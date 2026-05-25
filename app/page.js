@@ -2,21 +2,75 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+// ─── White-label config (edit per client) ───────────────────────────────────
 const BUSINESS_NAME = "GreenLeaf Support";
 const BUSINESS_INFO =
   "GreenLeaf is an eco-friendly home services company offering lawn care, landscaping, and seasonal cleanups. Hours: Mon–Fri 8am–6pm, Sat 9am–2pm. Phone: (555) 123-4567. Email: hello@greenleaf.example.";
+const PAY_NOW_URL = "https://example.com/pay";
+const SUPPORT_PHONE = "(555) 123-4567";
+const SUPPORT_EMAIL = "hello@greenleaf.example";
 
+/** Quick reply shortcuts (max 8). Edit per client; shown in a 2-column grid until the user sends a message. */
 const QUICK_REPLIES = [
   "What are your hours?",
-  "How much does lawn care cost?",
-  "Do you offer free estimates?",
-  "How do I book a service?",
+  "How do I book an appointment?",
+  "What services do you offer?",
+  "What are your prices?",
+  "Do you accept insurance?",
+  "Where are you located?",
+  "How do I pay?",
+  "Talk to someone",
 ];
+// ─────────────────────────────────────────────────────────────────────────────
+
+const PRICING_INFO = `Here's how our pricing works:
+
+• Basic lawn care — $45 per visit
+• Full landscaping — from $150
+• Seasonal cleanup — from $89
+
+You can pay securely online after your service is scheduled.`;
+
+const BOOKING_PATTERN =
+  /\b(book|booking|schedule|appointment|reserve|make an appointment)\b/i;
+const PAYMENT_PATTERN =
+  /\b(pay|payment|pricing|price|prices|cost|costs|how much|how to pay|fee|fees|quote)\b/i;
+const TALK_TO_SOMEONE_PATTERN = /\btalk to someone\b/i;
+const UNHELPFUL_AI_PATTERN =
+  /\b(i(?:'m| am) not sure|i don(?:'t| not) know|cannot help|can't help|can not help|unable to help|please contact us|please call us|reach out to us|contact us directly|call us directly|don't have (?:that |those )?information|do not have (?:that |those )?information|outside (?:of )?my (?:knowledge|ability)|not able to (?:help|answer)|unable to (?:answer|assist))\b/i;
+
+const getSupportFallbackMessage = () =>
+  `I want to make sure you get the best help! Please contact our team directly:
+📞 ${SUPPORT_PHONE}
+📧 ${SUPPORT_EMAIL}
+We're happy to assist you!`;
+
+const FOLLOW_UP_PROMPT =
+  "Is there anything else I can help you with today? 😊";
+
+const getClosingMessage = () =>
+  `Thank you for contacting ${BUSINESS_NAME}! We look forward to serving you. Have a wonderful day! 😊`;
 
 const INITIAL_MESSAGE = {
   role: "assistant",
   content: `Hi there! 👋 Welcome to ${BUSINESS_NAME}. How can I help you today?`,
 };
+
+function isBookingIntent(text) {
+  return BOOKING_PATTERN.test(text);
+}
+
+function isPaymentIntent(text) {
+  return PAYMENT_PATTERN.test(text);
+}
+
+function isTalkToSomeoneIntent(text) {
+  return TALK_TO_SOMEONE_PATTERN.test(text);
+}
+
+function needsSupportFallback(text) {
+  return UNHELPFUL_AI_PATTERN.test(text);
+}
 
 function TypingIndicator() {
   return (
@@ -78,12 +132,71 @@ function SendIcon() {
   );
 }
 
+function MessageContent({
+  msg,
+  showFollowUpButtons,
+  onFollowUpYes,
+  onFollowUpNo,
+  onStartNewChat,
+}) {
+  return (
+    <>
+      <span className="whitespace-pre-line">{msg.content}</span>
+      {msg.payButtonUrl && (
+        <a
+          href={msg.payButtonUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-flex w-full items-center justify-center rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+        >
+          Pay Now
+        </a>
+      )}
+      {msg.followUp && showFollowUpButtons && (
+        <div className="mt-3 flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={onFollowUpYes}
+            className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-100"
+          >
+            Yes, I have another question
+          </button>
+          <button
+            type="button"
+            onClick={onFollowUpNo}
+            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-100"
+          >
+            No, I&apos;m all set
+          </button>
+        </div>
+      )}
+      {msg.startNewChat && (
+        <button
+          type="button"
+          onClick={onStartNewChat}
+          className="mt-3 inline-flex w-full items-center justify-center rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+        >
+          Start New Chat
+        </button>
+      )}
+    </>
+  );
+}
+
 export default function Home() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([INITIAL_MESSAGE]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showQuickReplies, setShowQuickReplies] = useState(true);
+  const [bookingStep, setBookingStep] = useState(null);
+  const [bookingData, setBookingData] = useState({
+    name: "",
+    date: "",
+    phone: "",
+  });
+  const [awaitingFollowUp, setAwaitingFollowUp] = useState(false);
+  const [chatClosed, setChatClosed] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -101,16 +214,103 @@ export default function Home() {
     }
   }, [isOpen]);
 
+  const addAssistantMessage = useCallback((content, extra = {}) => {
+    setMessages((prev) => [...prev, { role: "assistant", content, ...extra }]);
+  }, []);
+
+  const completeWithFollowUp = useCallback(
+    (content, extra = {}) => {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content, ...extra },
+        { role: "assistant", content: FOLLOW_UP_PROMPT, followUp: true },
+      ]);
+      setAwaitingFollowUp(true);
+    },
+    []
+  );
+
+  const resetToStart = useCallback(() => {
+    setMessages([INITIAL_MESSAGE]);
+    setShowQuickReplies(true);
+    setBookingStep(null);
+    setBookingData({ name: "", date: "", phone: "" });
+    setAwaitingFollowUp(false);
+    setChatClosed(false);
+    setInput("");
+  }, []);
+
+  const handleFollowUpYes = () => {
+    resetToStart();
+  };
+
+  const handleFollowUpNo = () => {
+    setAwaitingFollowUp(false);
+    setChatClosed(true);
+    addAssistantMessage(getClosingMessage(), { startNewChat: true });
+  };
+
+  const cancelBooking = () => {
+    setBookingStep(null);
+    setBookingData({ name: "", date: "", phone: "" });
+    addAssistantMessage(
+      "No problem — I've cancelled the booking. How else can I help you today?"
+    );
+  };
+
   const sendMessage = async (text) => {
     const trimmed = text.trim();
-    if (!trimmed || isTyping) return;
+    if (!trimmed || isTyping || awaitingFollowUp || chatClosed) return;
 
     const userMessage = { role: "user", content: trimmed };
-    const nextMessages = [...messages, userMessage];
-
-    setMessages(nextMessages);
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setShowQuickReplies(false);
+
+    if (bookingStep === "name") {
+      setBookingData((d) => ({ ...d, name: trimmed }));
+      setBookingStep("date");
+      addAssistantMessage("Great! What date works best for you?");
+      return;
+    }
+
+    if (bookingStep === "date") {
+      setBookingData((d) => ({ ...d, date: trimmed }));
+      setBookingStep("phone");
+      addAssistantMessage("Thanks! What's the best phone number to reach you?");
+      return;
+    }
+
+    if (bookingStep === "phone") {
+      const confirmed = { ...bookingData, phone: trimmed };
+      setBookingStep(null);
+      setBookingData({ name: "", date: "", phone: "" });
+      completeWithFollowUp(
+        `You're all set, ${confirmed.name}! We've scheduled your visit for ${confirmed.date}. We'll call you at ${confirmed.phone} if we need anything else. See you then!`
+      );
+      return;
+    }
+
+    if (isBookingIntent(trimmed)) {
+      setBookingData({ name: "", date: "", phone: "" });
+      setBookingStep("name");
+      addAssistantMessage(
+        "I'd be happy to help you book an appointment! Let's start with your full name."
+      );
+      return;
+    }
+
+    if (isPaymentIntent(trimmed)) {
+      completeWithFollowUp(PRICING_INFO, { payButtonUrl: PAY_NOW_URL });
+      return;
+    }
+
+    if (isTalkToSomeoneIntent(trimmed)) {
+      completeWithFollowUp(getSupportFallbackMessage());
+      return;
+    }
+
+    const nextMessages = [...messages, userMessage];
     setIsTyping(true);
 
     try {
@@ -129,10 +329,19 @@ export default function Home() {
         throw new Error(data.error || "Request failed");
       }
 
+      const assistantReplies = [{ role: "assistant", content: data.message }];
+      if (needsSupportFallback(data.message)) {
+        assistantReplies.push({
+          role: "assistant",
+          content: getSupportFallbackMessage(),
+        });
+      }
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: data.message },
+        ...assistantReplies,
+        { role: "assistant", content: FOLLOW_UP_PROMPT, followUp: true },
       ]);
+      setAwaitingFollowUp(true);
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -155,6 +364,18 @@ export default function Home() {
     e.preventDefault();
     sendMessage(input);
   };
+
+  const inputPlaceholder = chatClosed
+    ? "Chat ended"
+    : awaitingFollowUp
+      ? "Choose an option above…"
+      : bookingStep === "name"
+        ? "Your full name…"
+        : bookingStep === "date"
+          ? "Preferred date (e.g. March 15)…"
+          : bookingStep === "phone"
+            ? "Your phone number…"
+            : "Type your message…";
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-emerald-50 via-white to-green-50">
@@ -220,29 +441,52 @@ export default function Home() {
                           : "rounded-bl-md border border-emerald-100 bg-white text-slate-700 shadow-sm"
                       }`}
                     >
-                      {msg.content}
-                                        </div>
-                                    </div>
+                      {msg.role === "user" ? (
+                        msg.content
+                      ) : (
+                        <MessageContent
+                          msg={msg}
+                          showFollowUpButtons={awaitingFollowUp}
+                          onFollowUpYes={handleFollowUpYes}
+                          onFollowUpNo={handleFollowUpNo}
+                          onStartNewChat={resetToStart}
+                        />
+                      )}
+                    </div>
+                  </div>
                 ))}
                 {isTyping && <TypingIndicator />}
                 <div ref={messagesEndRef} />
-                            </div>
-                        </div>
+              </div>
+            </div>
 
-            {showQuickReplies && (
-              <div className="flex flex-wrap gap-2 border-t border-emerald-50 bg-white px-3 py-2.5">
-                {QUICK_REPLIES.map((label) => (
+            {showQuickReplies && !bookingStep && !awaitingFollowUp && !chatClosed && (
+              <div className="grid grid-cols-2 gap-2 border-t border-emerald-50 bg-white p-3">
+                {QUICK_REPLIES.slice(0, 8).map((label) => (
                   <button
                     key={label}
                     type="button"
                     onClick={() => handleQuickReply(label)}
                     disabled={isTyping}
-                    className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-100 disabled:opacity-50"
+                    className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-left text-xs font-medium leading-snug text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-100 disabled:opacity-50"
                   >
                     {label}
                   </button>
                 ))}
-                            </div>
+              </div>
+            )}
+
+            {bookingStep && !awaitingFollowUp && !chatClosed && (
+              <div className="border-t border-emerald-50 bg-white px-3 py-2.5">
+                <button
+                  type="button"
+                  onClick={cancelBooking}
+                  disabled={isTyping}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-100 disabled:opacity-50"
+                >
+                  Start Over
+                </button>
+              </div>
             )}
 
             <form
@@ -254,20 +498,22 @@ export default function Home() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Type your message…"
-                disabled={isTyping}
+                placeholder={inputPlaceholder}
+                disabled={isTyping || awaitingFollowUp || chatClosed}
                 className="flex-1 rounded-xl border border-emerald-200 bg-emerald-50/50 px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-200 disabled:opacity-60"
               />
               <button
                 type="submit"
-                disabled={!input.trim() || isTyping}
+                disabled={
+                  !input.trim() || isTyping || awaitingFollowUp || chatClosed
+                }
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
                 aria-label="Send message"
               >
                 <SendIcon />
               </button>
             </form>
-                    </div>
+          </div>
         )}
 
         <button
@@ -279,7 +525,7 @@ export default function Home() {
         >
           {isOpen ? <CloseIcon /> : <ChatBubbleIcon />}
         </button>
-            </div>
-        </div>
+      </div>
+    </div>
   );
 }
