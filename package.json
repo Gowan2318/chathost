@@ -10,6 +10,9 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",
+    "@next-community/adapter-vercel": "^0.0.1-beta.22",
+    "@vercel/build-utils": "^12.2.2",
+    "@vercel/routing-utils": "^5.2.1",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4"
