@@ -1,531 +1,398 @@
-"use client";
+import Link from "next/link";
+import DemoChatSection from "../components/DemoChatSection";
+import ContactSection from "../components/landing/ContactSection";
+import FAQSection from "../components/landing/FAQSection";
+import HeroSection from "../components/landing/HeroSection";
+import LandingNav from "../components/landing/LandingNav";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-
-// ─── White-label config (edit per client) ───────────────────────────────────
-const BUSINESS_NAME = "GreenLeaf Support";
-const BUSINESS_INFO =
-  "GreenLeaf is an eco-friendly home services company offering lawn care, landscaping, and seasonal cleanups. Hours: Mon–Fri 8am–6pm, Sat 9am–2pm. Phone: (555) 123-4567. Email: hello@greenleaf.example.";
-const PAY_NOW_URL = "https://example.com/pay";
-const SUPPORT_PHONE = "(555) 123-4567";
-const SUPPORT_EMAIL = "hello@greenleaf.example";
-
-/** Quick reply shortcuts (max 8). Edit per client; shown in a 2-column grid until the user sends a message. */
-const QUICK_REPLIES = [
-  "What are your hours?",
-  "How do I book an appointment?",
-  "What services do you offer?",
-  "What are your prices?",
-  "Do you accept insurance?",
-  "Where are you located?",
-  "How do I pay?",
-  "Talk to someone",
+const FEATURES = [
+  {
+    title: "AI Powered",
+    description:
+      "Claude-powered responses trained on your business info — accurate, friendly, and on-brand every time.",
+    icon: "✦",
+  },
+  {
+    title: "24/7 Available",
+    description:
+      "Capture leads and answer questions while you sleep. Your customers never hit a closed sign.",
+    icon: "◷",
+  },
+  {
+    title: "Easy Setup",
+    description:
+      "Guided builder gets you live in minutes. No developers, no complex integrations required.",
+    icon: "⚡",
+  },
+  {
+    title: "Custom Mascots",
+    description:
+      "Industry-specific animated characters that make your chatbot memorable and uniquely yours.",
+    icon: "★",
+  },
+  {
+    title: "Appointment Booking",
+    description:
+      "Built-in booking flow collects name, date, and phone — then confirms with a celebration animation.",
+    icon: "📅",
+  },
+  {
+    title: "Payment Guidance",
+    description:
+      "Direct customers to your payment link with pricing answers and a one-click Pay Now button.",
+    icon: "💳",
+  },
 ];
-// ─────────────────────────────────────────────────────────────────────────────
 
-const PRICING_INFO = `Here's how our pricing works:
+const PLANS = [
+  {
+    name: "Starter",
+    price: 49,
+    description: "Perfect for single-location businesses getting started with AI chat.",
+    features: [
+      "1 chatbot widget",
+      "Appointment booking flow",
+      "Up to 500 AI messages/mo",
+      "Email support",
+    ],
+  },
+  {
+    name: "Pro",
+    price: 97,
+    popular: true,
+    description: "For growing businesses that need more customization and volume.",
+    features: [
+      "Everything in Starter",
+      "Custom brand colors & mascot",
+      "Payment link integration",
+      "Up to 2,000 AI messages/mo",
+      "Priority support",
+    ],
+  },
+  {
+    name: "Premium",
+    price: 197,
+    description: "White-glove setup for agencies and multi-location brands.",
+    features: [
+      "Everything in Pro",
+      "Unlimited quick replies",
+      "Multiple team members",
+      "Unlimited AI messages",
+      "Dedicated onboarding call",
+    ],
+  },
+];
 
-• Basic lawn care — $45 per visit
-• Full landscaping — from $150
-• Seasonal cleanup — from $89
+const STEPS = [
+  {
+    step: "1",
+    title: "Build your bot",
+    body: "Answer a few questions about your business, brand, and mascot in our guided builder.",
+  },
+  {
+    step: "2",
+    title: "Embed on your site",
+    body: "Drop one line of code on your website. Your AI assistant goes live in minutes.",
+  },
+  {
+    step: "3",
+    title: "Delight customers 24/7",
+    body: "Book appointments, answer FAQs, and route urgent requests — even after hours.",
+  },
+];
 
-You can pay securely online after your service is scheduled.`;
+const TESTIMONIALS = [
+  {
+    quote:
+      "We went from missing evening calls to booking 12 extra appointments a week. The mascot makes us stand out.",
+    name: "Maria Santos",
+    role: "Owner, Bloom & Blade Salon",
+  },
+  {
+    quote:
+      "Setup took 10 minutes. Our patients love asking about hours and insurance before they even pick up the phone.",
+    name: "Dr. James Chen",
+    role: "Sunrise Dental Studio",
+  },
+  {
+    quote:
+      "Finally, a chatbot that doesn't feel corporate. VestaChatHost feels like it was built for businesses like mine.",
+    name: "Tony Rivera",
+    role: "Rivera Realty Group",
+  },
+];
 
-const BOOKING_PATTERN =
-  /\b(book|booking|schedule|appointment|reserve|make an appointment)\b/i;
-const PAYMENT_PATTERN =
-  /\b(pay|payment|pricing|price|prices|cost|costs|how much|how to pay|fee|fees|quote)\b/i;
-const TALK_TO_SOMEONE_PATTERN = /\btalk to someone\b/i;
-const UNHELPFUL_AI_PATTERN =
-  /\b(i(?:'m| am) not sure|i don(?:'t| not) know|cannot help|can't help|can not help|unable to help|please contact us|please call us|reach out to us|contact us directly|call us directly|don't have (?:that |those )?information|do not have (?:that |those )?information|outside (?:of )?my (?:knowledge|ability)|not able to (?:help|answer)|unable to (?:answer|assist))\b/i;
-
-const getSupportFallbackMessage = () =>
-  `I want to make sure you get the best help! Please contact our team directly:
-📞 ${SUPPORT_PHONE}
-📧 ${SUPPORT_EMAIL}
-We're happy to assist you!`;
-
-const FOLLOW_UP_PROMPT =
-  "Is there anything else I can help you with today? 😊";
-
-const getClosingMessage = () =>
-  `Thank you for contacting ${BUSINESS_NAME}! We look forward to serving you. Have a wonderful day! 😊`;
-
-const INITIAL_MESSAGE = {
-  role: "assistant",
-  content: `Hi there! 👋 Welcome to ${BUSINESS_NAME}. How can I help you today?`,
-};
-
-function isBookingIntent(text) {
-  return BOOKING_PATTERN.test(text);
-}
-
-function isPaymentIntent(text) {
-  return PAYMENT_PATTERN.test(text);
-}
-
-function isTalkToSomeoneIntent(text) {
-  return TALK_TO_SOMEONE_PATTERN.test(text);
-}
-
-function needsSupportFallback(text) {
-  return UNHELPFUL_AI_PATTERN.test(text);
-}
-
-function TypingIndicator() {
+function SocialIcon({ children, label }) {
   return (
-    <div className="flex justify-start">
-      <div className="flex items-center gap-1 rounded-2xl rounded-bl-md bg-emerald-50 px-4 py-3">
-        <span className="h-2 w-2 animate-bounce rounded-full bg-emerald-500 [animation-delay:0ms]" />
-        <span className="h-2 w-2 animate-bounce rounded-full bg-emerald-500 [animation-delay:150ms]" />
-        <span className="h-2 w-2 animate-bounce rounded-full bg-emerald-500 [animation-delay:300ms]" />
-      </div>
-    </div>
-  );
-}
-
-function ChatBubbleIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className="h-7 w-7"
-      aria-hidden
+    <a
+      href="#"
+      aria-label={label}
+      className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-[#a3a3a3] transition hover:border-[#D4AF37]/50 hover:text-[#F0D060]"
     >
-      <path
-        fillRule="evenodd"
-        d="M4.848 2.771A49.144 49.144 0 0112 2.25c2.43 0 4.817.178 7.152.52 1.978.292 3.348 2.024 3.348 3.97v6.02c0 1.946-1.37 3.678-3.348 3.97a48.901 48.901 0 01-3.476.383.39.39 0 00-.297.17l-2.755 4.133a.75.75 0 01-1.164-.096l-2.165-3.24a.39.39 0 00-.297-.17 48.9 48.9 0 01-3.476-.384c-1.978-.29-3.348-2.024-3.348-3.97V6.741c0-1.946 1.37-3.68 3.348-3.97z"
-        clipRule="evenodd"
-      />
-    </svg>
+      {children}
+    </a>
   );
 }
 
-function CloseIcon() {
+export default function HomePage() {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      className="h-5 w-5"
-      aria-hidden
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-    </svg>
-  );
-}
+    <div className="min-h-screen bg-[#0A0A0A] text-white">
+      <LandingNav />
+      <HeroSection />
 
-function SendIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className="h-5 w-5"
-      aria-hidden
-    >
-      <path d="M3.478 2.404a.75.75 0 00-.926.941l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.404z" />
-    </svg>
-  );
-}
-
-function MessageContent({
-  msg,
-  showFollowUpButtons,
-  onFollowUpYes,
-  onFollowUpNo,
-  onStartNewChat,
-}) {
-  return (
-    <>
-      <span className="whitespace-pre-line">{msg.content}</span>
-      {msg.payButtonUrl && (
-        <a
-          href={msg.payButtonUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-3 inline-flex w-full items-center justify-center rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
-        >
-          Pay Now
-        </a>
-      )}
-      {msg.followUp && showFollowUpButtons && (
-        <div className="mt-3 flex flex-col gap-2">
-          <button
-            type="button"
-            onClick={onFollowUpYes}
-            className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-100"
-          >
-            Yes, I have another question
-          </button>
-          <button
-            type="button"
-            onClick={onFollowUpNo}
-            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-100"
-          >
-            No, I&apos;m all set
-          </button>
-        </div>
-      )}
-      {msg.startNewChat && (
-        <button
-          type="button"
-          onClick={onStartNewChat}
-          className="mt-3 inline-flex w-full items-center justify-center rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
-        >
-          Start New Chat
-        </button>
-      )}
-    </>
-  );
-}
-
-export default function Home() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([INITIAL_MESSAGE]);
-  const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  const [showQuickReplies, setShowQuickReplies] = useState(true);
-  const [bookingStep, setBookingStep] = useState(null);
-  const [bookingData, setBookingData] = useState({
-    name: "",
-    date: "",
-    phone: "",
-  });
-  const [awaitingFollowUp, setAwaitingFollowUp] = useState(false);
-  const [chatClosed, setChatClosed] = useState(false);
-  const messagesEndRef = useRef(null);
-  const inputRef = useRef(null);
-
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, []);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, isTyping, scrollToBottom]);
-
-  useEffect(() => {
-    if (isOpen) {
-      inputRef.current?.focus();
-    }
-  }, [isOpen]);
-
-  const addAssistantMessage = useCallback((content, extra = {}) => {
-    setMessages((prev) => [...prev, { role: "assistant", content, ...extra }]);
-  }, []);
-
-  const completeWithFollowUp = useCallback(
-    (content, extra = {}) => {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content, ...extra },
-        { role: "assistant", content: FOLLOW_UP_PROMPT, followUp: true },
-      ]);
-      setAwaitingFollowUp(true);
-    },
-    []
-  );
-
-  const resetToStart = useCallback(() => {
-    setMessages([INITIAL_MESSAGE]);
-    setShowQuickReplies(true);
-    setBookingStep(null);
-    setBookingData({ name: "", date: "", phone: "" });
-    setAwaitingFollowUp(false);
-    setChatClosed(false);
-    setInput("");
-  }, []);
-
-  const handleFollowUpYes = () => {
-    resetToStart();
-  };
-
-  const handleFollowUpNo = () => {
-    setAwaitingFollowUp(false);
-    setChatClosed(true);
-    addAssistantMessage(getClosingMessage(), { startNewChat: true });
-  };
-
-  const cancelBooking = () => {
-    setBookingStep(null);
-    setBookingData({ name: "", date: "", phone: "" });
-    addAssistantMessage(
-      "No problem — I've cancelled the booking. How else can I help you today?"
-    );
-  };
-
-  const sendMessage = async (text) => {
-    const trimmed = text.trim();
-    if (!trimmed || isTyping || awaitingFollowUp || chatClosed) return;
-
-    const userMessage = { role: "user", content: trimmed };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setShowQuickReplies(false);
-
-    if (bookingStep === "name") {
-      setBookingData((d) => ({ ...d, name: trimmed }));
-      setBookingStep("date");
-      addAssistantMessage("Great! What date works best for you?");
-      return;
-    }
-
-    if (bookingStep === "date") {
-      setBookingData((d) => ({ ...d, date: trimmed }));
-      setBookingStep("phone");
-      addAssistantMessage("Thanks! What's the best phone number to reach you?");
-      return;
-    }
-
-    if (bookingStep === "phone") {
-      const confirmed = { ...bookingData, phone: trimmed };
-      setBookingStep(null);
-      setBookingData({ name: "", date: "", phone: "" });
-      completeWithFollowUp(
-        `You're all set, ${confirmed.name}! We've scheduled your visit for ${confirmed.date}. We'll call you at ${confirmed.phone} if we need anything else. See you then!`
-      );
-      return;
-    }
-
-    if (isBookingIntent(trimmed)) {
-      setBookingData({ name: "", date: "", phone: "" });
-      setBookingStep("name");
-      addAssistantMessage(
-        "I'd be happy to help you book an appointment! Let's start with your full name."
-      );
-      return;
-    }
-
-    if (isPaymentIntent(trimmed)) {
-      completeWithFollowUp(PRICING_INFO, { payButtonUrl: PAY_NOW_URL });
-      return;
-    }
-
-    if (isTalkToSomeoneIntent(trimmed)) {
-      completeWithFollowUp(getSupportFallbackMessage());
-      return;
-    }
-
-    const nextMessages = [...messages, userMessage];
-    setIsTyping(true);
-
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: nextMessages,
-          businessName: BUSINESS_NAME,
-          businessInfo: BUSINESS_INFO,
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Request failed");
-      }
-
-      const assistantReplies = [{ role: "assistant", content: data.message }];
-      if (needsSupportFallback(data.message)) {
-        assistantReplies.push({
-          role: "assistant",
-          content: getSupportFallbackMessage(),
-        });
-      }
-      setMessages((prev) => [
-        ...prev,
-        ...assistantReplies,
-        { role: "assistant", content: FOLLOW_UP_PROMPT, followUp: true },
-      ]);
-      setAwaitingFollowUp(true);
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content:
-            "Sorry, something went wrong on our end. Please try again in a moment.",
-        },
-      ]);
-    } finally {
-      setIsTyping(false);
-    }
-  };
-
-  const handleQuickReply = (text) => {
-    sendMessage(text);
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    sendMessage(input);
-  };
-
-  const inputPlaceholder = chatClosed
-    ? "Chat ended"
-    : awaitingFollowUp
-      ? "Choose an option above…"
-      : bookingStep === "name"
-        ? "Your full name…"
-        : bookingStep === "date"
-          ? "Preferred date (e.g. March 15)…"
-          : bookingStep === "phone"
-            ? "Your phone number…"
-            : "Type your message…";
-
-  return (
-    <div className="relative min-h-screen bg-gradient-to-br from-emerald-50 via-white to-green-50">
-      <main className="mx-auto flex max-w-3xl flex-col items-center justify-center px-6 py-24 text-center">
-        <span className="mb-4 inline-block rounded-full bg-emerald-100 px-4 py-1 text-sm font-medium text-emerald-800">
-          White-label AI chat
-        </span>
-        <h1 className="text-4xl font-bold tracking-tight text-emerald-950 sm:text-5xl">
-          {BUSINESS_NAME}
-        </h1>
-        <p className="mt-4 max-w-lg text-lg leading-relaxed text-emerald-800/80">
-          Professional support powered by AI. Click the chat button in the
-          bottom-right corner to get started.
-        </p>
-      </main>
-
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4">
-        {isOpen && (
-          <div
-            className="flex h-[min(520px,calc(100vh-8rem))] w-[min(380px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-emerald-100 bg-white shadow-2xl shadow-emerald-900/10"
-            role="dialog"
-            aria-label={`Chat with ${BUSINESS_NAME}`}
-          >
-            <header className="flex items-center justify-between bg-gradient-to-r from-emerald-600 to-green-600 px-4 py-3.5 text-white">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-lg font-bold">
-                  {BUSINESS_NAME.charAt(0)}
-                </div>
-                <div>
-                  <h2 className="text-sm font-semibold leading-tight">
-                    {BUSINESS_NAME}
-                  </h2>
-                  <p className="flex items-center gap-1.5 text-xs text-emerald-100">
-                    <span className="relative flex h-2 w-2">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-300 opacity-75" />
-                      <span className="relative inline-flex h-2 w-2 rounded-full bg-green-300" />
-                    </span>
-                    Online
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="rounded-lg p-1.5 text-white/90 transition hover:bg-white/20"
-                aria-label="Close chat"
+      <section id="features" className="bg-[#111111] px-6 py-24">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-14 text-center">
+            <p className="text-sm font-semibold uppercase tracking-widest text-[#D4AF37]">Features</p>
+            <h2 className="mt-3 text-3xl font-bold text-white sm:text-4xl">
+              Everything local businesses need
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-[#a3a3a3]">
+              Enterprise-grade AI tools — packaged for the shop on Main Street.
+            </p>
+          </div>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map((f) => (
+              <div
+                key={f.title}
+                className="group rounded-2xl border border-white/5 bg-[#1A1A1A] p-8 transition hover:border-[#D4AF37]/30 hover:shadow-lg hover:shadow-[#D4AF37]/5"
               >
-                <CloseIcon />
-              </button>
-            </header>
+                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#D4AF37]/15 text-xl text-[#F0D060]">
+                  {f.icon}
+                </span>
+                <h3 className="mt-5 text-lg font-semibold text-white">{f.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-[#a3a3a3]">{f.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-            <div className="flex-1 overflow-y-auto bg-slate-50/80 px-4 py-4">
-              <div className="flex flex-col gap-3">
-                {messages.map((msg, i) => (
-                  <div
-                    key={`${msg.role}-${i}`}
-                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    <div
-                      className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                        msg.role === "user"
-                          ? "rounded-br-md bg-emerald-600 text-white"
-                          : "rounded-bl-md border border-emerald-100 bg-white text-slate-700 shadow-sm"
-                      }`}
-                    >
-                      {msg.role === "user" ? (
-                        msg.content
-                      ) : (
-                        <MessageContent
-                          msg={msg}
-                          showFollowUpButtons={awaitingFollowUp}
-                          onFollowUpYes={handleFollowUpYes}
-                          onFollowUpNo={handleFollowUpNo}
-                          onStartNewChat={resetToStart}
-                        />
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {isTyping && <TypingIndicator />}
-                <div ref={messagesEndRef} />
+      <section id="demo" className="px-6 py-24">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-12 text-center">
+            <p className="text-sm font-semibold uppercase tracking-widest text-[#D4AF37]">Live Demo</p>
+            <h2 className="mt-3 text-3xl font-bold text-white sm:text-4xl">See it in action</h2>
+            <p className="mx-auto mt-4 max-w-2xl text-[#a3a3a3]">
+              Chat with our sample bot for{" "}
+              <strong className="text-[#F0D060]">GreenLeaf Lawn Care</strong>. Try booking an
+              appointment, asking about prices, or clicking a quick reply.
+            </p>
+          </div>
+          <DemoChatSection />
+        </div>
+      </section>
+
+      <section id="how-it-works" className="bg-[#111111] px-6 py-24">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-14 text-center">
+            <p className="text-sm font-semibold uppercase tracking-widest text-[#D4AF37]">How It Works</p>
+            <h2 className="mt-3 text-3xl font-bold text-white sm:text-4xl">Launch in three steps</h2>
+            <p className="mt-4 text-[#a3a3a3]">From signup to live chatbot — faster than hiring staff.</p>
+          </div>
+          <div className="grid gap-8 md:grid-cols-3">
+            {STEPS.map((item) => (
+              <div
+                key={item.step}
+                className="relative rounded-2xl border border-white/5 bg-[#1A1A1A] p-8"
+              >
+                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#F0D060] text-lg font-bold text-[#0A0A0A]">
+                  {item.step}
+                </span>
+                <h3 className="mt-5 text-xl font-semibold text-white">{item.title}</h3>
+                <p className="mt-3 leading-relaxed text-[#a3a3a3]">{item.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="about" className="px-6 py-24">
+        <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-widest text-[#D4AF37]">About Us</p>
+            <h2 className="mt-3 text-3xl font-bold text-white sm:text-4xl">
+              Leveling the playing field for local business
+            </h2>
+            <div className="mt-6 space-y-4 leading-relaxed text-[#a3a3a3]">
+              <p>
+                VestaChatHost was founded on a simple belief: your neighborhood dentist, salon, or gym
+                deserves the same smart customer experience as a Fortune 500 company — without the
+                Fortune 500 budget.
+              </p>
+              <p>
+                We build white-label AI chatbots that feel personal, not robotic. With custom mascots,
+                appointment booking, and payment guidance baked in, you compete on service — not just
+                price.
+              </p>
+              <p>
+                Our mission is to help millions of local businesses grow with AI that works as hard as
+                they do — 24 hours a day, 7 days a week.
+              </p>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-[#D4AF37]/20 bg-gradient-to-br from-[#1A1A1A] to-[#111111] p-10">
+            <div className="space-y-8">
+              {[
+                { stat: "2,500+", label: "Businesses served" },
+                { stat: "1M+", label: "Conversations handled" },
+                { stat: "98%", label: "Customer satisfaction" },
+              ].map((item) => (
+                <div key={item.label} className="border-b border-white/5 pb-6 last:border-0 last:pb-0">
+                  <p className="text-4xl font-bold text-[#D4AF37]">{item.stat}</p>
+                  <p className="mt-1 text-[#a3a3a3]">{item.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-[#111111] px-6 py-24">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-14 text-center">
+            <p className="text-sm font-semibold uppercase tracking-widest text-[#D4AF37]">Testimonials</p>
+            <h2 className="mt-3 text-3xl font-bold text-white sm:text-4xl">Loved by business owners</h2>
+          </div>
+          <div className="grid gap-8 md:grid-cols-3">
+            {TESTIMONIALS.map((t) => (
+              <blockquote
+                key={t.name}
+                className="flex flex-col rounded-2xl border border-white/5 bg-[#1A1A1A] p-8"
+              >
+                <p className="flex-1 text-lg leading-relaxed text-white/90">&ldquo;{t.quote}&rdquo;</p>
+                <footer className="mt-6 border-t border-white/5 pt-6">
+                  <p className="font-semibold text-[#F0D060]">{t.name}</p>
+                  <p className="text-sm text-[#a3a3a3]">{t.role}</p>
+                </footer>
+              </blockquote>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <FAQSection />
+
+      <section id="pricing" className="relative px-6 py-24">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#D4AF37]/5 via-transparent to-transparent" />
+        <div className="relative mx-auto max-w-6xl">
+          <div className="mb-14 text-center">
+            <p className="text-sm font-semibold uppercase tracking-widest text-[#D4AF37]">Pricing</p>
+            <h2 className="mt-3 text-3xl font-bold text-white sm:text-4xl">
+              Invest in growth, not guesswork
+            </h2>
+            <p className="mt-4 text-[#a3a3a3]">Premium tools. Transparent pricing. Cancel anytime.</p>
+          </div>
+          <div className="grid gap-8 lg:grid-cols-3">
+            {PLANS.map((plan) => (
+              <div
+                key={plan.name}
+                className={`relative flex flex-col overflow-hidden rounded-2xl border p-8 ${
+                  plan.popular
+                    ? "border-[#D4AF37] bg-gradient-to-b from-[#1A1A1A] to-[#111111] shadow-2xl shadow-[#D4AF37]/15"
+                    : "border-white/10 bg-[#1A1A1A]"
+                }`}
+              >
+                {plan.popular && (
+                  <>
+                    <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#D4AF37] via-[#F0D060] to-[#D4AF37]" />
+                    <span className="absolute -top-px left-1/2 -translate-x-1/2 rounded-b-lg bg-[#D4AF37] px-4 py-1 text-xs font-bold text-[#0A0A0A]">
+                      MOST POPULAR
+                    </span>
+                  </>
+                )}
+                <h3 className="text-xl font-bold text-white">{plan.name}</h3>
+                <p className="mt-2 text-sm text-[#a3a3a3]">{plan.description}</p>
+                <p className="mt-8">
+                  <span className="bg-gradient-to-r from-[#D4AF37] to-[#F0D060] bg-clip-text text-5xl font-bold text-transparent">
+                    ${plan.price}
+                  </span>
+                  <span className="text-[#a3a3a3]">/mo</span>
+                </p>
+                <ul className="mt-8 flex-1 space-y-4 text-sm text-[#a3a3a3]">
+                  {plan.features.map((f) => (
+                    <li key={f} className="flex items-start gap-3">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#D4AF37]/20 text-xs text-[#F0D060]">
+                        ✓
+                      </span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href="/builder"
+                  className={`mt-10 block rounded-xl py-3.5 text-center text-sm font-bold transition ${
+                    plan.popular
+                      ? "bg-[#D4AF37] text-[#0A0A0A] hover:bg-[#F0D060] shadow-lg shadow-[#D4AF37]/20"
+                      : "border border-[#D4AF37]/40 text-[#F0D060] hover:bg-[#D4AF37]/10"
+                  }`}
+                >
+                  Get Started
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <ContactSection />
+
+      <footer className="border-t border-white/5 bg-[#111111] px-6 py-16">
+        <div className="mx-auto max-w-6xl">
+          <div className="grid gap-12 md:grid-cols-4">
+            <div className="md:col-span-2">
+              <Link href="/" className="flex items-center gap-2.5">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#F0D060] text-lg font-black text-[#0A0A0A]">
+                  V
+                </span>
+                <span className="text-lg font-bold text-white">VestaChatHost</span>
+              </Link>
+              <p className="mt-4 max-w-sm text-sm leading-relaxed text-[#a3a3a3]">
+                White-label AI chatbots for local businesses. Compete with the big brands — on your
+                terms.
+              </p>
+              <div className="mt-6 flex gap-3">
+                <SocialIcon label="Twitter">
+                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                  </svg>
+                </SocialIcon>
+                <SocialIcon label="LinkedIn">
+                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                  </svg>
+                </SocialIcon>
+                <SocialIcon label="Instagram">
+                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+                  </svg>
+                </SocialIcon>
               </div>
             </div>
-
-            {showQuickReplies && !bookingStep && !awaitingFollowUp && !chatClosed && (
-              <div className="grid grid-cols-2 gap-2 border-t border-emerald-50 bg-white p-3">
-                {QUICK_REPLIES.slice(0, 8).map((label) => (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => handleQuickReply(label)}
-                    disabled={isTyping}
-                    className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-left text-xs font-medium leading-snug text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-100 disabled:opacity-50"
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {bookingStep && !awaitingFollowUp && !chatClosed && (
-              <div className="border-t border-emerald-50 bg-white px-3 py-2.5">
-                <button
-                  type="button"
-                  onClick={cancelBooking}
-                  disabled={isTyping}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-100 disabled:opacity-50"
-                >
-                  Start Over
-                </button>
-              </div>
-            )}
-
-            <form
-              onSubmit={handleSubmit}
-              className="flex items-end gap-2 border-t border-emerald-100 bg-white p-3"
-            >
-              <input
-                ref={inputRef}
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={inputPlaceholder}
-                disabled={isTyping || awaitingFollowUp || chatClosed}
-                className="flex-1 rounded-xl border border-emerald-200 bg-emerald-50/50 px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-200 disabled:opacity-60"
-              />
-              <button
-                type="submit"
-                disabled={
-                  !input.trim() || isTyping || awaitingFollowUp || chatClosed
-                }
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label="Send message"
-              >
-                <SendIcon />
-              </button>
-            </form>
+            <div>
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-[#D4AF37]">Product</h4>
+              <ul className="mt-4 space-y-2 text-sm text-[#a3a3a3]">
+                <li><a href="#features" className="hover:text-[#F0D060]">Features</a></li>
+                <li><a href="#demo" className="hover:text-[#F0D060]">Live Demo</a></li>
+                <li><a href="#pricing" className="hover:text-[#F0D060]">Pricing</a></li>
+                <li><Link href="/builder" className="hover:text-[#F0D060]">Builder</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-[#D4AF37]">Company</h4>
+              <ul className="mt-4 space-y-2 text-sm text-[#a3a3a3]">
+                <li><a href="#about" className="hover:text-[#F0D060]">About</a></li>
+                <li><a href="#contact" className="hover:text-[#F0D060]">Contact</a></li>
+                <li><a href="#faq" className="hover:text-[#F0D060]">FAQ</a></li>
+              </ul>
+            </div>
           </div>
-        )}
-
-        <button
-          type="button"
-          onClick={() => setIsOpen((o) => !o)}
-          className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-green-600 text-white shadow-lg shadow-emerald-600/30 transition hover:scale-105 hover:shadow-xl hover:shadow-emerald-600/40 active:scale-95"
-          aria-label={isOpen ? "Close chat" : "Open chat"}
-          aria-expanded={isOpen}
-        >
-          {isOpen ? <CloseIcon /> : <ChatBubbleIcon />}
-        </button>
-      </div>
+          <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/5 pt-8 text-sm text-[#a3a3a3] md:flex-row">
+            <p>© {new Date().getFullYear()} VestaChatHost. All rights reserved.</p>
+            <p>Built for local businesses who refuse to settle.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

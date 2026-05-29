@@ -1,0 +1,523 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import MascotCharacter from "./mascots/MascotCharacter";
+import { shadeHex } from "../lib/color";
+
+const BOOKING_PATTERN =
+  /\b(book|booking|schedule|appointment|reserve|make an appointment)\b/i;
+const PAYMENT_PATTERN =
+  /\b(pay|payment|pricing|price|prices|cost|costs|how much|how to pay|fee|fees|quote)\b/i;
+const TALK_TO_SOMEONE_PATTERN = /\btalk to someone\b/i;
+const UNHELPFUL_AI_PATTERN =
+  /\b(i(?:'m| am) not sure|i don(?:'t| not) know|cannot help|can't help|can not help|unable to help|please contact us|please call us|reach out to us|contact us directly|call us directly|don't have (?:that |those )?information|do not have (?:that |those )?information|outside (?:of )?my (?:knowledge|ability)|not able to (?:help|answer)|unable to (?:answer|assist))\b/i;
+
+function isBookingIntent(text) {
+  return BOOKING_PATTERN.test(text);
+}
+function isPaymentIntent(text) {
+  return PAYMENT_PATTERN.test(text);
+}
+function isTalkToSomeoneIntent(text) {
+  return TALK_TO_SOMEONE_PATTERN.test(text);
+}
+function needsSupportFallback(text) {
+  return UNHELPFUL_AI_PATTERN.test(text);
+}
+
+function TypingIndicator({ brandColor }) {
+  return (
+    <div className="flex justify-start">
+      <div
+        className="flex items-center gap-1 rounded-2xl rounded-bl-md px-4 py-3"
+        style={{ backgroundColor: `${brandColor}18` }}
+      >
+        {[0, 150, 300].map((delay) => (
+          <span
+            key={delay}
+            className="h-2 w-2 animate-bounce rounded-full"
+            style={{ backgroundColor: brandColor, animationDelay: `${delay}ms` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ChatBubbleIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-7 w-7" aria-hidden>
+      <path
+        fillRule="evenodd"
+        d="M4.848 2.771A49.144 49.144 0 0112 2.25c2.43 0 4.817.178 7.152.52 1.978.292 3.348 2.024 3.348 3.97v6.02c0 1.946-1.37 3.678-3.348 3.97a48.901 48.901 0 01-3.476.383.39.39 0 00-.297.17l-2.755 4.133a.75.75 0 01-1.164-.096l-2.165-3.24a.39.39 0 00-.297-.17 48.9 48.9 0 01-3.476-.384c-1.978-.29-3.348-2.024-3.348-3.97V6.741c0-1.946 1.37-3.68 3.348-3.97z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5" aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  );
+}
+
+function SendIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5" aria-hidden>
+      <path d="M3.478 2.404a.75.75 0 00-.926.941l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.404z" />
+    </svg>
+  );
+}
+
+function MessageContent({
+  msg,
+  showFollowUpButtons,
+  onFollowUpYes,
+  onFollowUpNo,
+  onStartNewChat,
+  brandColor,
+}) {
+  return (
+    <>
+      <span className="whitespace-pre-line">{msg.content}</span>
+      {msg.payButtonUrl && (
+        <a
+          href={msg.payButtonUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+          style={{ backgroundColor: brandColor }}
+        >
+          Pay Now
+        </a>
+      )}
+      {msg.followUp && showFollowUpButtons && (
+        <div className="mt-3 flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={onFollowUpYes}
+            className="rounded-lg border px-3 py-2 text-xs font-medium transition"
+            style={{
+              borderColor: `${brandColor}40`,
+              backgroundColor: `${brandColor}12`,
+              color: shadeHex(brandColor, -40),
+            }}
+          >
+            Yes, I have another question
+          </button>
+          <button
+            type="button"
+            onClick={onFollowUpNo}
+            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-100"
+          >
+            No, I&apos;m all set
+          </button>
+        </div>
+      )}
+      {msg.startNewChat && (
+        <button
+          type="button"
+          onClick={onStartNewChat}
+          className="mt-3 inline-flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+          style={{ backgroundColor: brandColor }}
+        >
+          Start New Chat
+        </button>
+      )}
+    </>
+  );
+}
+
+const DEFAULT_PRICING = `Here's how our pricing works:
+
+• Service packages vary by business
+• Contact us for a custom quote
+
+You can pay securely online when you're ready.`;
+
+/**
+ * @param {{
+ *   config: object,
+ *   defaultOpen?: boolean,
+ *   embedded?: boolean,
+ *   className?: string,
+ * }}
+ */
+export default function ChatWidget({
+  config,
+  defaultOpen = false,
+  embedded = false,
+  className = "",
+}) {
+  const {
+    businessName = "Your Business",
+    businessInfo = "",
+    supportPhone = "",
+    supportEmail = "",
+    payNowUrl = "",
+    quickReplies = [],
+    brandColor = "#059669",
+    industry = "other",
+    mascotName = "",
+  } = config;
+
+  const displayMascotName = mascotName || businessName;
+  const brandDark = shadeHex(brandColor, -25);
+
+  const getSupportFallbackMessage = () =>
+    `I want to make sure you get the best help! Please contact our team directly:
+📞 ${supportPhone}
+📧 ${supportEmail}
+We're happy to assist you!`;
+
+  const FOLLOW_UP_PROMPT = "Is there anything else I can help you with today? 😊";
+  const getClosingMessage = () =>
+    `Thank you for contacting ${businessName}! We look forward to serving you. Have a wonderful day! 😊`;
+
+  const initialMessage = useMemo(
+    () => ({
+      role: "assistant",
+      content: `Hi there! 👋 Welcome to ${businessName}. How can I help you today?`,
+    }),
+    [businessName]
+  );
+
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [messages, setMessages] = useState([initialMessage]);
+  const [input, setInput] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const [showQuickReplies, setShowQuickReplies] = useState(true);
+  const [bookingStep, setBookingStep] = useState(null);
+  const [bookingData, setBookingData] = useState({ name: "", date: "", phone: "" });
+  const [awaitingFollowUp, setAwaitingFollowUp] = useState(false);
+  const [chatClosed, setChatClosed] = useState(false);
+  const [mascotAnimation, setMascotAnimation] = useState("idle");
+  const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
+
+  const pricingInfo =
+    config.pricingInfo ||
+    `Here's how our pricing works:\n\nContact ${businessName} for current rates and packages.\n\nYou can pay securely online when you're ready.`;
+
+  useEffect(() => {
+    setMessages([initialMessage]);
+    setShowQuickReplies(true);
+    setBookingStep(null);
+    setBookingData({ name: "", date: "", phone: "" });
+    setAwaitingFollowUp(false);
+    setChatClosed(false);
+    setInput("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessName, businessInfo, supportPhone, supportEmail]);
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isTyping, scrollToBottom]);
+
+  useEffect(() => {
+    if (isOpen) inputRef.current?.focus();
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setMascotAnimation("bounce");
+      const t = setTimeout(() => setMascotAnimation("idle"), 800);
+      return () => clearTimeout(t);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isTyping) setMascotAnimation("thinking");
+    else if (mascotAnimation === "thinking") setMascotAnimation("idle");
+  }, [isTyping, mascotAnimation]);
+
+  const triggerCelebrate = useCallback(() => {
+    setMascotAnimation("celebrate");
+    const t = setTimeout(() => setMascotAnimation("idle"), 2000);
+    return () => clearTimeout(t);
+  }, []);
+
+  const addAssistantMessage = useCallback((content, extra = {}) => {
+    setMessages((prev) => [...prev, { role: "assistant", content, ...extra }]);
+  }, []);
+
+  const completeWithFollowUp = useCallback((content, extra = {}) => {
+    setMessages((prev) => [
+      ...prev,
+      { role: "assistant", content, ...extra },
+      { role: "assistant", content: FOLLOW_UP_PROMPT, followUp: true },
+    ]);
+    setAwaitingFollowUp(true);
+  }, []);
+
+  const resetToStart = useCallback(() => {
+    setMessages([initialMessage]);
+    setShowQuickReplies(true);
+    setBookingStep(null);
+    setBookingData({ name: "", date: "", phone: "" });
+    setAwaitingFollowUp(false);
+    setChatClosed(false);
+    setInput("");
+  }, [initialMessage, businessName]);
+
+  const sendMessage = async (text) => {
+    const trimmed = text.trim();
+    if (!trimmed || isTyping || awaitingFollowUp || chatClosed) return;
+
+    const userMessage = { role: "user", content: trimmed };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setShowQuickReplies(false);
+
+    if (bookingStep === "name") {
+      setBookingData((d) => ({ ...d, name: trimmed }));
+      setBookingStep("date");
+      addAssistantMessage("Great! What date works best for you?");
+      return;
+    }
+    if (bookingStep === "date") {
+      setBookingData((d) => ({ ...d, date: trimmed }));
+      setBookingStep("phone");
+      addAssistantMessage("Thanks! What's the best phone number to reach you?");
+      return;
+    }
+    if (bookingStep === "phone") {
+      const confirmed = { ...bookingData, phone: trimmed };
+      setBookingStep(null);
+      setBookingData({ name: "", date: "", phone: "" });
+      triggerCelebrate();
+      completeWithFollowUp(
+        `You're all set, ${confirmed.name}! We've scheduled your visit for ${confirmed.date}. We'll call you at ${confirmed.phone} if we need anything else. See you then!`
+      );
+      return;
+    }
+    if (isBookingIntent(trimmed)) {
+      setBookingData({ name: "", date: "", phone: "" });
+      setBookingStep("name");
+      addAssistantMessage("I'd be happy to help you book an appointment! Let's start with your full name.");
+      return;
+    }
+    if (isPaymentIntent(trimmed)) {
+      completeWithFollowUp(pricingInfo, { payButtonUrl: payNowUrl || undefined });
+      return;
+    }
+    if (isTalkToSomeoneIntent(trimmed)) {
+      completeWithFollowUp(getSupportFallbackMessage());
+      return;
+    }
+
+    const nextMessages = [...messages, userMessage];
+    setIsTyping(true);
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: nextMessages, businessName, businessInfo }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Request failed");
+
+      const assistantReplies = [{ role: "assistant", content: data.message }];
+      if (needsSupportFallback(data.message)) {
+        assistantReplies.push({ role: "assistant", content: getSupportFallbackMessage() });
+      }
+      setMessages((prev) => [
+        ...prev,
+        ...assistantReplies,
+        { role: "assistant", content: FOLLOW_UP_PROMPT, followUp: true },
+      ]);
+      setAwaitingFollowUp(true);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Sorry, something went wrong on our end. Please try again in a moment." },
+      ]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const inputPlaceholder = chatClosed
+    ? "Chat ended"
+    : awaitingFollowUp
+      ? "Choose an option above…"
+      : bookingStep === "name"
+        ? "Your full name…"
+        : bookingStep === "date"
+          ? "Preferred date…"
+          : bookingStep === "phone"
+            ? "Your phone number…"
+            : "Type your message…";
+
+  const replies = quickReplies.filter(Boolean).slice(0, 8);
+  const positionClass = embedded
+    ? "relative flex flex-col items-stretch"
+    : "fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4";
+
+  return (
+    <div className={`${positionClass} ${className}`}>
+      {isOpen && (
+        <div
+          className={`flex flex-col overflow-hidden rounded-2xl border bg-white shadow-2xl ${
+            embedded
+              ? "h-[480px] w-full border-emerald-100 shadow-emerald-900/10"
+              : "h-[min(520px,calc(100vh-8rem))] w-[min(380px,calc(100vw-2rem))] border-emerald-100 shadow-emerald-900/10"
+          }`}
+          role="dialog"
+          aria-label={`Chat with ${businessName}`}
+        >
+          <header
+            className="flex items-center justify-between px-4 py-3.5 text-white"
+            style={{ background: `linear-gradient(to right, ${brandColor}, ${brandDark})` }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/25">
+                <MascotCharacter industry={industry} animation={mascotAnimation} size={40} />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold leading-tight">{businessName}</h2>
+                <p className="text-xs text-white/90">
+                  {displayMascotName !== businessName ? `${displayMascotName} · ` : ""}
+                  Online
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="rounded-lg p-1.5 text-white/90 transition hover:bg-white/20"
+              aria-label="Close chat"
+            >
+              <CloseIcon />
+            </button>
+          </header>
+
+          <div className="flex-1 overflow-y-auto bg-slate-50/80 px-4 py-4">
+            <div className="flex flex-col gap-3">
+              {messages.map((msg, i) => (
+                <div key={`${msg.role}-${i}`} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                      msg.role === "user"
+                        ? "rounded-br-md text-white"
+                        : "rounded-bl-md border border-slate-100 bg-white text-slate-700 shadow-sm"
+                    }`}
+                    style={msg.role === "user" ? { backgroundColor: brandColor } : undefined}
+                  >
+                    {msg.role === "user" ? (
+                      msg.content
+                    ) : (
+                      <MessageContent
+                        msg={msg}
+                        showFollowUpButtons={awaitingFollowUp}
+                        onFollowUpYes={resetToStart}
+                        onFollowUpNo={() => {
+                          setAwaitingFollowUp(false);
+                          setChatClosed(true);
+                          addAssistantMessage(getClosingMessage(), { startNewChat: true });
+                        }}
+                        onStartNewChat={resetToStart}
+                        brandColor={brandColor}
+                      />
+                    )}
+                  </div>
+                </div>
+              ))}
+              {isTyping && <TypingIndicator brandColor={brandColor} />}
+              <div ref={messagesEndRef} />
+            </div>
+          </div>
+
+          {showQuickReplies && !bookingStep && !awaitingFollowUp && !chatClosed && replies.length > 0 && (
+            <div className="grid grid-cols-2 gap-2 border-t border-emerald-50 bg-white p-3">
+              {replies.map((label) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => sendMessage(label)}
+                  disabled={isTyping}
+                  className="rounded-xl border px-3 py-2.5 text-left text-xs font-medium leading-snug transition disabled:opacity-50"
+                  style={{
+                    borderColor: `${brandColor}35`,
+                    backgroundColor: `${brandColor}10`,
+                    color: shadeHex(brandColor, -50),
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {bookingStep && !awaitingFollowUp && !chatClosed && (
+            <div className="border-t border-emerald-50 bg-white px-3 py-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setBookingStep(null);
+                  setBookingData({ name: "", date: "", phone: "" });
+                  addAssistantMessage("No problem — I've cancelled the booking. How else can I help you today?");
+                }}
+                disabled={isTyping}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-100 disabled:opacity-50"
+              >
+                Start Over
+              </button>
+            </div>
+          )}
+
+          <form onSubmit={(e) => { e.preventDefault(); sendMessage(input); }} className="flex items-end gap-2 border-t border-emerald-100 bg-white p-3">
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={inputPlaceholder}
+              disabled={isTyping || awaitingFollowUp || chatClosed}
+              className="flex-1 rounded-xl border px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:ring-2 disabled:opacity-60"
+              style={{ borderColor: `${brandColor}40`, backgroundColor: `${brandColor}08` }}
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || isTyping || awaitingFollowUp || chatClosed}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+              style={{ backgroundColor: brandColor }}
+              aria-label="Send message"
+            >
+              <SendIcon />
+            </button>
+          </form>
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setIsOpen((o) => !o)}
+        className={`flex items-center justify-center rounded-full text-white shadow-lg transition hover:scale-105 active:scale-95 ${
+          embedded ? "absolute bottom-4 right-4 h-14 w-14" : "h-14 w-14"
+        }`}
+        style={{
+          background: `linear-gradient(to bottom right, ${brandColor}, ${brandDark})`,
+          boxShadow: `0 10px 25px ${brandColor}40`,
+        }}
+        aria-label={isOpen ? "Close chat" : "Open chat"}
+        aria-expanded={isOpen}
+      >
+        {isOpen ? (
+          <CloseIcon />
+        ) : (
+          <span className="flex items-center justify-center">
+            <MascotCharacter industry={industry} animation={mascotAnimation} size={36} />
+          </span>
+        )}
+      </button>
+    </div>
+  );
+}
