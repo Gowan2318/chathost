@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import AddressInput from "../../components/builder/AddressInput";
 import BrandColorPicker from "../../components/builder/BrandColorPicker";
+import ChatThemeSelector from "../../components/builder/ChatThemeSelector";
 import BusinessHoursEditor from "../../components/builder/BusinessHoursEditor";
 import { ErrorSummary, FormField, inputClassName } from "../../components/builder/FormField";
 import IndustrySelector from "../../components/builder/IndustrySelector";
@@ -45,6 +46,7 @@ const INITIAL = {
   supportEmail: "",
   payNowUrl: "",
   brandColor: "#D4AF37",
+  chatTheme: "light",
   quickReplies: [],
   customQA: [],
   mascotName: "",
@@ -102,6 +104,7 @@ export default function BuilderPage() {
       payNowUrl: form.payNowUrl,
       quickReplies: form.quickReplies.filter(Boolean).slice(0, 8),
       brandColor: form.brandColor,
+      chatTheme: form.chatTheme || "light",
       industry: form.industry || "other",
       mascotName: form.mascotName,
     }),
@@ -390,6 +393,11 @@ export default function BuilderPage() {
                 error={errors.brandColor}
                 isValid={fieldValid("brandColor", (f) => validateBrandColor(f.brandColor))}
               />
+              <ChatThemeSelector
+                value={form.chatTheme}
+                brandColor={form.brandColor}
+                onChange={(chatTheme) => update({ chatTheme })}
+              />
               <QuickRepliesEditor
                 industry={form.industry || "other"}
                 quickReplies={form.quickReplies}
@@ -467,7 +475,13 @@ export default function BuilderPage() {
               <p className="mb-6 text-center text-sm text-[#a3a3a3]">
                 This is how customers will see your chatbot on your website.
               </p>
-              <div className="relative mx-auto min-h-[520px] max-w-md overflow-hidden rounded-2xl border border-[#D4AF37]/25 bg-[#111111] p-4">
+              <div
+                className={`relative mx-auto min-h-[520px] max-w-md overflow-hidden rounded-2xl border border-[#D4AF37]/25 p-4 ${
+                  form.chatTheme === "glass"
+                    ? "bg-gradient-to-br from-slate-600 via-slate-800 to-slate-900"
+                    : "bg-[#111111]"
+                }`}
+              >
                 <ChatWidget key={JSON.stringify(chatConfig)} config={chatConfig} defaultOpen embedded />
               </div>
             </div>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MascotCharacter from "./mascots/MascotCharacter";
 import { shadeHex } from "../lib/color";
+import { resolveChatTheme } from "../lib/chat-themes";
 
 const BOOKING_PATTERN =
   /\b(book|booking|schedule|appointment|reserve|make an appointment)\b/i;
@@ -25,12 +26,12 @@ function needsSupportFallback(text) {
   return UNHELPFUL_AI_PATTERN.test(text);
 }
 
-function TypingIndicator({ brandColor }) {
+function TypingIndicator({ brandColor, theme }) {
   return (
     <div className="flex justify-start">
       <div
         className="flex items-center gap-1 rounded-2xl rounded-bl-md px-4 py-3"
-        style={{ backgroundColor: `${brandColor}18` }}
+        style={{ backgroundColor: theme.botBubble }}
       >
         {[0, 150, 300].map((delay) => (
           <span
@@ -79,6 +80,7 @@ function MessageContent({
   onFollowUpNo,
   onStartNewChat,
   brandColor,
+  theme,
 }) {
   return (
     <>
@@ -111,7 +113,12 @@ function MessageContent({
           <button
             type="button"
             onClick={onFollowUpNo}
-            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-100"
+            className="rounded-lg border px-3 py-2 text-xs font-medium transition opacity-90 hover:opacity-100"
+            style={{
+              borderColor: theme.secondaryButtonBorder,
+              backgroundColor: theme.secondaryButtonBg,
+              color: theme.secondaryButtonText,
+            }}
           >
             No, I&apos;m all set
           </button>
@@ -162,10 +169,12 @@ export default function ChatWidget({
     brandColor = "#059669",
     industry = "other",
     mascotName = "",
+    chatTheme = "light",
   } = config;
 
   const displayMascotName = mascotName || businessName;
   const brandDark = shadeHex(brandColor, -25);
+  const theme = resolveChatTheme(chatTheme, brandColor);
 
   const getSupportFallbackMessage = () =>
     `I want to make sure you get the best help! Please contact our team directly:
@@ -365,11 +374,18 @@ We're happy to assist you!`;
     <div className={`${positionClass} ${className}`}>
       {isOpen && (
         <div
-          className={`flex flex-col overflow-hidden rounded-2xl border bg-white shadow-2xl ${
+          className={`flex flex-col overflow-hidden rounded-2xl border shadow-2xl ${
             embedded
-              ? "h-[480px] w-full border-emerald-100 shadow-emerald-900/10"
-              : "h-[min(520px,calc(100vh-8rem))] w-[min(380px,calc(100vw-2rem))] border-emerald-100 shadow-emerald-900/10"
-          }`}
+              ? "h-[480px] w-full shadow-black/20"
+              : "h-[min(520px,calc(100vh-8rem))] w-[min(380px,calc(100vw-2rem))] shadow-black/30"
+          } ${theme.glass && embedded ? "backdrop-blur-xl" : ""}`}
+          style={{
+            background: theme.chatBackground,
+            borderColor: theme.panelBorder,
+            ...(theme.glass
+              ? { backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }
+              : {}),
+          }}
           role="dialog"
           aria-label={`Chat with ${businessName}`}
         >
@@ -399,17 +415,26 @@ We're happy to assist you!`;
             </button>
           </header>
 
-          <div className="flex-1 overflow-y-auto bg-slate-50/80 px-4 py-4">
+          <div
+            className="flex-1 overflow-y-auto px-4 py-4"
+            style={{ background: theme.messagesArea }}
+          >
             <div className="flex flex-col gap-3">
               {messages.map((msg, i) => (
                 <div key={`${msg.role}-${i}`} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                   <div
                     className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                      msg.role === "user"
-                        ? "rounded-br-md text-white"
-                        : "rounded-bl-md border border-slate-100 bg-white text-slate-700 shadow-sm"
+                      msg.role === "user" ? "rounded-br-md" : "rounded-bl-md shadow-sm"
                     }`}
-                    style={msg.role === "user" ? { backgroundColor: brandColor } : undefined}
+                    style={
+                      msg.role === "user"
+                        ? { backgroundColor: theme.userBubble, color: theme.userText }
+                        : {
+                            backgroundColor: theme.botBubble,
+                            color: theme.botText,
+                            border: `1px solid ${theme.panelBorder}`,
+                          }
+                    }
                   >
                     {msg.role === "user" ? (
                       msg.content
@@ -425,18 +450,25 @@ We're happy to assist you!`;
                         }}
                         onStartNewChat={resetToStart}
                         brandColor={brandColor}
+                        theme={theme}
                       />
                     )}
                   </div>
                 </div>
               ))}
-              {isTyping && <TypingIndicator brandColor={brandColor} />}
+              {isTyping && <TypingIndicator brandColor={brandColor} theme={theme} />}
               <div ref={messagesEndRef} />
             </div>
           </div>
 
           {showQuickReplies && !bookingStep && !awaitingFollowUp && !chatClosed && replies.length > 0 && (
-            <div className="grid grid-cols-2 gap-2 border-t border-emerald-50 bg-white p-3">
+            <div
+              className="grid grid-cols-2 gap-2 border-t p-3"
+              style={{
+                background: theme.quickReplyBackground,
+                borderColor: theme.footerBorder,
+              }}
+            >
               {replies.map((label) => (
                 <button
                   key={label}
@@ -457,7 +489,13 @@ We're happy to assist you!`;
           )}
 
           {bookingStep && !awaitingFollowUp && !chatClosed && (
-            <div className="border-t border-emerald-50 bg-white px-3 py-2.5">
+            <div
+              className="border-t px-3 py-2.5"
+              style={{
+                background: theme.footerBackground,
+                borderColor: theme.footerBorder,
+              }}
+            >
               <button
                 type="button"
                 onClick={() => {
@@ -466,14 +504,29 @@ We're happy to assist you!`;
                   addAssistantMessage("No problem — I've cancelled the booking. How else can I help you today?");
                 }}
                 disabled={isTyping}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-100 disabled:opacity-50"
+                className="w-full rounded-xl border px-3 py-2 text-xs font-medium transition opacity-90 hover:opacity-100 disabled:opacity-50"
+                style={{
+                  borderColor: theme.secondaryButtonBorder,
+                  backgroundColor: theme.secondaryButtonBg,
+                  color: theme.secondaryButtonText,
+                }}
               >
                 Start Over
               </button>
             </div>
           )}
 
-          <form onSubmit={(e) => { e.preventDefault(); sendMessage(input); }} className="flex items-end gap-2 border-t border-emerald-100 bg-white p-3">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              sendMessage(input);
+            }}
+            className="flex items-end gap-2 border-t p-3"
+            style={{
+              background: theme.footerBackground,
+              borderColor: theme.footerBorder,
+            }}
+          >
             <input
               ref={inputRef}
               type="text"
@@ -481,8 +534,13 @@ We're happy to assist you!`;
               onChange={(e) => setInput(e.target.value)}
               placeholder={inputPlaceholder}
               disabled={isTyping || awaitingFollowUp || chatClosed}
-              className="flex-1 rounded-xl border px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:ring-2 disabled:opacity-60"
-              style={{ borderColor: `${brandColor}40`, backgroundColor: `${brandColor}08` }}
+              className="flex-1 rounded-xl border px-4 py-2.5 text-sm outline-none transition focus:ring-2 focus:ring-offset-0 disabled:opacity-60"
+              style={{
+                borderColor: theme.panelBorder,
+                backgroundColor: theme.inputBackground,
+                color: theme.inputText,
+                ...(theme.glass ? { backdropFilter: "blur(8px)" } : {}),
+              }}
             />
             <button
               type="submit"
