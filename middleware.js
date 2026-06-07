@@ -7,7 +7,7 @@ export function middleware(request) {
 
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/coming-soon")) {
+  if (pathname.startsWith("/coming-soon") || pathname.startsWith("/success")) {
     return NextResponse.next();
   }
 
