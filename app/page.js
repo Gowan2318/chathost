@@ -46,39 +46,37 @@ const FEATURES = [
 
 const PLANS = [
   {
-    name: "Starter",
-    price: 49,
-    description: "Perfect for single-location businesses getting started with AI chat.",
+    name: "Basic Plan",
+    price: 40,
+    discountedPrice: 32,
+    description: "Everything you need to answer customers around the clock.",
+    checkoutUrl: "https://buy.stripe.com/test_8x2dR8ePrdylcO8a99c7u01?prefilled_promo_code=FOUNDING20",
     features: [
-      "1 chatbot widget",
-      "Appointment booking flow",
-      "Up to 500 AI messages/mo",
+      "AI chatbot on their website",
+      "Answers customer questions 24/7",
+      "8 quick reply buttons",
+      "Support contact fallback",
+      "Loop back conversation feature",
+      "Self service builder setup in 15 minutes",
       "Email support",
     ],
   },
   {
-    name: "Pro",
-    price: 97,
+    name: "Pro Plan",
+    price: 60,
+    discountedPrice: 48,
     popular: true,
-    description: "For growing businesses that need more customization and volume.",
+    description: "Full customization, booking, and payments — built for growth.",
+    checkoutUrl: "https://buy.stripe.com/test_fZu28q22FdylbK4gxxc7u02?prefilled_promo_code=FOUNDING20",
     features: [
-      "Everything in Starter",
-      "Custom brand colors & mascot",
-      "Payment link integration",
-      "Up to 2,000 AI messages/mo",
+      "Everything in Basic",
+      "Custom mascot character with their name",
+      "Appointment booking flow",
+      "Payment guidance with Pay Now button",
+      "Custom brand color",
+      "Dark and light theme choice",
       "Priority support",
-    ],
-  },
-  {
-    name: "Premium",
-    price: 197,
-    description: "White-glove setup for agencies and multi-location brands.",
-    features: [
-      "Everything in Pro",
-      "Unlimited quick replies",
-      "Multiple team members",
-      "Unlimited AI messages",
-      "Dedicated onboarding call",
+      "Monthly performance report",
     ],
   },
 ];
@@ -276,6 +274,12 @@ export default function HomePage() {
       <section id="pricing" className="relative px-6 py-24">
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#D4AF37]/5 via-transparent to-transparent" />
         <div className="relative mx-auto max-w-6xl">
+          <div className="mb-10 rounded-xl bg-gradient-to-r from-[#D4AF37] to-[#F0D060] px-6 py-4 text-center shadow-lg shadow-[#D4AF37]/20">
+            <p className="text-sm font-bold text-[#0A0A0A] sm:text-base">
+              🎉 Founding Member Offer — First 100 spots get 20% off forever! Discount automatically
+              applied at checkout.
+            </p>
+          </div>
           <div className="mb-14 text-center">
             <p className="text-sm font-semibold uppercase tracking-widest text-[#D4AF37]">Pricing</p>
             <h2 className="mt-3 text-3xl font-bold text-white sm:text-4xl">
@@ -283,7 +287,7 @@ export default function HomePage() {
             </h2>
             <p className="mt-4 text-[#a3a3a3]">Premium tools. Transparent pricing. Cancel anytime.</p>
           </div>
-          <div className="grid gap-8 lg:grid-cols-3">
+          <div className="mx-auto grid max-w-4xl gap-8 lg:grid-cols-2">
             {PLANS.map((plan) => (
               <div
                 key={plan.name}
@@ -303,12 +307,23 @@ export default function HomePage() {
                 )}
                 <h3 className="text-xl font-bold text-white">{plan.name}</h3>
                 <p className="mt-2 text-sm text-[#a3a3a3]">{plan.description}</p>
-                <p className="mt-8">
-                  <span className="bg-gradient-to-r from-[#D4AF37] to-[#F0D060] bg-clip-text text-5xl font-bold text-transparent">
-                    ${plan.price}
-                  </span>
-                  <span className="text-[#a3a3a3]">/mo</span>
-                </p>
+                <div className="mt-8">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-lg text-[#666666] line-through">
+                      ${plan.price}/mo
+                    </span>
+                    <span className="rounded-full bg-[#D4AF37] px-2.5 py-0.5 text-xs font-bold text-[#0A0A0A]">
+                      20% OFF
+                    </span>
+                  </div>
+                  <p className="mt-2">
+                    <span className="bg-gradient-to-r from-[#D4AF37] to-[#F0D060] bg-clip-text text-5xl font-bold text-transparent">
+                      ${plan.discountedPrice}
+                    </span>
+                    <span className="text-[#a3a3a3]">/mo</span>
+                  </p>
+                  <p className="mt-2 text-sm text-[#a3a3a3]">with code FOUNDING20</p>
+                </div>
                 <ul className="mt-8 flex-1 space-y-4 text-sm text-[#a3a3a3]">
                   {plan.features.map((f) => (
                     <li key={f} className="flex items-start gap-3">
@@ -319,8 +334,10 @@ export default function HomePage() {
                     </li>
                   ))}
                 </ul>
-                <Link
-                  href="/builder"
+                <a
+                  href={plan.checkoutUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className={`mt-10 block rounded-xl py-3.5 text-center text-sm font-bold transition ${
                     plan.popular
                       ? "bg-[#D4AF37] text-[#0A0A0A] hover:bg-[#F0D060] shadow-lg shadow-[#D4AF37]/20"
@@ -328,7 +345,7 @@ export default function HomePage() {
                   }`}
                 >
                   Get Started
-                </Link>
+                </a>
               </div>
             ))}
           </div>
