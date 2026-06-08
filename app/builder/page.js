@@ -12,6 +12,7 @@ import QuickRepliesEditor from "../../components/builder/QuickRepliesEditor";
 import ChatWidget from "../../components/ChatWidget";
 import MascotCharacter from "../../components/mascots/MascotCharacter";
 import { composeBusinessInfo } from "../../lib/builder-form";
+import { buildChatbotConfig, buildEmbedCode } from "../../lib/chatbot-config";
 import { createDefaultBusinessHours } from "../../lib/builder-hours";
 import { getIndustryQuickReplySuggestions } from "../../lib/builder-quick-replies";
 import {
@@ -28,6 +29,7 @@ import {
   validateWebsiteUrl,
 } from "../../lib/builder-validation";
 import { INDUSTRY_LABELS } from "../../lib/industries";
+import { getSupabaseClient } from "../../lib/supabase";
 
 const TOTAL_STEPS = 6;
 
@@ -88,6 +90,10 @@ export default function BuilderPage() {
   const [attemptedStep, setAttemptedStep] = useState(null);
   const [errors, setErrors] = useState({});
   const [summary, setSummary] = useState([]);
+  const [clientId, setClientId] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [copied, setCopied] = useState(false);
 
   const showValidation = attemptedStep === step;
 
@@ -135,7 +141,7 @@ export default function BuilderPage() {
     setStep((s) => Math.max(1, s - 1));
   };
 
-  const handleStripeCheckout = () => {
+  const handleStripeCheckout = async () => {
     const result = validateStep(6, form);
     if (!result.valid) {
       setAttemptedStep(6);
@@ -143,11 +149,55 @@ export default function BuilderPage() {
       setSummary(result.summary);
       return;
     }
-    const params = new URLSearchParams({
-      client_reference_id: form.businessName.slice(0, 40),
-      prefilled_email: form.supportEmail,
-    });
-    window.open(`${STRIPE_PAYMENT_LINK}?${params.toString()}`, "_blank", "noopener,noreferrer");
+
+    setSaveError("");
+    setIsSaving(true);
+
+    try {
+      const supabase = getSupabaseClient();
+      const newClientId = clientId || crypto.randomUUID();
+      const config = buildChatbotConfig(form, businessInfo);
+
+      const { error } = await supabase.from("chatbots").upsert(
+        {
+          client_id: newClientId,
+          config,
+        },
+        { onConflict: "client_id" }
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      setClientId(newClientId);
+
+      const params = new URLSearchParams({
+        client_reference_id: newClientId,
+        prefilled_email: form.supportEmail,
+      });
+      window.open(`${STRIPE_PAYMENT_LINK}?${params.toString()}`, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      console.error("Failed to save chatbot config:", err);
+      setSaveError(
+        err?.message || "Could not save your chatbot configuration. Please try again."
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const embedCode = clientId ? buildEmbedCode(clientId) : "";
+
+  const handleCopyEmbed = async () => {
+    if (!embedCode) return;
+    try {
+      await navigator.clipboard.writeText(embedCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setSaveError("Could not copy embed code. Please copy it manually.");
+    }
   };
 
   const descLen = form.businessDescription.trim().length;
@@ -524,10 +574,33 @@ export default function BuilderPage() {
               <button
                 type="button"
                 onClick={handleStripeCheckout}
-                className="w-full rounded-xl bg-[#635bff] px-6 py-4 text-base font-semibold text-white shadow-lg transition hover:bg-[#5851e0]"
+                disabled={isSaving}
+                className="w-full rounded-xl bg-[#635bff] px-6 py-4 text-base font-semibold text-white shadow-lg transition hover:bg-[#5851e0] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Subscribe with Stripe
+                {isSaving ? "Saving..." : "Subscribe with Stripe"}
               </button>
+              {saveError && <p className="text-sm text-red-400">{saveError}</p>}
+              {clientId && (
+                <div className="rounded-2xl border border-[#D4AF37]/30 bg-[#111111] p-5 text-left">
+                  <p className="text-sm font-semibold text-[#F0D060]">Your embed code</p>
+                  <p className="mt-2 text-xs text-[#a3a3a3]">
+                    Paste this snippet before the closing <code className="text-[#F0D060]">&lt;/body&gt;</code>{" "}
+                    tag on your website.
+                  </p>
+                  <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start">
+                    <pre className="flex-1 overflow-x-auto rounded-xl border border-white/10 bg-[#0A0A0A] p-4 text-left text-xs leading-relaxed text-[#F0D060]">
+                      {embedCode}
+                    </pre>
+                    <button
+                      type="button"
+                      onClick={handleCopyEmbed}
+                      className="shrink-0 rounded-xl border border-[#D4AF37]/40 px-4 py-2.5 text-sm font-semibold text-[#F0D060] transition hover:bg-[#D4AF37]/10"
+                    >
+                      {copied ? "Copied!" : "Copy"}
+                    </button>
+                  </div>
+                </div>
+              )}
               <p className="text-xs text-[#a3a3a3]">
                 Set <code className="rounded bg-[#1A1A1A] px-1 text-[#F0D060]">NEXT_PUBLIC_STRIPE_PAYMENT_LINK</code>{" "}
                 in your environment for your live Stripe Payment Link.
