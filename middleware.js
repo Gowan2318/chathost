@@ -7,7 +7,11 @@ export function middleware(request) {
 
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/coming-soon") || pathname.startsWith("/success")) {
+  if (
+    pathname.startsWith("/coming-soon") ||
+    pathname.startsWith("/success") ||
+    pathname.startsWith("/test-widget")
+  ) {
     return NextResponse.next();
   }
 
@@ -27,5 +31,7 @@ export function middleware(request) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:html|js|css|png|jpg|jpeg|gif|webp|svg|ico|json|txt|xml|woff|woff2|ttf|map)$).*)",
+  ],
 };
