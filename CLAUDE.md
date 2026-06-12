@@ -67,4 +67,28 @@ This project uses **Next.js 16.2.6**, which has breaking changes from earlier ve
 
 ## Git Workflow
 
-Every meaningful change must be committed and pushed to the remote. Commit message style: imperative mood, concise subject (e.g. `Fix rate limit cleanup interval`, `Add glassmorphism chat theme`).
+**Commit and push to GitHub after every meaningful unit of work — no exceptions.** The user depends on this history to roll back if anything breaks. Do not batch work across multiple tasks before committing; commit as you go.
+
+- Remote: `https://github.com/Gowan2318/chathost.git` (account: Gowan2318)
+- Branch: `main`
+- `gh` CLI is at `C:\Program Files\GitHub CLI` — add to PATH before use: `$env:PATH = $env:PATH + ";C:\Program Files\GitHub CLI"`
+- Commit message style: imperative mood, concise subject (e.g. `Fix rate limit cleanup interval`, `Add glassmorphism chat theme`)
+
+### When to commit
+
+Commit after each of these — do not wait until everything is done:
+- A new feature or page is added
+- A bug is fixed
+- A component or utility is created or meaningfully changed
+- Any configuration or dependency change
+
+### Commit sequence
+
+```powershell
+# Add to PATH if needed
+$env:PATH = $env:PATH + ";C:\Program Files\GitHub CLI"
+
+git add <specific files>
+git commit -m "Short imperative description of what changed"
+git push origin main
+```
