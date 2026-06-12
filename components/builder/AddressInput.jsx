@@ -3,12 +3,14 @@
 import { formatAddressLine } from "../../lib/builder-address";
 import { US_STATES } from "../../lib/us-states";
 import { FormField, inputClassName } from "./FormField";
+import FieldTooltip from "./FieldTooltip";
 
 export default function AddressInput({
   address,
   onChange,
   showValidation = false,
   errors = {},
+  tooltip,
 }) {
   const update = (patch) => onChange({ ...address, ...patch });
 
@@ -30,7 +32,10 @@ export default function AddressInput({
 
   return (
     <div className="space-y-4 rounded-xl border border-white/10 bg-[#111111] p-4">
-      <p className="text-sm font-medium text-[#D4AF37]">Business address</p>
+      <p className="flex items-center gap-1.5 text-sm font-medium text-[#D4AF37]">
+        <span>Business address</span>
+        {tooltip && <FieldTooltip text={tooltip} />}
+      </p>
 
       <FormField
         label="Street address"

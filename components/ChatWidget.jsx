@@ -96,6 +96,17 @@ function MessageContent({
           Pay Now
         </a>
       )}
+      {msg.bookButtonUrl && (
+        <a
+          href={msg.bookButtonUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+          style={{ backgroundColor: brandColor }}
+        >
+          📅 Book Now
+        </a>
+      )}
       {msg.followUp && showFollowUpButtons && (
         <div className="mt-3 flex flex-col gap-2">
           <button
@@ -172,6 +183,8 @@ export default function ChatWidget({
     chatTheme = "light",
   } = config;
 
+  const bookingUrl = config.booking_url || config.bookingUrl || "";
+
   const displayMascotName = mascotName || businessName;
   const brandDark = shadeHex(brandColor, -25);
   const theme = resolveChatTheme(chatTheme, brandColor);
@@ -199,12 +212,11 @@ We're happy to assist you!`;
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showQuickReplies, setShowQuickReplies] = useState(true);
-  const [bookingStep, setBookingStep] = useState(null);
-  const [bookingData, setBookingData] = useState({ name: "", date: "", phone: "" });
   const [awaitingFollowUp, setAwaitingFollowUp] = useState(false);
   const [chatClosed, setChatClosed] = useState(false);
   const [mascotAnimation, setMascotAnimation] = useState("idle");
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
 
   const pricingInfo =
@@ -214,8 +226,6 @@ We're happy to assist you!`;
   useEffect(() => {
     setMessages([initialMessage]);
     setShowQuickReplies(true);
-    setBookingStep(null);
-    setBookingData({ name: "", date: "", phone: "" });
     setAwaitingFollowUp(false);
     setChatClosed(false);
     setInput("");
@@ -223,7 +233,12 @@ We're happy to assist you!`;
   }, [businessName, businessInfo, supportPhone, supportEmail]);
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+      return;
+    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, []);
 
   useEffect(() => {
@@ -269,12 +284,23 @@ We're happy to assist you!`;
   const resetToStart = useCallback(() => {
     setMessages([initialMessage]);
     setShowQuickReplies(true);
-    setBookingStep(null);
-    setBookingData({ name: "", date: "", phone: "" });
     setAwaitingFollowUp(false);
     setChatClosed(false);
     setInput("");
-  }, [initialMessage, businessName]);
+  }, [initialMessage]);
+
+  const handleBooking = useCallback(() => {
+    if (bookingUrl) {
+      completeWithFollowUp(
+        "I'd love to help you schedule! Click below to see our available times and book instantly 📅",
+        { bookButtonUrl: bookingUrl }
+      );
+    } else {
+      completeWithFollowUp(
+        `To book an appointment please call us at ${supportPhone} or email ${supportEmail}`
+      );
+    }
+  }, [bookingUrl, supportPhone, supportEmail, completeWithFollowUp]);
 
   const sendMessage = async (text) => {
     const trimmed = text.trim();
@@ -285,32 +311,8 @@ We're happy to assist you!`;
     setInput("");
     setShowQuickReplies(false);
 
-    if (bookingStep === "name") {
-      setBookingData((d) => ({ ...d, name: trimmed }));
-      setBookingStep("date");
-      addAssistantMessage("Great! What date works best for you?");
-      return;
-    }
-    if (bookingStep === "date") {
-      setBookingData((d) => ({ ...d, date: trimmed }));
-      setBookingStep("phone");
-      addAssistantMessage("Thanks! What's the best phone number to reach you?");
-      return;
-    }
-    if (bookingStep === "phone") {
-      const confirmed = { ...bookingData, phone: trimmed };
-      setBookingStep(null);
-      setBookingData({ name: "", date: "", phone: "" });
-      triggerCelebrate();
-      completeWithFollowUp(
-        `You're all set, ${confirmed.name}! We've scheduled your visit for ${confirmed.date}. We'll call you at ${confirmed.phone} if we need anything else. See you then!`
-      );
-      return;
-    }
     if (isBookingIntent(trimmed)) {
-      setBookingData({ name: "", date: "", phone: "" });
-      setBookingStep("name");
-      addAssistantMessage("I'd be happy to help you book an appointment! Let's start with your full name.");
+      handleBooking();
       return;
     }
     if (isPaymentIntent(trimmed)) {
@@ -357,13 +359,7 @@ We're happy to assist you!`;
     ? "Chat ended"
     : awaitingFollowUp
       ? "Choose an option above…"
-      : bookingStep === "name"
-        ? "Your full name…"
-        : bookingStep === "date"
-          ? "Preferred date…"
-          : bookingStep === "phone"
-            ? "Your phone number…"
-            : "Type your message…";
+      : "Type your message…";
 
   const replies = quickReplies.filter(Boolean).slice(0, 8);
   const positionClass = embedded
@@ -416,6 +412,7 @@ We're happy to assist you!`;
           </header>
 
           <div
+            ref={messagesContainerRef}
             className="flex-1 overflow-y-auto px-4 py-4"
             style={{ background: theme.messagesArea }}
           >
@@ -461,7 +458,7 @@ We're happy to assist you!`;
             </div>
           </div>
 
-          {showQuickReplies && !bookingStep && !awaitingFollowUp && !chatClosed && replies.length > 0 && (
+          {showQuickReplies && !awaitingFollowUp && !chatClosed && replies.length > 0 && (
             <div
               className="grid grid-cols-2 gap-2 border-t p-3"
               style={{
@@ -485,34 +482,6 @@ We're happy to assist you!`;
                   {label}
                 </button>
               ))}
-            </div>
-          )}
-
-          {bookingStep && !awaitingFollowUp && !chatClosed && (
-            <div
-              className="border-t px-3 py-2.5"
-              style={{
-                background: theme.footerBackground,
-                borderColor: theme.footerBorder,
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  setBookingStep(null);
-                  setBookingData({ name: "", date: "", phone: "" });
-                  addAssistantMessage("No problem — I've cancelled the booking. How else can I help you today?");
-                }}
-                disabled={isTyping}
-                className="w-full rounded-xl border px-3 py-2 text-xs font-medium transition opacity-90 hover:opacity-100 disabled:opacity-50"
-                style={{
-                  borderColor: theme.secondaryButtonBorder,
-                  backgroundColor: theme.secondaryButtonBg,
-                  color: theme.secondaryButtonText,
-                }}
-              >
-                Start Over
-              </button>
             </div>
           )}
 
@@ -543,7 +512,8 @@ We're happy to assist you!`;
               }}
             />
             <button
-              type="submit"
+              type="button"
+              onClick={() => sendMessage(input)}
               disabled={!input.trim() || isTyping || awaitingFollowUp || chatClosed}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
               style={{ backgroundColor: brandColor }}

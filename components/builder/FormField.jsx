@@ -1,5 +1,7 @@
 "use client";
 
+import FieldTooltip from "./FieldTooltip";
+
 function CheckIcon() {
   return (
     <span
@@ -37,6 +39,7 @@ export function FormField({
   children,
   hint,
   counter,
+  tooltip,
 }) {
   const showError = showValidation && error;
   const showValid = showValidation && isValid && !error;
@@ -44,8 +47,9 @@ export function FormField({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between gap-2">
-        <label htmlFor={htmlFor} className="text-sm font-medium text-[#a3a3a3]">
-          {label}
+        <label htmlFor={htmlFor} className="flex items-center gap-1.5 text-sm font-medium text-[#a3a3a3]">
+          <span>{label}</span>
+          {tooltip && <FieldTooltip text={tooltip} />}
         </label>
         <div className="flex items-center gap-2">
           {counter}

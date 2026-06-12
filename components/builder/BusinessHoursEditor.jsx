@@ -1,8 +1,9 @@
 "use client";
 
 import { TIME_OPTIONS, WEEKDAYS } from "../../lib/builder-hours";
+import FieldTooltip from "./FieldTooltip";
 
-export default function BusinessHoursEditor({ hours, onChange }) {
+export default function BusinessHoursEditor({ hours, onChange, tooltip }) {
   const updateDay = (key, patch) => {
     onChange({
       ...hours,
@@ -12,7 +13,10 @@ export default function BusinessHoursEditor({ hours, onChange }) {
 
   return (
     <div className="space-y-3">
-      <p className="text-sm font-medium text-[#a3a3a3]">Business hours</p>
+      <p className="flex items-center gap-1.5 text-sm font-medium text-[#a3a3a3]">
+        <span>Business hours</span>
+        {tooltip && <FieldTooltip text={tooltip} />}
+      </p>
       <div className="space-y-2 rounded-xl border border-white/10 bg-[#111111] p-3">
         {WEEKDAYS.map((day) => {
           const slot = hours[day.key];

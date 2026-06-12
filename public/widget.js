@@ -9,6 +9,18 @@
   var UNHELPFUL_AI_PATTERN =
     /\b(i(?:'m| am) not sure|i don(?:'t| not) know|cannot help|can't help|can not help|unable to help|please contact us|please call us|reach out to us|contact us directly|call us directly|don't have (?:that |those )?information|do not have (?:that |those )?information|outside (?:of )?my (?:knowledge|ability)|not able to (?:help|answer)|unable to (?:answer|assist))\b/i;
 
+  var MASCOT_SRC = {
+    dental: "/mascots/dental.png",
+    gym: "/mascots/gym.png",
+    salon: "/mascots/salon.png",
+    restaurant: "/mascots/restaurant.png",
+    real_estate: "/mascots/realestate.png",
+    law: "/mascots/law.png",
+    barber: "/mascots/barber.png",
+    lawn: "/mascots/lawncare.png",
+    other: "/mascots/other.png",
+  };
+
   var THEMES = {
     light: {
       chatBackground: "#ffffff",
@@ -144,6 +156,10 @@
     var brandColor = config.brandColor || "#D4AF37";
     var brandDark = shadeHex(brandColor, -25);
     var theme = resolveTheme(config.chatTheme || "light", brandColor);
+    var industry = config.mascotIndustry || config.industry || "other";
+    var mascotName = config.mascotName || "";
+    var displayMascotName = mascotName || businessName;
+    var mascotUrl = baseUrl + (MASCOT_SRC[industry] || MASCOT_SRC.other);
 
     var FOLLOW_UP =
       "Is there anything else I can help you with today? \uD83D\uDE0A";
@@ -213,6 +229,9 @@
       "," +
       brandDark +
       ")}" +
+      ".vch-header-left{display:flex;align-items:center;gap:12px}" +
+      ".vch-mascot-wrap{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}" +
+      ".vch-mascot{width:36px;height:36px;object-fit:contain}" +
       ".vch-title{margin:0;font-size:15px;font-weight:600}" +
       ".vch-subtitle{margin:2px 0 0;font-size:12px;opacity:0.9}" +
       ".vch-close{border:none;background:transparent;color:#fff;cursor:pointer;border-radius:8px;padding:6px;display:flex}" +
@@ -312,7 +331,9 @@
     root.innerHTML =
       '<div class="vch-panel" role="dialog">' +
       '<header class="vch-header">' +
-      "<div><h2 class=\"vch-title\"></h2><p class=\"vch-subtitle\">Online</p></div>" +
+      '<div class="vch-header-left">' +
+      '<div class="vch-mascot-wrap"><img class="vch-mascot" src="" alt="" /></div>' +
+      "<div><h2 class=\"vch-title\"></h2><p class=\"vch-subtitle\"></p></div></div>" +
       '<button type="button" class="vch-close" aria-label="Close chat">' +
       '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>' +
       "</button></header>" +
@@ -330,6 +351,8 @@
 
     var panel = root.querySelector(".vch-panel");
     var titleEl = root.querySelector(".vch-title");
+    var subtitleEl = root.querySelector(".vch-subtitle");
+    var mascotImgEl = root.querySelector(".vch-mascot");
     var messagesEl = root.querySelector(".vch-messages");
     var quickEl = root.querySelector(".vch-quick");
     var formEl = root.querySelector(".vch-footer");
@@ -339,6 +362,11 @@
     var closeBtn = root.querySelector(".vch-close");
 
     titleEl.textContent = businessName;
+    subtitleEl.textContent =
+      (displayMascotName !== businessName ? displayMascotName + " \u00B7 " : "") +
+      "Online";
+    mascotImgEl.src = mascotUrl;
+    mascotImgEl.alt = displayMascotName + " mascot";
     panel.setAttribute("aria-label", "Chat with " + businessName);
 
     function updateInput() {

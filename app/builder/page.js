@@ -12,7 +12,7 @@ import QuickRepliesEditor from "../../components/builder/QuickRepliesEditor";
 import ChatWidget from "../../components/ChatWidget";
 import MascotCharacter from "../../components/mascots/MascotCharacter";
 import { composeBusinessInfo } from "../../lib/builder-form";
-import { buildChatbotConfig, buildEmbedCode } from "../../lib/chatbot-config";
+import { buildChatbotConfig } from "../../lib/chatbot-config";
 import { createDefaultBusinessHours } from "../../lib/builder-hours";
 import { getIndustryQuickReplySuggestions } from "../../lib/builder-quick-replies";
 import {
@@ -33,9 +33,18 @@ import { getSupabaseClient } from "../../lib/supabase";
 
 const TOTAL_STEPS = 6;
 
-const STRIPE_PAYMENT_LINK =
-  process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK ||
-  "https://buy.stripe.com/test";
+const STRIPE_CHECKOUT_LINKS = {
+  basic:
+    "https://buy.stripe.com/test_8x2dR8ePrdylcO8a99c7u01?prefilled_promo_code=FOUNDING20",
+  pro: "https://buy.stripe.com/test_fZu28q22FdylbK4gxxc7u02?prefilled_promo_code=FOUNDING20",
+};
+
+function buildStripeCheckoutUrl(baseLink, clientReferenceId, email) {
+  const url = new URL(baseLink);
+  url.searchParams.set("client_reference_id", clientReferenceId);
+  url.searchParams.set("prefilled_email", email);
+  return url.toString();
+}
 
 const INITIAL = {
   businessName: "",
@@ -46,6 +55,7 @@ const INITIAL = {
   address: { street: "", city: "", state: "", zip: "" },
   supportPhone: "",
   supportEmail: "",
+  bookingUrl: "",
   payNowUrl: "",
   brandColor: "#D4AF37",
   chatTheme: "light",
@@ -90,10 +100,9 @@ export default function BuilderPage() {
   const [attemptedStep, setAttemptedStep] = useState(null);
   const [errors, setErrors] = useState({});
   const [summary, setSummary] = useState([]);
-  const [clientId, setClientId] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState("pro");
 
   const showValidation = attemptedStep === step;
 
@@ -155,7 +164,7 @@ export default function BuilderPage() {
 
     try {
       const supabase = getSupabaseClient();
-      const newClientId = clientId || crypto.randomUUID();
+      const newClientId = crypto.randomUUID();
       const config = buildChatbotConfig(form, businessInfo);
 
       const { error } = await supabase.from("chatbots").upsert(
@@ -170,13 +179,12 @@ export default function BuilderPage() {
         throw error;
       }
 
-      setClientId(newClientId);
-
-      const params = new URLSearchParams({
-        client_reference_id: newClientId,
-        prefilled_email: form.supportEmail,
-      });
-      window.open(`${STRIPE_PAYMENT_LINK}?${params.toString()}`, "_blank", "noopener,noreferrer");
+      const checkoutUrl = buildStripeCheckoutUrl(
+        STRIPE_CHECKOUT_LINKS[selectedPlan],
+        newClientId,
+        form.supportEmail
+      );
+      window.location.assign(checkoutUrl);
     } catch (err) {
       console.error("Failed to save chatbot config:", err);
       setSaveError(
@@ -184,19 +192,6 @@ export default function BuilderPage() {
       );
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const embedCode = clientId ? buildEmbedCode(clientId) : "";
-
-  const handleCopyEmbed = async () => {
-    if (!embedCode) return;
-    try {
-      await navigator.clipboard.writeText(embedCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setSaveError("Could not copy embed code. Please copy it manually.");
     }
   };
 
@@ -277,6 +272,7 @@ export default function BuilderPage() {
               <FormField
                 label="Business description"
                 htmlFor="business-description"
+                tooltip="A brief overview of your business — what you do and what makes you special. This helps the AI chatbot answer questions about your business accurately."
                 showValidation={showValidation}
                 error={errors.businessDescription}
                 isValid={fieldValid("businessDescription", (f) =>
@@ -309,6 +305,7 @@ export default function BuilderPage() {
               <FormField
                 label="Services"
                 htmlFor="services"
+                tooltip="List the main services or products you offer, separated by commas. The chatbot will use this to tell customers what you provide."
                 showValidation={showValidation}
                 error={errors.servicesDescription}
                 isValid={fieldValid("servicesDescription", (f) =>
@@ -341,6 +338,7 @@ export default function BuilderPage() {
               <BusinessHoursEditor
                 hours={form.businessHours}
                 onChange={(businessHours) => update({ businessHours })}
+                tooltip="Set when you're open each day. The chatbot will tell customers your hours and let them know if you're currently open or closed."
               />
 
               <AddressInput
@@ -348,12 +346,14 @@ export default function BuilderPage() {
                 onChange={(address) => update({ address })}
                 showValidation={showValidation}
                 errors={errors}
+                tooltip="Your business location. The chatbot will share this when customers ask where you're located."
               />
 
               <div className="grid gap-5 sm:grid-cols-2">
                 <FormField
                   label="Support phone"
                   htmlFor="support-phone"
+                  tooltip="Your business phone number. The chatbot will share this when customers want to talk to someone or need to reach you directly."
                   showValidation={showValidation}
                   error={errors.supportPhone}
                   isValid={fieldValid("supportPhone", (f) => validatePhone(f.supportPhone))}
@@ -374,6 +374,7 @@ export default function BuilderPage() {
                 <FormField
                   label="Support email"
                   htmlFor="support-email"
+                  tooltip="Your business email address. The chatbot will share this when customers ask to contact you or need help from your team."
                   showValidation={showValidation}
                   error={errors.supportEmail}
                   isValid={fieldValid("supportEmail", (f) => validateEmail(f.supportEmail))}
@@ -394,8 +395,40 @@ export default function BuilderPage() {
               </div>
 
               <FormField
+                label="Appointment Booking Link (Calendly, Square, etc.)"
+                htmlFor="booking-url"
+                tooltip="This is your Calendly link (or similar booking tool). Don't have one? Sign up free at calendly.com, connect your Google/Outlook calendar there, then paste your personal link here. Leave blank if you don't take online bookings."
+                showValidation={showValidation}
+                error={errors.bookingUrl}
+                isValid={
+                  showValidation &&
+                  !errors.bookingUrl &&
+                  (!form.bookingUrl.trim() ||
+                    validateHttpsUrl(form.bookingUrl) === null)
+                }
+                hint="Customers will be sent here to book appointments. Leave blank if you don't take online bookings yet."
+              >
+                <input
+                  id="booking-url"
+                  type="url"
+                  value={form.bookingUrl}
+                  onChange={(e) => update({ bookingUrl: e.target.value })}
+                  placeholder="https://calendly.com/yourbusiness"
+                  className={inputClassName(
+                    showValidation,
+                    errors.bookingUrl,
+                    showValidation &&
+                      !errors.bookingUrl &&
+                      form.bookingUrl.trim() &&
+                      validateHttpsUrl(form.bookingUrl) === null
+                  )}
+                />
+              </FormField>
+
+              <FormField
                 label="Payment link (optional)"
                 htmlFor="pay-url"
+                tooltip="A link where customers can pay you online (Stripe, PayPal, Square, Venmo, etc.). When customers ask about payment, the chatbot will show this as a 'Pay Now' button."
                 showValidation={showValidation}
                 error={errors.payNowUrl}
                 isValid={
@@ -571,6 +604,30 @@ export default function BuilderPage() {
                   />
                 </FormField>
               </div>
+              <div className="space-y-3 text-left">
+                <p className="text-sm font-medium text-white">Choose your plan</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[
+                    { id: "basic", name: "Basic Plan", price: "$32/mo" },
+                    { id: "pro", name: "Pro Plan", price: "$48/mo" },
+                  ].map((plan) => (
+                    <button
+                      key={plan.id}
+                      type="button"
+                      onClick={() => setSelectedPlan(plan.id)}
+                      className={`rounded-xl border p-4 text-left transition ${
+                        selectedPlan === plan.id
+                          ? "border-[#D4AF37] bg-[#D4AF37]/10"
+                          : "border-white/10 bg-[#111111] hover:border-[#D4AF37]/40"
+                      }`}
+                    >
+                      <p className="font-semibold text-white">{plan.name}</p>
+                      <p className="mt-1 text-sm text-[#F0D060]">{plan.price}</p>
+                      <p className="mt-1 text-xs text-[#a3a3a3]">FOUNDING20 applied</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={handleStripeCheckout}
@@ -580,30 +637,8 @@ export default function BuilderPage() {
                 {isSaving ? "Saving..." : "Subscribe with Stripe"}
               </button>
               {saveError && <p className="text-sm text-red-400">{saveError}</p>}
-              {clientId && (
-                <div className="rounded-2xl border border-[#D4AF37]/30 bg-[#111111] p-5 text-left">
-                  <p className="text-sm font-semibold text-[#F0D060]">Your embed code</p>
-                  <p className="mt-2 text-xs text-[#a3a3a3]">
-                    Paste this snippet before the closing <code className="text-[#F0D060]">&lt;/body&gt;</code>{" "}
-                    tag on your website.
-                  </p>
-                  <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start">
-                    <pre className="flex-1 overflow-x-auto rounded-xl border border-white/10 bg-[#0A0A0A] p-4 text-left text-xs leading-relaxed text-[#F0D060]">
-                      {embedCode}
-                    </pre>
-                    <button
-                      type="button"
-                      onClick={handleCopyEmbed}
-                      className="shrink-0 rounded-xl border border-[#D4AF37]/40 px-4 py-2.5 text-sm font-semibold text-[#F0D060] transition hover:bg-[#D4AF37]/10"
-                    >
-                      {copied ? "Copied!" : "Copy"}
-                    </button>
-                  </div>
-                </div>
-              )}
               <p className="text-xs text-[#a3a3a3]">
-                Set <code className="rounded bg-[#1A1A1A] px-1 text-[#F0D060]">NEXT_PUBLIC_STRIPE_PAYMENT_LINK</code>{" "}
-                in your environment for your live Stripe Payment Link.
+                Your FOUNDING20 discount is applied automatically at checkout.
               </p>
             </div>
           )}
