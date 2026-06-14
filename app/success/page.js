@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { buildEmbedCode } from "../../lib/chatbot-config";
+import EmbedCodeCard from "../../components/EmbedCodeCard";
 
 const STEPS = [
   {
@@ -28,12 +28,7 @@ function SuccessContent() {
   const searchParams = useSearchParams();
   const clientId =
     searchParams.get("client_id") || searchParams.get("client_reference_id");
-  const [copied, setCopied] = useState(false);
-  const [installHelpOpen, setInstallHelpOpen] = useState(false);
   const [businessName, setBusinessName] = useState("");
-  const [loadError, setLoadError] = useState("");
-
-  const embedCode = clientId ? buildEmbedCode(clientId) : "";
 
   useEffect(() => {
     if (!clientId) return;
@@ -46,21 +41,8 @@ function SuccessContent() {
       .then((config) => {
         setBusinessName(config.businessName || "");
       })
-      .catch(() => {
-        setLoadError("Could not load your chatbot configuration.");
-      });
+      .catch(() => {});
   }, [clientId]);
-
-  const handleCopyEmbed = async () => {
-    if (!embedCode) return;
-    try {
-      await navigator.clipboard.writeText(embedCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setLoadError("Could not copy embed code. Please copy it manually.");
-    }
-  };
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#0A0A0A] text-white">
@@ -115,80 +97,7 @@ function SuccessContent() {
                 website builder including WordPress, Wix, Squarespace, Shopify, and custom sites.
               </p>
             </div>
-
-            <div className="overflow-hidden rounded-2xl border border-[#D4AF37]/20 bg-[#1A1A1A]/90 backdrop-blur-sm">
-              <button
-                type="button"
-                onClick={() => setInstallHelpOpen((open) => !open)}
-                className="flex w-full items-center justify-between gap-3 px-6 py-4 text-left transition hover:bg-[#D4AF37]/5"
-                aria-expanded={installHelpOpen}
-              >
-                <span className="text-sm font-semibold text-[#F0D060]">
-                  Need help installing this?
-                </span>
-                <span
-                  className={`shrink-0 text-[#D4AF37] transition-transform ${
-                    installHelpOpen ? "rotate-180" : ""
-                  }`}
-                  aria-hidden
-                >
-                  ▼
-                </span>
-              </button>
-              {installHelpOpen && (
-                <div className="border-t border-white/10 px-6 pb-6 pt-4">
-                  <p className="text-sm text-[#a3a3a3]">
-                    If you&apos;re not sure how to add this to your website:
-                  </p>
-                  <ul className="mt-4 space-y-3 text-sm leading-relaxed text-[#a3a3a3]">
-                    <li>
-                      <span className="font-medium text-white">WordPress:</span> Use a plugin like
-                      &quot;Insert Headers and Footers&quot; and paste the code in the footer
-                      section
-                    </li>
-                    <li>
-                      <span className="font-medium text-white">Wix:</span> Go to Settings &gt;
-                      Custom Code &gt; Add Code to Footer
-                    </li>
-                    <li>
-                      <span className="font-medium text-white">Squarespace:</span> Go to Settings
-                      &gt; Advanced &gt; Code Injection &gt; Footer
-                    </li>
-                    <li>
-                      <span className="font-medium text-white">Shopify:</span> Go to Online Store
-                      &gt; Themes &gt; Edit Code &gt; theme.liquid, paste before{" "}
-                      <code className="text-[#F0D060]">&lt;/body&gt;</code>
-                    </li>
-                    <li>
-                      <span className="font-medium text-white">Other/Custom site:</span> Send this
-                      code to your web developer and ask them to add it before the closing{" "}
-                      <code className="text-[#F0D060]">&lt;/body&gt;</code> tag
-                    </li>
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            <div className="rounded-2xl border border-[#D4AF37]/30 bg-[#1A1A1A]/90 p-6 backdrop-blur-sm">
-              <p className="text-sm font-semibold text-[#F0D060]">Your embed code</p>
-              <p className="mt-2 text-xs text-[#a3a3a3]">
-                Paste this snippet before the closing{" "}
-                <code className="text-[#F0D060]">&lt;/body&gt;</code> tag on your website.
-              </p>
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start">
-                <pre className="flex-1 overflow-x-auto rounded-xl border border-white/10 bg-[#0A0A0A] p-4 text-left text-xs leading-relaxed text-[#F0D060]">
-                  {embedCode}
-                </pre>
-                <button
-                  type="button"
-                  onClick={handleCopyEmbed}
-                  className="shrink-0 rounded-xl border border-[#D4AF37]/40 px-4 py-2.5 text-sm font-semibold text-[#F0D060] transition hover:bg-[#D4AF37]/10"
-                >
-                  {copied ? "Copied!" : "Copy"}
-                </button>
-              </div>
-              {loadError && <p className="mt-3 text-sm text-red-400">{loadError}</p>}
-            </div>
+            <EmbedCodeCard clientId={clientId} />
           </div>
         ) : (
           <p className="mt-10 text-sm text-[#a3a3a3]">
