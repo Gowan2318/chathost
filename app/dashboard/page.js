@@ -71,12 +71,38 @@ function EmptyState() {
   );
 }
 
+const STATUS_LABELS = {
+  active: "Active",
+  inactive: "Inactive",
+  past_due: "Past due",
+  canceled: "Canceled",
+  trialing: "Trialing",
+  unpaid: "Unpaid",
+  paused: "Paused",
+  incomplete: "Incomplete",
+  incomplete_expired: "Expired",
+};
+
+const STATUS_COLORS = {
+  active: "text-green-400",
+  trialing: "text-green-400",
+  past_due: "text-yellow-400",
+  unpaid: "text-yellow-400",
+  canceled: "text-red-400",
+  incomplete_expired: "text-red-400",
+  inactive: "text-[#a3a3a3]",
+  paused: "text-[#a3a3a3]",
+  incomplete: "text-[#a3a3a3]",
+};
+
 export default function DashboardPage() {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
   const [chatbot, setChatbot] = useState(null);
   const [fetchLoading, setFetchLoading] = useState(true);
   const [fetchError, setFetchError] = useState("");
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [portalError, setPortalError] = useState("");
 
   useEffect(() => {
     if (!loading && !user) {
@@ -106,6 +132,33 @@ export default function DashboardPage() {
   async function handleSignOut() {
     await signOut();
     router.push("/");
+  }
+
+  async function handleManageSubscription() {
+    setPortalError("");
+    setPortalLoading(true);
+    try {
+      const supabase = getSupabaseClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/create-portal-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ client_id: chatbot.client_id }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setPortalError(json.error || "Could not open subscription portal.");
+        return;
+      }
+      window.location.assign(json.url);
+    } catch {
+      setPortalError("Could not open subscription portal. Please try again.");
+    } finally {
+      setPortalLoading(false);
+    }
   }
 
   if (loading || !user) {
@@ -169,7 +222,10 @@ export default function DashboardPage() {
                   {config.businessName}
                 </h2>
                 <p className="mt-1 text-sm text-[#a3a3a3]">
-                  {INDUSTRY_LABELS[config.industry] || "Business"} · Active subscription
+                  {INDUSTRY_LABELS[config.industry] || "Business"}{" "}
+                  <span className={`font-medium ${STATUS_COLORS[chatbot.subscription_status] ?? "text-[#a3a3a3]"}`}>
+                    · {STATUS_LABELS[chatbot.subscription_status] ?? chatbot.subscription_status ?? "—"}
+                  </span>
                 </p>
                 {config.websiteUrl && (
                   <a
@@ -219,18 +275,42 @@ export default function DashboardPage() {
                   <p className="text-sm font-semibold uppercase tracking-widest text-[#D4AF37]">
                     Subscription
                   </p>
-                  <p className="mt-2 text-sm leading-relaxed text-[#a3a3a3]">
-                    Active subscription · Need to make changes to your plan or
-                    billing? Contact our team.
+                  <p className="mt-1.5 text-sm text-[#a3a3a3]">
+                    Status:{" "}
+                    <span className={`font-semibold ${STATUS_COLORS[chatbot.subscription_status] ?? "text-white"}`}>
+                      {STATUS_LABELS[chatbot.subscription_status] ?? chatbot.subscription_status ?? "—"}
+                    </span>
                   </p>
+                  <p className="mt-2 text-sm leading-relaxed text-[#a3a3a3]">
+                    Update payment method, view invoices, or cancel your plan through the Stripe portal.
+                  </p>
+                  {portalError && (
+                    <p className="mt-2 text-xs text-red-400">{portalError}</p>
+                  )}
                 </div>
-                {/* Phase 4: replace with Stripe Customer Portal link */}
-                <a
-                  href="mailto:support@vestachathost.com?subject=Manage%20my%20VestaChatHost%20subscription"
-                  className="mt-5 inline-block rounded-xl border border-[#D4AF37]/40 px-5 py-2.5 text-center text-sm font-semibold text-[#F0D060] transition hover:bg-[#D4AF37]/10"
-                >
-                  Manage Subscription
-                </a>
+
+                {chatbot.stripe_customer_id ? (
+                  <button
+                    type="button"
+                    onClick={handleManageSubscription}
+                    disabled={portalLoading}
+                    className="mt-5 rounded-xl border border-[#D4AF37]/40 px-5 py-2.5 text-center text-sm font-semibold text-[#F0D060] transition hover:bg-[#D4AF37]/10 disabled:opacity-60"
+                  >
+                    {portalLoading ? "Opening…" : "Manage Subscription"}
+                  </button>
+                ) : (
+                  <div className="mt-5 space-y-2">
+                    <p className="text-xs text-[#a3a3a3]">
+                      Subscription linking pending — if you have paid, the portal link will appear shortly.
+                    </p>
+                    <a
+                      href="mailto:support@vestachathost.com?subject=Manage%20my%20VestaChatHost%20subscription"
+                      className="inline-block rounded-xl border border-white/10 px-5 py-2.5 text-center text-sm font-semibold text-[#a3a3a3] transition hover:bg-[#1A1A1A]"
+                    >
+                      Contact Support
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           </div>
