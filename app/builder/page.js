@@ -30,6 +30,7 @@ import {
 } from "../../lib/builder-validation";
 import { INDUSTRY_LABELS } from "../../lib/industries";
 import { getSupabaseClient } from "../../lib/supabase";
+import { useAuth } from "../../lib/AuthContext";
 
 const TOTAL_STEPS = 6;
 
@@ -95,6 +96,7 @@ function StepIndicator({ current }) {
 }
 
 export default function BuilderPage() {
+  const { user, signOut } = useAuth();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(INITIAL);
   const [attemptedStep, setAttemptedStep] = useState(null);
@@ -103,6 +105,14 @@ export default function BuilderPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [selectedPlan, setSelectedPlan] = useState("pro");
+
+  // Inline auth panel state (Step 6 only)
+  const [authTab, setAuthTab] = useState("login");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authConfirm, setAuthConfirm] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
 
   const showValidation = attemptedStep === step;
 
@@ -150,6 +160,34 @@ export default function BuilderPage() {
     setStep((s) => Math.max(1, s - 1));
   };
 
+  const handleInlineAuth = async () => {
+    setAuthError("");
+    if (authTab === "signup") {
+      if (authPassword.length < 8) {
+        setAuthError("Password must be at least 8 characters.");
+        return;
+      }
+      if (authPassword !== authConfirm) {
+        setAuthError("Passwords do not match.");
+        return;
+      }
+    }
+    setAuthLoading(true);
+    const supabase = getSupabaseClient();
+    const { error } = authTab === "login"
+      ? await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword })
+      : await supabase.auth.signUp({ email: authEmail, password: authPassword });
+    setAuthLoading(false);
+    if (error) {
+      if (error.message.toLowerCase().includes("already registered")) {
+        setAuthError("An account with this email already exists. Try logging in.");
+      } else {
+        setAuthError(error.message);
+      }
+    }
+    // On success, onAuthStateChange in AuthContext updates `user` automatically — no redirect needed.
+  };
+
   const handleStripeCheckout = async () => {
     const result = validateStep(6, form);
     if (!result.valid) {
@@ -171,6 +209,7 @@ export default function BuilderPage() {
         {
           client_id: newClientId,
           config,
+          user_id: user?.id ?? null,
         },
         { onConflict: "client_id" }
       );
@@ -582,6 +621,7 @@ export default function BuilderPage() {
                   chatbot.
                 </p>
               </div>
+
               <div className="text-left">
                 <FormField
                   label="Your website URL"
@@ -604,6 +644,7 @@ export default function BuilderPage() {
                   />
                 </FormField>
               </div>
+
               <div className="space-y-3 text-left">
                 <p className="text-sm font-medium text-white">Choose your plan</p>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -628,14 +669,114 @@ export default function BuilderPage() {
                   ))}
                 </div>
               </div>
+
+              {/* ── Auth panel (shown only when logged out) ── */}
+              {!user && (
+                <div className="rounded-2xl border border-[#D4AF37]/20 bg-[#111111] p-6 text-left">
+                  <p className="mb-4 text-sm font-semibold text-white">
+                    Create an account or log in to save your chatbot and continue to payment
+                  </p>
+
+                  {/* Tab toggle */}
+                  <div className="mb-5 flex rounded-xl border border-white/10 bg-[#0A0A0A] p-1">
+                    {["login", "signup"].map((tab) => (
+                      <button
+                        key={tab}
+                        type="button"
+                        onClick={() => { setAuthTab(tab); setAuthError(""); }}
+                        className={`flex-1 rounded-lg py-2 text-sm font-semibold transition ${
+                          authTab === tab
+                            ? "bg-[#D4AF37] text-[#0A0A0A]"
+                            : "text-[#a3a3a3] hover:text-white"
+                        }`}
+                      >
+                        {tab === "login" ? "Log In" : "Sign Up"}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-[#a3a3a3]">Email</label>
+                      <input
+                        type="email"
+                        autoComplete="email"
+                        value={authEmail}
+                        onChange={(e) => setAuthEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        className="w-full rounded-xl border border-white/10 bg-[#0A0A0A] px-4 py-3 text-sm text-white placeholder-[#555] outline-none transition focus:border-[#D4AF37]/60 focus:ring-1 focus:ring-[#D4AF37]/30"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-[#a3a3a3]">Password</label>
+                      <input
+                        type="password"
+                        autoComplete={authTab === "login" ? "current-password" : "new-password"}
+                        value={authPassword}
+                        onChange={(e) => setAuthPassword(e.target.value)}
+                        placeholder={authTab === "signup" ? "At least 8 characters" : "Your password"}
+                        className="w-full rounded-xl border border-white/10 bg-[#0A0A0A] px-4 py-3 text-sm text-white placeholder-[#555] outline-none transition focus:border-[#D4AF37]/60 focus:ring-1 focus:ring-[#D4AF37]/30"
+                      />
+                    </div>
+                    {authTab === "signup" && (
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-[#a3a3a3]">Confirm password</label>
+                        <input
+                          type="password"
+                          autoComplete="new-password"
+                          value={authConfirm}
+                          onChange={(e) => setAuthConfirm(e.target.value)}
+                          placeholder="Repeat your password"
+                          className="w-full rounded-xl border border-white/10 bg-[#0A0A0A] px-4 py-3 text-sm text-white placeholder-[#555] outline-none transition focus:border-[#D4AF37]/60 focus:ring-1 focus:ring-[#D4AF37]/30"
+                        />
+                      </div>
+                    )}
+                    {authError && (
+                      <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                        {authError}
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleInlineAuth}
+                      disabled={authLoading}
+                      className="w-full rounded-xl bg-[#D4AF37] py-3 text-sm font-bold text-[#0A0A0A] shadow-lg shadow-[#D4AF37]/20 transition hover:bg-[#F0D060] disabled:opacity-50"
+                    >
+                      {authLoading
+                        ? (authTab === "login" ? "Signing in…" : "Creating account…")
+                        : (authTab === "login" ? "Sign In" : "Create Account")}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Logged-in confirmation ── */}
+              {user && (
+                <div className="flex items-center justify-between rounded-xl border border-[#D4AF37]/20 bg-[#111111] px-4 py-3 text-left">
+                  <p className="text-sm text-[#a3a3a3]">
+                    Logged in as <span className="font-medium text-white">{user.email}</span>
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => signOut()}
+                    className="text-xs text-[#D4AF37] transition hover:text-[#F0D060]"
+                  >
+                    Not you? Sign out
+                  </button>
+                </div>
+              )}
+
               <button
                 type="button"
                 onClick={handleStripeCheckout}
-                disabled={isSaving}
+                disabled={isSaving || !user}
                 className="w-full rounded-xl bg-[#635bff] px-6 py-4 text-base font-semibold text-white shadow-lg transition hover:bg-[#5851e0] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSaving ? "Saving..." : "Subscribe with Stripe"}
               </button>
+              {!user && (
+                <p className="text-xs text-[#a3a3a3]">Sign in or create an account above to continue.</p>
+              )}
               {saveError && <p className="text-sm text-red-400">{saveError}</p>}
               <p className="text-xs text-[#a3a3a3]">
                 Your FOUNDING20 discount is applied automatically at checkout.
