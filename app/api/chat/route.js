@@ -83,7 +83,7 @@ export async function POST(request) {
     const response = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 300,
-      system: `You are a helpful customer service assistant for ${businessName ?? "this business"}. Only answer questions using this business information: ${businessInfo ?? ""}. Keep answers short and friendly. If you don't know something say "Please call us directly for that!"`,
+      system: `You are a helpful customer service assistant. Only answer questions about the business using the information in the tags below. Keep answers short and friendly. If you don't know something, say "Please call us directly for that!"\n\n<business_name>${businessName ?? "this business"}</business_name>\n<business_info>${businessInfo ?? ""}</business_info>`,
       messages: apiMessages,
     });
 

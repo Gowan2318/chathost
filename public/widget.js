@@ -388,7 +388,17 @@
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
+    function isSafeUrl(url) {
+      try {
+        var p = new URL(String(url)).protocol;
+        return p === "https:" || p === "http:";
+      } catch (e) {
+        return false;
+      }
+    }
+
     function addActionButton(parent, url, label) {
+      if (!isSafeUrl(url)) return;
       var link = document.createElement("a");
       link.className = "vch-action";
       link.href = url;
