@@ -1,5 +1,5 @@
 -- Phase 2: link chatbots to user accounts
--- Run this in the Supabase SQL editor (Dashboard → SQL Editor → New query)
+-- Run this in the Supabase SQL editor: Dashboard > SQL Editor > New query
 
 -- 1. Add nullable user_id column (nullable preserves existing anonymous rows)
 ALTER TABLE public.chatbots
@@ -18,13 +18,13 @@ DROP POLICY IF EXISTS "Enable insert for authenticated users only" ON public.cha
 DROP POLICY IF EXISTS "Enable update for users based on user_id"  ON public.chatbots;
 DROP POLICY IF EXISTS "Public chatbots are viewable by everyone"  ON public.chatbots;
 
--- 4. SELECT — unrestricted; the /api/widget route reads configs by client_id with the anon key
+-- 4. SELECT - unrestricted; the /api/widget route reads configs by client_id with the anon key
 CREATE POLICY "chatbots_select_public"
   ON public.chatbots
   FOR SELECT
   USING (true);
 
--- 5. INSERT — allow when user_id is null (legacy/test rows) OR matches the authenticated caller
+-- 5. INSERT - allow when user_id is null (legacy/test rows) OR matches the authenticated caller
 CREATE POLICY "chatbots_insert"
   ON public.chatbots
   FOR INSERT
@@ -33,7 +33,7 @@ CREATE POLICY "chatbots_insert"
     OR auth.uid() = user_id
   );
 
--- 6. UPDATE — same scoping as INSERT
+-- 6. UPDATE - same scoping as INSERT
 CREATE POLICY "chatbots_update"
   ON public.chatbots
   FOR UPDATE
