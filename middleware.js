@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
+import { getClientIp, isIpBlocked } from "./lib/rateLimit";
 
-export function middleware(request) {
+export async function middleware(request) {
+  const ip = getClientIp(request);
+  if (await isIpBlocked(ip)) {
+    return new NextResponse("Access denied", { status: 403 });
+  }
+
   if (process.env.SITE_LIVE === "true") {
     return NextResponse.next();
   }

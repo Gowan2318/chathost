@@ -27,6 +27,19 @@ export default function SignupPage() {
     }
 
     setLoading(true);
+
+    const checkRes = await fetch("/api/auth-rate-check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "signup" }),
+    });
+    if (!checkRes.ok) {
+      const { error: rateLimitError } = await checkRes.json();
+      setError(rateLimitError || "Too many requests. Please try again later.");
+      setLoading(false);
+      return;
+    }
+
     const { error: authError } = await supabase.auth.signUp({ email, password });
     setLoading(false);
 

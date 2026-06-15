@@ -17,6 +17,18 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
 
+    const checkRes = await fetch("/api/auth-rate-check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "login" }),
+    });
+    if (!checkRes.ok) {
+      const { error: rateLimitError } = await checkRes.json();
+      setError(rateLimitError || "Too many requests. Please try again later.");
+      setLoading(false);
+      return;
+    }
+
     const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
 

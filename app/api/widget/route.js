@@ -1,7 +1,25 @@
 import { NextResponse } from "next/server";
 import { getSupabaseClient } from "../../../lib/supabase";
+import {
+  getClientIp,
+  isIpBlocked,
+  checkRateLimit,
+  autoBlockIfAbusive,
+} from "../../../lib/rateLimit";
 
 export async function GET(request) {
+  const clientIp = getClientIp(request);
+
+  if (await isIpBlocked(clientIp)) {
+    return NextResponse.json({ error: "Access denied" }, { status: 403 });
+  }
+
+  const { allowed } = await checkRateLimit(clientIp, "/api/widget", 30, 60);
+  if (!allowed) {
+    await autoBlockIfAbusive(clientIp);
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   const id = request.nextUrl.searchParams.get("id");
 
   if (!id?.trim()) {

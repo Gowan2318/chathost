@@ -1,5 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
+import {
+  getClientIp,
+  isIpBlocked,
+  checkRateLimit,
+  autoBlockIfAbusive,
+} from "../../../lib/rateLimit";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -7,21 +13,10 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-const MAX_REQUESTS_PER_MINUTE = 15;
-const RATE_LIMIT_WINDOW_MS = 60 * 1000;
-const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
-
-/** @type {Map<string, { count: number, windowStart: number }>} */
-const rateLimitStore = new Map();
-let lastCleanup = Date.now();
-
 function corsJson(body, init = {}) {
   return NextResponse.json(body, {
     ...init,
-    headers: {
-      ...CORS_HEADERS,
-      ...init.headers,
-    },
+    headers: { ...CORS_HEADERS, ...init.headers },
   });
 }
 
@@ -29,67 +24,14 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 200, headers: CORS_HEADERS });
 }
 
-function getClientIp(request) {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) {
-    return forwarded.split(",")[0].trim();
-  }
-
-  const realIp = request.headers.get("x-real-ip");
-  if (realIp) {
-    return realIp.trim();
-  }
-
-  return request.headers.get("cf-connecting-ip")?.trim() || "unknown";
-}
-
-function cleanupRateLimitStore(now) {
-  if (now - lastCleanup < CLEANUP_INTERVAL_MS) {
-    return;
-  }
-
-  lastCleanup = now;
-  for (const [ip, entry] of rateLimitStore.entries()) {
-    if (now - entry.windowStart >= RATE_LIMIT_WINDOW_MS) {
-      rateLimitStore.delete(ip);
-    }
-  }
-}
-
-function isRateLimited(ip) {
-  const now = Date.now();
-  cleanupRateLimitStore(now);
-
-  const entry = rateLimitStore.get(ip);
-
-  if (!entry || now - entry.windowStart >= RATE_LIMIT_WINDOW_MS) {
-    rateLimitStore.set(ip, { count: 1, windowStart: now });
-    return false;
-  }
-
-  if (entry.count >= MAX_REQUESTS_PER_MINUTE) {
-    return true;
-  }
-
-  entry.count += 1;
-  return false;
-}
-
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 function toApiMessages(messages) {
-  if (!Array.isArray(messages)) {
-    return [];
-  }
+  if (!Array.isArray(messages)) return [];
 
   const normalized = messages
     .filter((msg) => msg?.role === "user" || msg?.role === "assistant")
-    .map((msg) => ({
-      role: msg.role,
-      content: String(msg.content ?? ""),
-    }))
+    .map((msg) => ({ role: msg.role, content: String(msg.content ?? "") }))
     .filter((msg) => msg.content.length > 0);
 
   let start = 0;
@@ -101,10 +43,7 @@ function toApiMessages(messages) {
 }
 
 function extractText(content) {
-  if (!Array.isArray(content)) {
-    return "";
-  }
-
+  if (!Array.isArray(content)) return "";
   return content
     .filter((block) => block.type === "text")
     .map((block) => block.text)
@@ -115,7 +54,13 @@ export async function POST(request) {
   try {
     const clientIp = getClientIp(request);
 
-    if (isRateLimited(clientIp)) {
+    if (await isIpBlocked(clientIp)) {
+      return corsJson({ error: "Access denied" }, { status: 403 });
+    }
+
+    const { allowed } = await checkRateLimit(clientIp, "/api/chat", 15, 60);
+    if (!allowed) {
+      await autoBlockIfAbusive(clientIp);
       return corsJson(
         { error: "Too many requests, please try again in a minute" },
         { status: 429 }
@@ -123,10 +68,7 @@ export async function POST(request) {
     }
 
     if (!process.env.ANTHROPIC_API_KEY) {
-      return corsJson(
-        { error: "ANTHROPIC_API_KEY is not configured" },
-        { status: 500 }
-      );
+      return corsJson({ error: "ANTHROPIC_API_KEY is not configured" }, { status: 500 });
     }
 
     const body = await request.json();
@@ -154,9 +96,6 @@ export async function POST(request) {
     return corsJson({ message });
   } catch (error) {
     console.error("API Error:", error);
-    return corsJson(
-      { error: error.message ?? "Internal server error" },
-      { status: 500 }
-    );
+    return corsJson({ error: error.message ?? "Internal server error" }, { status: 500 });
   }
 }

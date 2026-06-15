@@ -1,6 +1,12 @@
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import {
+  getClientIp,
+  isIpBlocked,
+  checkRateLimit,
+  autoBlockIfAbusive,
+} from "../../../lib/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -14,6 +20,18 @@ function adminClient() {
 }
 
 export async function POST(req) {
+  const clientIp = getClientIp(req);
+
+  if (await isIpBlocked(clientIp)) {
+    return NextResponse.json({ error: "Access denied" }, { status: 403 });
+  }
+
+  const { allowed } = await checkRateLimit(clientIp, "/api/create-portal-session", 10, 60);
+  if (!allowed) {
+    await autoBlockIfAbusive(clientIp);
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   // Verify caller is an authenticated Supabase user.
   // The client sends the session access_token as a Bearer token.
   const authHeader = req.headers.get("authorization") ?? "";
