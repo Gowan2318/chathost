@@ -205,17 +205,21 @@ export default function BuilderPage() {
       const newClientId = crypto.randomUUID();
       const config = buildChatbotConfig(form, businessInfo);
 
-      const { error } = await supabase.from("chatbots").upsert(
-        {
-          client_id: newClientId,
-          config,
-          user_id: user?.id ?? null,
-        },
-        { onConflict: "client_id" }
-      );
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
 
-      if (error) {
-        throw error;
+      const res = await fetch("/api/save-chatbot", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ clientId: newClientId, config }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Could not save your chatbot configuration.");
       }
 
       const checkoutUrl = buildStripeCheckoutUrl(

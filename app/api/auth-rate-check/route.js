@@ -7,8 +7,8 @@ import {
 } from "../../../lib/rateLimit";
 
 const LIMITS = {
-  login:  { maxRequests: 10, windowSeconds: 15 * 60 },
-  signup: { maxRequests: 5,  windowSeconds: 60 * 60 },
+  login:  { maxRequests: 5, windowSeconds: 15 * 60 },
+  signup: { maxRequests: 5, windowSeconds: 15 * 60 },
 };
 
 export async function POST(request) {
@@ -46,7 +46,7 @@ export async function POST(request) {
     const message =
       type === "login"
         ? "Too many login attempts. Please wait 15 minutes before trying again."
-        : "Too many sign-up attempts. Please wait an hour before trying again.";
+        : "Too many sign-up attempts. Please wait 15 minutes before trying again.";
     return NextResponse.json({ error: message }, { status: 429 });
   }
 

@@ -26,10 +26,10 @@ export async function POST(req) {
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
 
-  const { allowed } = await checkRateLimit(clientIp, "/api/create-portal-session", 10, 60);
+  const { allowed } = await checkRateLimit(clientIp, "/api/create-portal-session", 5, 15 * 60);
   if (!allowed) {
     await autoBlockIfAbusive(clientIp);
-    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    return NextResponse.json({ error: "Too many requests. Please wait 15 minutes before trying again." }, { status: 429 });
   }
 
   // Verify caller is an authenticated Supabase user.
@@ -58,6 +58,10 @@ export async function POST(req) {
   const { client_id } = body;
   if (!client_id) {
     return NextResponse.json({ error: "client_id is required" }, { status: 400 });
+  }
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID_RE.test(client_id)) {
+    return NextResponse.json({ error: "Invalid client_id" }, { status: 400 });
   }
 
   // Fetch chatbot and confirm it belongs to the authenticated user.

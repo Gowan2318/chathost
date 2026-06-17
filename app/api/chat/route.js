@@ -74,6 +74,15 @@ export async function POST(request) {
     const body = await request.json();
     const { messages, businessInfo, businessName } = body;
 
+    if (!Array.isArray(messages) || messages.length > 50) {
+      return corsJson({ error: "Invalid messages array" }, { status: 400 });
+    }
+    for (const msg of messages) {
+      if (msg?.content != null && String(msg.content).length > 2000) {
+        return corsJson({ error: "Message content too long (max 2000 characters)" }, { status: 400 });
+      }
+    }
+
     const apiMessages = toApiMessages(messages);
 
     if (apiMessages.length === 0) {

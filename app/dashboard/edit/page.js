@@ -145,11 +145,23 @@ export default function EditBotPage() {
     try {
       const supabase = getSupabaseClient();
       const updatedConfig = buildChatbotConfig(form, businessInfo);
-      const { error } = await supabase
-        .from("chatbots")
-        .update({ config: updatedConfig })
-        .eq("client_id", clientId);
-      if (error) throw error;
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      const res = await fetch("/api/update-chatbot", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ clientId, config: updatedConfig }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Could not save changes.");
+      }
       setSaveSuccess(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {

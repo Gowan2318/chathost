@@ -36,6 +36,10 @@ export async function GET(request) {
   if (!id?.trim()) {
     return NextResponse.json({ error: "Missing id parameter" }, { status: 400, headers: CORS_HEADERS });
   }
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID_RE.test(id.trim())) {
+    return NextResponse.json({ error: "Invalid id parameter" }, { status: 400, headers: CORS_HEADERS });
+  }
 
   try {
     const supabase = getSupabaseClient();
