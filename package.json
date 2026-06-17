@@ -6,7 +6,8 @@
     "dev": "node --use-system-ca ./node_modules/next/dist/bin/next dev",
     "build": "next build",
     "start": "node --use-system-ca ./node_modules/next/dist/bin/next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:security": "node --use-system-ca scripts/security-test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",
