@@ -92,10 +92,17 @@ export async function POST(req) {
   // Build return URL from the request origin so it works in both dev and prod.
   const origin = req.headers.get("origin") || "https://vestachathost.com";
 
-  const portalSession = await stripe.billingPortal.sessions.create({
-    customer: chatbot.stripe_customer_id,
-    return_url: `${origin}/dashboard`,
-  });
-
-  return NextResponse.json({ url: portalSession.url });
+  try {
+    const portalSession = await stripe.billingPortal.sessions.create({
+      customer: chatbot.stripe_customer_id,
+      return_url: `${origin}/dashboard`,
+    });
+    return NextResponse.json({ url: portalSession.url });
+  } catch (err) {
+    console.error("[create-portal-session] Stripe error:", err);
+    return NextResponse.json(
+      { error: "Could not open subscription portal. Please try again." },
+      { status: 502 }
+    );
+  }
 }

@@ -118,13 +118,15 @@ export async function POST(req) {
     return NextResponse.json({ error: validationErrors[0] }, { status: 400 });
   }
 
-  const { error } = await db.from("chatbots").upsert(
-    { client_id: clientId, config, user_id: user.id },
-    { onConflict: "client_id" }
+  const { error } = await db.from("chatbots").insert(
+    { client_id: clientId, config, user_id: user.id }
   );
 
   if (error) {
-    console.error("[save-chatbot] DB error:", error);
+    if (error.code === "23505") {
+      return NextResponse.json({ error: "Chatbot ID conflict, please retry" }, { status: 409 });
+    }
+    console.error("[save-chatbot] insert error:", error);
     return NextResponse.json({ error: "Failed to save chatbot" }, { status: 500 });
   }
 

@@ -104,7 +104,7 @@ export async function POST(request) {
 
     return corsJson({ message });
   } catch (error) {
-    console.error("API Error:", error);
-    return corsJson({ error: error.message ?? "Internal server error" }, { status: 500 });
+    console.error("[api/chat] error:", error);
+    return corsJson({ error: "Unable to process your request. Please try again." }, { status: 500 });
   }
 }
