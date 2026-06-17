@@ -127,7 +127,11 @@ async function main() {
 
   // ── Load env & sign in ──
   const env = loadEnv();
-  const { NEXT_PUBLIC_SUPABASE_URL: url, NEXT_PUBLIC_SUPABASE_ANON_KEY: anonKey } = env;
+  const {
+    NEXT_PUBLIC_SUPABASE_URL: url,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: anonKey,
+    SUPABASE_SERVICE_ROLE_KEY: serviceKey,
+  } = env;
   if (!url || !anonKey) {
     console.error("ERROR: Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
     process.exit(1);
@@ -144,7 +148,34 @@ async function main() {
     process.exit(1);
   }
   const token = authData.session.access_token;
-  console.log("Signed in successfully.\n");
+  console.log("Signed in successfully.");
+
+  // ── Clear any leftover IP block from previous test runs ──
+  // The rate-limit test triggers autoBlockIfAbusive(), which blocks the local IP
+  // for 24 hours. On Windows, Next.js injects x-forwarded-for: ::1 for localhost
+  // requests, so getClientIp() returns "::1". We also cover 127.0.0.1 and the
+  // "unknown" fallback for robustness. Run this before ALL tests so a stale block
+  // never causes false failures in the positive or negative test sections.
+  if (serviceKey) {
+    const adminDb = createClient(url, serviceKey, { auth: { persistSession: false } });
+    const LOCAL_IPS = ["::1", "127.0.0.1", "unknown"];
+    const { data: blocks } = await adminDb
+      .from("blocked_ips")
+      .select("ip_address")
+      .in("ip_address", LOCAL_IPS);
+    if (blocks && blocks.length > 0) {
+      const blockedAddrs = blocks.map((b) => b.ip_address);
+      await adminDb.from("blocked_ips").delete().in("ip_address", blockedAddrs);
+      await adminDb.from("rate_limit_log").delete().in("ip_address", blockedAddrs).eq("route", "__violation__");
+      console.log(`  [setup] Cleared stale IP block(s) for: ${blockedAddrs.join(", ")} (left by a previous run).`);
+    }
+    // Reset auth-rate-check log entries so the rate-limit test starts from 0
+    // regardless of how many times it has been run within the 15-min window.
+    await adminDb.from("rate_limit_log").delete().in("ip_address", LOCAL_IPS).eq("route", "/api/auth-rate-check");
+    console.log("  [setup] Cleared auth-rate-check rate limit log for local IPs.\n");
+  } else {
+    console.log("  [warning] SUPABASE_SERVICE_ROLE_KEY not in env — cannot pre-clear IP block; tests may fail if IP is blocked.\n");
+  }
 
   // ════════════════════════════════════
   // POSITIVE TESTS
