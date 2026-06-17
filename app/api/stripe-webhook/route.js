@@ -45,12 +45,19 @@ export async function POST(req) {
           break;
         }
 
+        const updateFields = { subscription_status: "active" };
+        if (stripeCustomerId) {
+          updateFields.stripe_customer_id = stripeCustomerId;
+        } else {
+          console.warn(
+            "[stripe-webhook] checkout.session.completed has no session.customer — stripe_customer_id not updated. Session ID:",
+            session.id
+          );
+        }
+
         const { error } = await db
           .from("chatbots")
-          .update({
-            stripe_customer_id: stripeCustomerId,
-            subscription_status: "active",
-          })
+          .update(updateFields)
           .eq("client_id", clientId);
 
         if (error) {
