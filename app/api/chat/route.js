@@ -26,6 +26,42 @@ export async function OPTIONS() {
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+const VALID_INDUSTRIES = new Set([
+  "dental", "gym", "salon", "restaurant", "real_estate", "law", "barber", "lawn", "other",
+]);
+
+const INDUSTRY_TONE = {
+  dental:      "professional, warm, and reassuring — be precise but never intimidating",
+  gym:         "energetic and encouraging — celebrate their goals and keep the energy positive",
+  salon:       "warm, friendly, and personal — make the visitor feel welcome and excited",
+  restaurant:  "hospitable and enthusiastic — convey warmth and a genuine love of great food",
+  real_estate: "professional and trustworthy — be informative and measured, never pushy or full of hype",
+  law:         "formal and precise — never provide specific legal advice; always recommend speaking with an attorney for legal matters",
+  barber:      "casual, friendly, and community-focused — keep a relaxed, welcoming tone",
+  lawn:        "practical and down-to-earth — be friendly, helpful, and no-nonsense",
+  other:       "friendly, professional, and helpful",
+};
+
+function buildSystemPrompt(businessName, businessInfo, industry) {
+  const tone = INDUSTRY_TONE[industry] || INDUSTRY_TONE.other;
+  const name = businessName ?? "this business";
+  return (
+    `You are the AI assistant for <business_name>${name}</business_name>, speaking on behalf of this business.\n\n` +
+    `TONE: Be ${tone}. Keep responses to 1–3 short sentences — sound like a knowledgeable staff member, not a scripted bot. ` +
+    `Never start two consecutive replies in the same conversation with the same opener. ` +
+    `NEVER open a response with filler phrases — this is a hard rule. Prohibited openers include: "I'd be happy to help!", "I'm happy to help!", "Happy to help!", "Great question!", "Certainly!", "Of course!", "Absolutely!", "Sure!", or any variation of these. Start directly with the answer.\n\n` +
+    `SCOPE: Only answer using the business information in the tags below. Never invent details not provided. ` +
+    `If you genuinely don't know something, say so honestly and suggest contacting the team directly.\n\n` +
+    `EDGE CASES — follow these rules exactly:\n` +
+    `- Off-topic requests (unrelated to this business): Politely decline and redirect to what you can help with at ${name}. Don't engage with the off-topic request.\n` +
+    `- Rude or hostile messages: Stay calm and professional. Don't mirror negativity. Acknowledge frustration and offer to connect them with the team.\n` +
+    `- Ambiguous questions: Ask exactly one clarifying question. Don't guess or give a generic non-answer.\n` +
+    `- Multi-part questions: Address every part. Don't answer only the first and ignore the rest.\n` +
+    `- Frustrated users or repeated inability to help: Proactively offer to connect them with a team member for personal assistance.\n\n` +
+    `<business_info>${businessInfo ?? ""}</business_info>`
+  );
+}
+
 function toApiMessages(messages) {
   if (!Array.isArray(messages)) return [];
 
@@ -72,7 +108,7 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { messages, businessInfo, businessName } = body;
+    const { messages, businessInfo, businessName, industry } = body;
 
     if (!Array.isArray(messages) || messages.length > 50) {
       return corsJson({ error: "Invalid messages array" }, { status: 400 });
@@ -89,10 +125,12 @@ export async function POST(request) {
       return corsJson({ error: "No messages provided" }, { status: 400 });
     }
 
+    const safeIndustry = VALID_INDUSTRIES.has(industry) ? industry : "other";
+
     const response = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 300,
-      system: `You are a helpful customer service assistant. Only answer questions about the business using the information in the tags below. Keep answers short and friendly. If you don't know something, say "Please call us directly for that!"\n\n<business_name>${businessName ?? "this business"}</business_name>\n<business_info>${businessInfo ?? ""}</business_info>`,
+      system: buildSystemPrompt(businessName, businessInfo, safeIndustry),
       messages: apiMessages,
     });
 

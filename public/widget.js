@@ -8,6 +8,9 @@
   var TALK_TO_SOMEONE_PATTERN = /\btalk to someone\b/i;
   var UNHELPFUL_AI_PATTERN =
     /\b(i(?:'m| am) not sure|i don(?:'t| not) know|cannot help|can't help|can not help|unable to help|please contact us|please call us|reach out to us|contact us directly|call us directly|don't have (?:that |those )?information|do not have (?:that |those )?information|outside (?:of )?my (?:knowledge|ability)|not able to (?:help|answer)|unable to (?:answer|assist))\b/i;
+  var FRUSTRATION_PATTERN =
+    /\b(frustrated|annoyed|angry|useless|doesn't work|not working|terrible|awful|horrible|stupid|ridiculous|worst|pointless|waste of time|forget it|nevermind|give up|no help)\b/i;
+  var SERVICES_TOPIC_RESP = /\b(service|offer|provide|specialize|treatment|plan|package|include)\b/i;
 
   var MASCOT_SRC = {
     dental: "/mascots/dental.png",
@@ -190,6 +193,23 @@
       );
     }
 
+    function buildContextualReplies(botText, needsSupportPriority) {
+      var pool = [];
+      if (needsSupportPriority && (supportPhone || supportEmail)) {
+        pool.push("Talk to someone");
+      }
+      if (SERVICES_TOPIC_RESP.test(botText) && pool.indexOf("What are your prices?") === -1) {
+        pool.push("What are your prices?");
+      }
+      if (bookingUrl && pool.indexOf("Book an appointment") === -1) {
+        pool.push("Book an appointment");
+      }
+      if ((supportPhone || supportEmail) && pool.indexOf("Talk to someone") === -1) {
+        pool.push("Talk to someone");
+      }
+      return pool.slice(0, 3);
+    }
+
     var welcomeMessage = {
       role: "assistant",
       content:
@@ -206,6 +226,9 @@
       showQuickReplies: true,
       awaitingFollowUp: false,
       chatClosed: false,
+      contextualQuickReplies: [],
+      unhelpfulCount: 0,
+      lastMessageWasFrustrated: false,
     };
 
     var host = document.createElement("div");
@@ -488,15 +511,18 @@
     }
 
     function renderQuickReplies() {
-      if (
-        state.showQuickReplies &&
-        !state.awaitingFollowUp &&
+      var showInitial = state.showQuickReplies && !state.chatClosed && quickReplies.length;
+      var showContextual =
+        !state.showQuickReplies &&
         !state.chatClosed &&
-        quickReplies.length
-      ) {
+        !state.awaitingFollowUp &&
+        state.contextualQuickReplies.length;
+
+      if (showInitial || showContextual) {
         quickEl.style.display = "grid";
         quickEl.innerHTML = "";
-        quickReplies.forEach(function (label) {
+        var toShow = showInitial ? quickReplies : state.contextualQuickReplies;
+        toShow.forEach(function (label) {
           var btn = document.createElement("button");
           btn.type = "button";
           btn.className = "vch-quick-btn";
@@ -553,6 +579,9 @@
       state.awaitingFollowUp = false;
       state.chatClosed = false;
       state.input = "";
+      state.contextualQuickReplies = [];
+      state.unhelpfulCount = 0;
+      state.lastMessageWasFrustrated = false;
       inputEl.value = "";
       render();
     }
@@ -584,6 +613,7 @@
           messages: toApiMessages(state.messages),
           businessName: businessName,
           businessInfo: businessInfo,
+          industry: industry,
         }),
       })
         .then(function (res) {
@@ -594,19 +624,24 @@
         })
         .then(function (data) {
           state.isTyping = false;
-          state.messages.push({ role: "assistant", content: data.message });
-          if (needsSupportFallback(data.message)) {
-            state.messages.push({
-              role: "assistant",
-              content: supportMessage(),
-            });
+          var botText = data.message;
+          var needsSupport = needsSupportFallback(botText);
+
+          state.messages.push({ role: "assistant", content: botText });
+
+          if (needsSupport) {
+            state.unhelpfulCount = (state.unhelpfulCount || 0) + 1;
+            state.messages.push({ role: "assistant", content: supportMessage() });
+          } else {
+            state.unhelpfulCount = 0;
           }
-          state.messages.push({
-            role: "assistant",
-            content: FOLLOW_UP,
-            followUp: true,
-          });
-          state.awaitingFollowUp = true;
+
+          var forceSupport =
+            needsSupport ||
+            state.lastMessageWasFrustrated ||
+            state.unhelpfulCount >= 2;
+          state.contextualQuickReplies = buildContextualReplies(botText, forceSupport);
+          state.lastMessageWasFrustrated = false;
           render();
         })
         .catch(function () {
@@ -623,10 +658,12 @@
         return;
       }
 
+      state.lastMessageWasFrustrated = FRUSTRATION_PATTERN.test(trimmed);
       state.messages.push({ role: "user", content: trimmed });
       state.input = "";
       inputEl.value = "";
       state.showQuickReplies = false;
+      state.contextualQuickReplies = [];
       render();
 
       if (isBookingIntent(trimmed)) {

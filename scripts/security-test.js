@@ -169,10 +169,14 @@ async function main() {
       await adminDb.from("rate_limit_log").delete().in("ip_address", blockedAddrs).eq("route", "__violation__");
       console.log(`  [setup] Cleared stale IP block(s) for: ${blockedAddrs.join(", ")} (left by a previous run).`);
     }
-    // Reset auth-rate-check log entries so the rate-limit test starts from 0
-    // regardless of how many times it has been run within the 15-min window.
+    // Reset auth-rate-check and violation log entries unconditionally so the
+    // rate-limit test starts from 0 regardless of how many times it has been
+    // run within the 15-min window, and so accumulated violations can't cause
+    // autoBlockIfAbusive to fire and return 403 instead of 429.
     await adminDb.from("rate_limit_log").delete().in("ip_address", LOCAL_IPS).eq("route", "/api/auth-rate-check");
-    console.log("  [setup] Cleared auth-rate-check rate limit log for local IPs.\n");
+    await adminDb.from("rate_limit_log").delete().in("ip_address", LOCAL_IPS).eq("route", "__violation__");
+    await adminDb.from("blocked_ips").delete().in("ip_address", LOCAL_IPS);
+    console.log("  [setup] Cleared auth-rate-check, violation log, and any IP blocks for local IPs.\n");
   } else {
     console.log("  [warning] SUPABASE_SERVICE_ROLE_KEY not in env — cannot pre-clear IP block; tests may fail if IP is blocked.\n");
   }
