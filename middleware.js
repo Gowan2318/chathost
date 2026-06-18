@@ -3,7 +3,7 @@ import { getClientIp, isIpBlocked } from "./lib/rateLimit";
 
 export async function middleware(request) {
   const ip = getClientIp(request);
-  if (await isIpBlocked(ip)) {
+  if (process.env.NODE_ENV === "production" && await isIpBlocked(ip)) {
     return new NextResponse("Access denied", { status: 403 });
   }
 
