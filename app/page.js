@@ -406,7 +406,10 @@ export default function HomePage() {
           </div>
           <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/5 pt-8 text-sm text-[#a3a3a3] md:flex-row">
             <p>© {new Date().getFullYear()} VestaChatHost. All rights reserved.</p>
-            <p>Built for local businesses who refuse to settle.</p>
+            <div className="flex items-center gap-4">
+              <Link href="/terms" className="hover:text-[#F0D060] transition">Terms of Service</Link>
+              <Link href="/privacy" className="hover:text-[#F0D060] transition">Privacy Policy</Link>
+            </div>
           </div>
         </div>
       </footer>

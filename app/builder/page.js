@@ -783,6 +783,12 @@ export default function BuilderPage() {
               )}
               {saveError && <p className="text-sm text-red-400">{saveError}</p>}
               <p className="text-xs text-[#a3a3a3]">
+                By subscribing, you agree to our{" "}
+                <Link href="/terms" className="text-[#F0D060] hover:underline">Terms of Service</Link>
+                {" "}and{" "}
+                <Link href="/privacy" className="text-[#F0D060] hover:underline">Privacy Policy</Link>.
+              </p>
+              <p className="text-xs text-[#a3a3a3]">
                 Your FOUNDING20 discount is applied automatically at checkout.
               </p>
             </div>
