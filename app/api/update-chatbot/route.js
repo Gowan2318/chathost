@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getClientIp, isIpBlocked, checkRateLimit, autoBlockIfAbusive } from "../../../lib/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -121,6 +122,18 @@ function validateConfig(config) {
 }
 
 export async function POST(req) {
+  const clientIp = getClientIp(req);
+
+  if (await isIpBlocked(clientIp)) {
+    return NextResponse.json({ error: "Access denied" }, { status: 403 });
+  }
+
+  const { allowed } = await checkRateLimit(clientIp, "/api/update-chatbot", 20, 60);
+  if (!allowed) {
+    await autoBlockIfAbusive(clientIp);
+    return NextResponse.json({ error: "Too many requests. Please slow down." }, { status: 429 });
+  }
+
   const authHeader = req.headers.get("authorization") ?? "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
   if (!token) {
