@@ -176,6 +176,11 @@ async function main() {
     await adminDb.from("rate_limit_log").delete().in("ip_address", LOCAL_IPS).eq("route", "/api/auth-rate-check");
     await adminDb.from("rate_limit_log").delete().in("ip_address", LOCAL_IPS).eq("route", "__violation__");
     await adminDb.from("blocked_ips").delete().in("ip_address", LOCAL_IPS);
+    // Ensure the test chatbot is active so the widget subscription gate passes.
+    await adminDb
+      .from("chatbots")
+      .update({ subscription_status: "active" })
+      .eq("client_id", TEST_CLIENT_ID);
     console.log("  [setup] Cleared auth-rate-check, violation log, and any IP blocks for local IPs.\n");
   } else {
     console.log("  [warning] SUPABASE_SERVICE_ROLE_KEY not in env — cannot pre-clear IP block; tests may fail if IP is blocked.\n");

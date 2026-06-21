@@ -6,6 +6,27 @@ export const runtime = "nodejs";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ALLOWED_THEMES = new Set(["light", "dark", "glass"]);
 
+const BASIC_FIELD_DEFAULTS = {
+  booking_url: "",
+  payNowUrl: "",
+  brandColor: "#D4AF37",
+  chatTheme: "light",
+  mascotName: "",
+};
+
+const ALLOWED_CONFIG_KEYS = new Set([
+  "businessName", "businessInfo", "businessDescription", "servicesDescription",
+  "businessHours", "address", "supportPhone", "supportEmail",
+  "booking_url", "payNowUrl", "brandColor", "chatTheme",
+  "quickReplies", "customQA", "mascotName", "websiteUrl",
+  "industry", "plan",
+]);
+
+function applyPlanEnforcement(config, plan) {
+  if (plan !== "basic") return config;
+  return { ...config, ...BASIC_FIELD_DEFAULTS };
+}
+
 function adminClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -20,6 +41,14 @@ function validateConfig(config) {
   }
 
   const errors = [];
+
+  if (
+    !config.businessName ||
+    typeof config.businessName !== "string" ||
+    !config.businessName.trim()
+  ) {
+    errors.push("Business name is required");
+  }
 
   const strMax = (label, key, max) => {
     const val = config[key];
@@ -39,6 +68,10 @@ function validateConfig(config) {
   strMax("Website URL", "websiteUrl", 500);
   strMax("Brand color", "brandColor", 7);
   strMax("Mascot name", "mascotName", 20);
+
+  if (config.brandColor != null && !/^#[0-9A-Fa-f]{6}$/.test(config.brandColor)) {
+    errors.push("Brand color must be a valid hex color (e.g. #0D7377)");
+  }
 
   if (config.chatTheme != null && !ALLOWED_THEMES.has(config.chatTheme)) {
     errors.push("Invalid chat theme");
@@ -107,7 +140,7 @@ export async function POST(req) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const { clientId, config } = body;
+  const { clientId, config, plan } = body;
 
   if (!clientId || !UUID_RE.test(clientId)) {
     return NextResponse.json({ error: "Invalid clientId" }, { status: 400 });
@@ -118,8 +151,31 @@ export async function POST(req) {
     return NextResponse.json({ error: validationErrors[0] }, { status: 400 });
   }
 
+  // Enforce 1 chatbot per account — prevents API cost amplification abuse.
+  const { count, error: countError } = await db
+    .from("chatbots")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
+  if (countError || count >= 1) {
+    if (countError) console.error("[save-chatbot] count error:", countError);
+    return NextResponse.json(
+      { error: "Account already has a chatbot. Please manage it from your dashboard." },
+      { status: 409 }
+    );
+  }
+
+  const validPlan = plan === "basic" || plan === "pro" ? plan : "pro";
+
+  // Strip any keys not in the allow-list before saving.
+  const sanitizedConfig = Object.fromEntries(
+    Object.entries(config).filter(([key]) => ALLOWED_CONFIG_KEYS.has(key))
+  );
+
+  const configToSave = applyPlanEnforcement({ ...sanitizedConfig, plan: validPlan }, validPlan);
+
   const { error } = await db.from("chatbots").insert(
-    { client_id: clientId, config, user_id: user.id }
+    { client_id: clientId, config: configToSave, user_id: user.id }
   );
 
   if (error) {

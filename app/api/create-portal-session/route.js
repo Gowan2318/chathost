@@ -89,14 +89,22 @@ export async function POST(req) {
     );
   }
 
-  // Build return URL from the request origin so it works in both dev and prod.
-  const origin = req.headers.get("origin") || "https://vestachathost.com";
+  const returnBase = process.env.NEXT_PUBLIC_SITE_URL || "https://vestachathost.com";
 
   try {
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: chatbot.stripe_customer_id,
-      return_url: `${origin}/dashboard`,
+      return_url: `${returnBase}/dashboard`,
     });
+
+    if (!portalSession?.url) {
+      console.error("[create-portal-session] Stripe returned session without URL");
+      return NextResponse.json(
+        { error: "Could not open subscription portal. Please try again." },
+        { status: 502 }
+      );
+    }
+
     return NextResponse.json({ url: portalSession.url });
   } catch (err) {
     console.error("[create-portal-session] Stripe error:", err);

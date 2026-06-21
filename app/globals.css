@@ -1,27 +1,37 @@
 @import "tailwindcss";
 
 :root {
-  --vesta-bg: #0a0a0a;
-  --vesta-bg-secondary: #111111;
-  --vesta-card: #1a1a1a;
-  --vesta-gold: #d4af37;
-  --vesta-gold-light: #f0d060;
-  --vesta-text-muted: #a3a3a3;
+  --vesta-bg: #F8F9FA;
+  --vesta-bg-secondary: #FFFFFF;
+  --vesta-card: #FFFFFF;
+  --vesta-teal: #0D7377;
+  --vesta-teal-hover: #0A5D61;
+  --vesta-teal-light: #E8F4F4;
+  --vesta-navy: #1A1A2E;
+  --vesta-body: #4A5568;
+  --vesta-border: #E2E8F0;
   --background: var(--vesta-bg);
-  --foreground: #ffffff;
+  --foreground: var(--vesta-navy);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-vesta-bg: #0a0a0a;
-  --color-vesta-bg-secondary: #111111;
-  --color-vesta-card: #1a1a1a;
-  --color-vesta-gold: #d4af37;
-  --color-vesta-gold-light: #f0d060;
-  --color-vesta-muted: #a3a3a3;
+  --color-vesta-bg: #F8F9FA;
+  --color-vesta-bg-secondary: #FFFFFF;
+  --color-vesta-card: #FFFFFF;
+  --color-vesta-teal: #0D7377;
+  --color-vesta-teal-hover: #0A5D61;
+  --color-vesta-teal-light: #E8F4F4;
+  --color-vesta-navy: #1A1A2E;
+  --color-vesta-body: #4A5568;
+  --color-vesta-border: #E2E8F0;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
@@ -30,115 +40,29 @@ body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
-@keyframes hero-float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-14px);
-  }
-}
-
-@keyframes hero-glow {
-  0%,
-  100% {
-    opacity: 0.35;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.55;
-    transform: scale(1.08);
-  }
-}
-
-@keyframes hero-shimmer {
-  0% {
-    background-position: 200% center;
-  }
-  100% {
-    background-position: -200% center;
-  }
-}
-
+/* ─── Mascot animations (used in widget) ────────── */
 @keyframes mascot-bounce-keyframes {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  40% {
-    transform: translateY(-14px);
-  }
-  60% {
-    transform: translateY(-7px);
-  }
+  0%, 100% { transform: translateY(0); }
+  40%       { transform: translateY(-14px); }
+  60%       { transform: translateY(-7px); }
 }
 
 @keyframes mascot-thinking-keyframes {
-  0%,
-  100% {
-    transform: rotate(0deg);
-  }
-  25% {
-    transform: rotate(-5deg);
-  }
-  75% {
-    transform: rotate(5deg);
-  }
+  0%, 100% { transform: rotate(0deg); }
+  25%       { transform: rotate(-5deg); }
+  75%       { transform: rotate(5deg); }
 }
 
 @keyframes mascot-celebrate-keyframes {
-  0%,
-  100% {
-    transform: scale(1) rotate(0deg);
-  }
-  25% {
-    transform: scale(1.1) rotate(-10deg);
-  }
-  50% {
-    transform: scale(1.14) rotate(10deg);
-  }
-  75% {
-    transform: scale(1.08) rotate(-5deg);
-  }
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25%       { transform: scale(1.1) rotate(-10deg); }
+  50%       { transform: scale(1.14) rotate(10deg); }
+  75%       { transform: scale(1.08) rotate(-5deg); }
 }
 
 @keyframes thought-pulse {
-  0%,
-  100% {
-    opacity: 0.4;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.hero-float {
-  animation: hero-float 5s ease-in-out infinite;
-}
-
-.hero-float-delay {
-  animation: hero-float 5s ease-in-out 1.2s infinite;
-}
-
-.hero-glow-orb {
-  animation: hero-glow 4s ease-in-out infinite;
-}
-
-.hero-shimmer-text {
-  background: linear-gradient(
-    90deg,
-    #d4af37 0%,
-    #f0d060 25%,
-    #ffffff 50%,
-    #f0d060 75%,
-    #d4af37 100%
-  );
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: hero-shimmer 6s linear infinite;
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 1; }
 }
 
 .mascot-bounce {
@@ -159,4 +83,55 @@ body {
 
 .mascot-thought-dot-delay {
   animation: thought-pulse 1.2s ease-in-out 0.3s infinite;
+}
+
+/* ─── Scroll reveal ──────────────────────────────── */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 500ms ease-out, transform 500ms ease-out;
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ─── Demo chatbot border pulse (3× then stops) ──── */
+@keyframes demo-glow-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(13, 115, 119, 0); border-color: rgba(13, 115, 119, 0.25); }
+  40%  { box-shadow: 0 0 32px 8px rgba(13, 115, 119, 0.18); border-color: rgba(13, 115, 119, 0.6); }
+  100% { box-shadow: 0 0 0 0 rgba(13, 115, 119, 0); border-color: rgba(13, 115, 119, 0.25); }
+}
+
+.demo-container-pulse {
+  animation: demo-glow-pulse 0.9s ease-in-out 3;
+}
+
+/* ─── Nav link underline slide-in ────────────────── */
+.nav-link-slide {
+  position: relative;
+}
+
+.nav-link-slide::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1.5px;
+  background: #0D7377;
+  transition: width 180ms ease;
+}
+
+.nav-link-slide:hover::after {
+  width: 100%;
 }

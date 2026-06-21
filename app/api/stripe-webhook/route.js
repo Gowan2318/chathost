@@ -68,6 +68,14 @@ export async function POST(req) {
 
       case "customer.subscription.updated": {
         const sub = event.data.object;
+        if (!sub.customer) {
+          console.warn("[stripe-webhook] missing sub.customer on", event.type, event.id);
+          break;
+        }
+        if (!sub.status) {
+          console.warn("[stripe-webhook] missing sub.status on", event.id);
+          break;
+        }
         // sub.status: 'active' | 'past_due' | 'canceled' | 'trialing' | 'unpaid' | 'paused' | ...
         const { error } = await db
           .from("chatbots")
@@ -82,6 +90,10 @@ export async function POST(req) {
 
       case "customer.subscription.deleted": {
         const sub = event.data.object;
+        if (!sub.customer) {
+          console.warn("[stripe-webhook] missing sub.customer on", event.type, event.id);
+          break;
+        }
         const { error } = await db
           .from("chatbots")
           .update({ subscription_status: "canceled" })

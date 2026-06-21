@@ -45,7 +45,7 @@ export async function GET(request) {
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from("chatbots")
-      .select("config")
+      .select("config, subscription_status")
       .eq("client_id", id.trim())
       .maybeSingle();
 
@@ -56,6 +56,12 @@ export async function GET(request) {
 
     if (!data?.config) {
       return NextResponse.json({ error: "Chatbot not found" }, { status: 404, headers: CORS_HEADERS });
+    }
+
+    // null = just created, Stripe webhook not yet fired — allow through so /success works immediately.
+    const status = data.subscription_status;
+    if (status !== null && status !== "active" && status !== "trialing") {
+      return NextResponse.json({ error: "Subscription inactive" }, { status: 402, headers: CORS_HEADERS });
     }
 
     return NextResponse.json(data.config, { headers: CORS_HEADERS });

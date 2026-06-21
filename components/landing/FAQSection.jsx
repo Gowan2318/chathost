@@ -29,31 +29,31 @@ export default function FAQSection() {
   const [openIndex, setOpenIndex] = useState(0);
 
   return (
-    <section id="faq" className="bg-[#111111] px-6 py-24">
+    <section id="faq" className="bg-[#F8F9FA] px-6 py-24">
       <div className="mx-auto max-w-3xl">
         <div className="mb-14 text-center">
-          <p className="text-sm font-semibold uppercase tracking-widest text-[#D4AF37]">FAQ</p>
-          <h2 className="mt-3 text-3xl font-bold text-white sm:text-4xl">Common questions</h2>
+          <p className="text-sm font-semibold uppercase tracking-widest text-[#0D7377]">FAQ</p>
+          <h2 className="mt-3 text-3xl font-bold text-[#1A1A2E] sm:text-4xl">Common questions</h2>
         </div>
         <div className="space-y-3">
           {FAQS.map((item, i) => (
             <div
               key={item.q}
-              className="overflow-hidden rounded-2xl border border-white/5 bg-[#1A1A1A]"
+              className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white"
             >
               <button
                 type="button"
                 onClick={() => setOpenIndex(openIndex === i ? -1 : i)}
                 className="flex w-full items-center justify-between px-6 py-5 text-left"
               >
-                <span className="pr-4 font-semibold text-white">{item.q}</span>
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#D4AF37]/15 text-[#D4AF37]">
+                <span className="pr-4 font-semibold text-[#1A1A2E]">{item.q}</span>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E8F4F4] text-[#0D7377] font-bold">
                   {openIndex === i ? "−" : "+"}
                 </span>
               </button>
               {openIndex === i && (
-                <div className="border-t border-white/5 px-6 pb-5 pt-0">
-                  <p className="leading-relaxed text-[#a3a3a3]">{item.a}</p>
+                <div className="border-t border-[#E2E8F0] px-6 pb-5 pt-4">
+                  <p className="leading-relaxed text-[#4A5568]">{item.a}</p>
                 </div>
               )}
             </div>

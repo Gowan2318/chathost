@@ -6,6 +6,27 @@ export const runtime = "nodejs";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ALLOWED_THEMES = new Set(["light", "dark", "glass"]);
 
+const BASIC_FIELD_DEFAULTS = {
+  booking_url: "",
+  payNowUrl: "",
+  brandColor: "#D4AF37",
+  chatTheme: "light",
+  mascotName: "",
+};
+
+const ALLOWED_CONFIG_KEYS = new Set([
+  "businessName", "businessInfo", "businessDescription", "servicesDescription",
+  "businessHours", "address", "supportPhone", "supportEmail",
+  "booking_url", "payNowUrl", "brandColor", "chatTheme",
+  "quickReplies", "customQA", "mascotName", "websiteUrl",
+  "industry", "plan",
+]);
+
+function applyPlanEnforcement(config, plan) {
+  if (plan !== "basic") return config;
+  return { ...config, ...BASIC_FIELD_DEFAULTS };
+}
+
 function adminClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -20,6 +41,14 @@ function validateConfig(config) {
   }
 
   const errors = [];
+
+  if (
+    !config.businessName ||
+    typeof config.businessName !== "string" ||
+    !config.businessName.trim()
+  ) {
+    errors.push("Business name is required");
+  }
 
   const strMax = (label, key, max) => {
     const val = config[key];
@@ -39,6 +68,10 @@ function validateConfig(config) {
   strMax("Website URL", "websiteUrl", 500);
   strMax("Brand color", "brandColor", 7);
   strMax("Mascot name", "mascotName", 20);
+
+  if (config.brandColor != null && !/^#[0-9A-Fa-f]{6}$/.test(config.brandColor)) {
+    errors.push("Brand color must be a valid hex color (e.g. #0D7377)");
+  }
 
   if (config.chatTheme != null && !ALLOWED_THEMES.has(config.chatTheme)) {
     errors.push("Invalid chat theme");
@@ -118,20 +151,40 @@ export async function POST(req) {
     return NextResponse.json({ error: validationErrors[0] }, { status: 400 });
   }
 
-  // Verify the chatbot belongs to the authenticated user before updating.
-  const { data: chatbot } = await db
+  // Fetch the existing row: verify ownership and read the stored plan.
+  const { data: chatbot, error: fetchError } = await db
     .from("chatbots")
-    .select("user_id")
+    .select("user_id, config")
     .eq("client_id", clientId)
     .maybeSingle();
+
+  if (fetchError) {
+    console.error("[update-chatbot] ownership fetch error:", fetchError);
+    return NextResponse.json({ error: "Failed to verify ownership" }, { status: 500 });
+  }
 
   if (!chatbot || chatbot.user_id !== user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // Strip any keys not in the allow-list before further processing.
+  const sanitizedConfig = Object.fromEntries(
+    Object.entries(config).filter(([key]) => ALLOWED_CONFIG_KEYS.has(key))
+  );
+
+  // Use the plan and industry stored in the DB row as source of truth — clients
+  // cannot upgrade their plan or change industry after initial setup via API.
+  const existingPlan = chatbot.config?.plan === "basic" ? "basic" : "pro";
+  const existingIndustry = chatbot.config?.industry ?? sanitizedConfig.industry ?? "other";
+
+  const configToSave = applyPlanEnforcement(
+    { ...sanitizedConfig, plan: existingPlan, industry: existingIndustry },
+    existingPlan
+  );
+
   const { error } = await db
     .from("chatbots")
-    .update({ config })
+    .update({ config: configToSave })
     .eq("client_id", clientId);
 
   if (error) {
