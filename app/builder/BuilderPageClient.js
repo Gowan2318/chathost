@@ -751,18 +751,43 @@ export default function BuilderPageClient() {
 
             {step === 5 && (
               <div>
-                <p className="mb-6 text-center text-sm text-[#4A5568]">
+                <p className="mb-6 text-center text-sm font-medium text-[#4A5568]">
                   This is how customers will see your chatbot on your website.
                 </p>
-                <div
-                  className={`relative mx-auto min-h-[520px] max-w-md overflow-hidden rounded-2xl border border-[#E2E8F0] p-4 ${
-                    form.chatTheme === "glass"
-                      ? "bg-gradient-to-br from-slate-600 via-slate-800 to-slate-900"
-                      : "bg-[#F8F9FA]"
-                  }`}
-                >
-                  <ChatWidget key={JSON.stringify(chatConfig)} config={chatConfig} defaultOpen embedded />
+                {/* Device mockup frame */}
+                <div className="mx-auto max-w-lg overflow-hidden rounded-2xl border-2 border-[#E2E8F0] shadow-2xl">
+                  {/* Mock browser chrome */}
+                  <div className="flex items-center gap-2 border-b border-[#E2E8F0] bg-[#F0F4F8] px-4 py-3">
+                    <span className="h-3 w-3 rounded-full bg-red-400/70" />
+                    <span className="h-3 w-3 rounded-full bg-yellow-400/70" />
+                    <span className="h-3 w-3 rounded-full bg-green-400/70" />
+                    <div className="ml-3 flex-1 rounded-md bg-white/80 px-3 py-1 text-xs text-[#9CA3AF]">
+                      {form.websiteUrl || "yourbusiness.com"}
+                    </div>
+                  </div>
+                  {/* Page canvas */}
+                  <div
+                    className={`relative min-h-[500px] p-6 ${
+                      form.chatTheme === "glass"
+                        ? "bg-gradient-to-br from-slate-600 via-slate-800 to-slate-900"
+                        : "bg-[#F0F4F8]"
+                    }`}
+                  >
+                    {/* Fake page content lines */}
+                    {form.chatTheme !== "glass" && (
+                      <div className="space-y-3 opacity-30">
+                        <div className="h-4 w-2/3 rounded bg-[#CBD5E0]" />
+                        <div className="h-3 w-full rounded bg-[#CBD5E0]" />
+                        <div className="h-3 w-5/6 rounded bg-[#CBD5E0]" />
+                        <div className="h-3 w-4/5 rounded bg-[#CBD5E0]" />
+                      </div>
+                    )}
+                    <ChatWidget key={JSON.stringify(chatConfig)} config={chatConfig} defaultOpen embedded />
+                  </div>
                 </div>
+                <p className="mt-4 text-center text-xs text-[#9CA3AF]">
+                  The chat bubble sits in the bottom-right corner of your website
+                </p>
               </div>
             )}
 
