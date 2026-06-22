@@ -24,7 +24,7 @@ const ALLOWED_CONFIG_KEYS = new Set([
   "menuUrl", "reservationLink", "hasDelivery", "dietaryOptions",
   "insurancePlans", "newPatientFormUrl", "hasPaymentPlans",
   "walkInsWelcome", "servicesPricing",
-  "membershipOptions", "hasFreeTrial", "classScheduleUrl",
+  "membershipUrl", "hasFreeTrial", "classScheduleUrl",
   "practiceAreas", "freeConsultation", "worksOnContingency",
   "serviceArea", "freeEstimates", "recurringPlans",
   "clientType", "areasServed", "extraInfo",
@@ -84,7 +84,7 @@ function validateConfig(config) {
   strMax("Dietary options", "dietaryOptions", 1000);
   strMax("Insurance plans", "insurancePlans", 1000);
   strMax("Services pricing", "servicesPricing", 1000);
-  strMax("Membership options", "membershipOptions", 1000);
+  strMax("Membership URL", "membershipUrl", 500);
   strMax("Practice areas", "practiceAreas", 1000);
   strMax("Service area", "serviceArea", 1000);
   strMax("Areas served", "areasServed", 1000);

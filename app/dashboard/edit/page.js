@@ -55,7 +55,7 @@ function configToForm(config) {
     hasPaymentPlans: Boolean(config.hasPaymentPlans),
     walkInsWelcome: Boolean(config.walkInsWelcome),
     servicesPricing: config.servicesPricing || "",
-    membershipOptions: config.membershipOptions || "",
+    membershipUrl: config.membershipUrl || "",
     hasFreeTrial: Boolean(config.hasFreeTrial),
     classScheduleUrl: config.classScheduleUrl || "",
     practiceAreas: config.practiceAreas || "",
@@ -506,8 +506,8 @@ export default function EditBotPage() {
 
                 {form.industry === "gym" && (
                   <>
-                    <FormField label="Membership options & pricing" htmlFor="edit-membership" hint="e.g. Monthly $49, Annual $399, Day pass $15" showValidation={false} error={null} isValid={false}>
-                      <textarea id="edit-membership" rows={3} value={form.membershipOptions} onChange={(e) => update({ membershipOptions: e.target.value })} placeholder="e.g. Monthly $49, Annual $399, Day pass $15" className={inputClassName(false, null, false)} />
+                    <FormField label="Membership page URL" htmlFor="edit-membership-url" hint="Link to your memberships/pricing page (e.g. your website's membership section)" showValidation={false} error={null} isValid={false}>
+                      <input id="edit-membership-url" type="url" value={form.membershipUrl} onChange={(e) => update({ membershipUrl: e.target.value })} placeholder="https://yourgym.com/memberships" className={inputClassName(false, null, false)} />
                     </FormField>
                     <Toggle label="Do you offer a free trial or guest pass?" checked={form.hasFreeTrial} onChange={(v) => update({ hasFreeTrial: v })} />
                     <FormField label="Class schedule URL" htmlFor="edit-class-schedule" hint="Link to your class schedule if available" showValidation={false} error={null} isValid={false}>

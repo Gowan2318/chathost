@@ -78,7 +78,7 @@ const INITIAL = {
   hasPaymentPlans: false,
   walkInsWelcome: false,
   servicesPricing: "",
-  membershipOptions: "",
+  membershipUrl: "",
   hasFreeTrial: false,
   classScheduleUrl: "",
   practiceAreas: "",
@@ -734,8 +734,8 @@ export default function BuilderPageClient() {
 
                     {form.industry === "gym" && (
                       <div className="space-y-4">
-                        <FormField label="Membership options & pricing" htmlFor="membership-options" hint="e.g. Monthly $49, Annual $399, Day pass $15" showValidation={false} error={null} isValid={false}>
-                          <textarea id="membership-options" rows={3} value={form.membershipOptions} onChange={(e) => update({ membershipOptions: e.target.value })} placeholder="e.g. Monthly $49, Annual $399, Day pass $15" className={inputClassName(false, null, false)} />
+                        <FormField label="Membership page URL" htmlFor="membership-url" hint="Link to your memberships/pricing page (e.g. your website's membership section)" showValidation={false} error={null} isValid={false}>
+                          <input id="membership-url" type="url" value={form.membershipUrl} onChange={(e) => update({ membershipUrl: e.target.value })} placeholder="https://yourgym.com/memberships" className={inputClassName(false, null, false)} />
                         </FormField>
                         <Toggle label="Do you offer a free trial or guest pass?" checked={form.hasFreeTrial} onChange={(v) => update({ hasFreeTrial: v })} />
                         <FormField label="Class schedule URL" htmlFor="class-schedule-url" hint="Link to your class schedule if available" showValidation={false} error={null} isValid={false}>
