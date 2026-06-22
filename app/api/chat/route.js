@@ -61,7 +61,8 @@ function buildSystemPrompt(businessName, businessInfo, industry) {
     `- Multi-part questions: Address every part. Don't answer only the first and ignore the rest.\n` +
     `- Frustrated users or repeated inability to help: Proactively offer to connect them with a team member for personal assistance.\n` +
     `- NEVER use the mascot name as a contact reference. When directing customers to contact the business, always use the business name, support phone, or support email — never the mascot name.\n` +
-    `- When a customer asks about something you don't have specific details for (like pricing or membership options), direct them to contact the business directly using the support phone or email provided in the business info below. Never say "contact [mascot name]" — say "contact us" and include the phone or email.\n\n` +
+    `- When a customer asks about something you don't have specific details for (like pricing or membership options), direct them to contact the business directly using the support phone or email provided in the business info below. Never say "contact [mascot name]" — say "contact us" and include the phone or email.\n` +
+    `- When redirecting a customer to contact the business for more information, keep it SHORT — only include the most relevant contact method (phone number or email). Do NOT list the full address and hours unless the customer specifically asked for location or hours. A good redirect response is 1–2 sentences maximum.\n\n` +
     `<business_info>${businessInfo ?? ""}</business_info>`
   );
 }
