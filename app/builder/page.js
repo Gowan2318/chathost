@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useState, Suspense } from "react";
 import AddressInput from "../../components/builder/AddressInput";
 import BrandColorPicker from "../../components/builder/BrandColorPicker";
 import ChatThemeSelector from "../../components/builder/ChatThemeSelector";
@@ -120,7 +120,7 @@ const PRO_FEATURES = [
   "Priority support",
 ];
 
-export default function BuilderPage() {
+function BuilderPageInner() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const searchParams = useSearchParams();
@@ -950,5 +950,13 @@ export default function BuilderPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function BuilderPage() {
+  return (
+    <Suspense>
+      <BuilderPageInner />
+    </Suspense>
   );
 }
