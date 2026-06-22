@@ -246,7 +246,7 @@ We're happy to assist you!`;
   }, [messages, isTyping, scrollToBottom]);
 
   useEffect(() => {
-    if (isOpen) inputRef.current?.focus();
+    if (isOpen) inputRef.current?.focus({ preventScroll: true });
   }, [isOpen]);
 
   useEffect(() => {
