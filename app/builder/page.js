@@ -49,6 +49,7 @@ function buildStripeCheckoutUrl(baseLink, clientReferenceId, email) {
   const url = new URL(baseLink);
   url.searchParams.set("client_reference_id", clientReferenceId);
   url.searchParams.set("prefilled_email", email);
+  url.searchParams.set("prefilled_promo_code", "FOUNDING20");
   return url.toString();
 }
 
