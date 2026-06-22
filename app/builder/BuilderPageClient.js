@@ -33,8 +33,6 @@ import { INDUSTRY_LABELS } from "../../lib/industries";
 import { getSupabaseClient } from "../../lib/supabase";
 import { useAuth } from "../../lib/AuthContext";
 
-const TOTAL_STEPS = 6;
-
 const STRIPE_CHECKOUT_LINKS = {
   basic: "https://buy.stripe.com/eVq8wO5g06j56rU73BdfG00",
   pro: "https://buy.stripe.com/00w28qcIsbDp4jMgEbdfG01",
@@ -64,7 +62,7 @@ const INITIAL = {
   supportEmail: "",
   bookingUrl: "",
   payNowUrl: "",
-  brandColor: "#D4AF37",
+  brandColor: "#0D7377",
   chatTheme: "light",
   quickReplies: [],
   customQA: [],
@@ -72,26 +70,28 @@ const INITIAL = {
   websiteUrl: "",
 };
 
-function StepIndicator({ current }) {
+// current = visual step (1-based, already accounting for skipped steps)
+// total   = total visual steps for this plan
+function StepIndicator({ current, total }) {
   return (
     <div className="mb-10 flex items-center justify-center gap-2">
-      {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((n) => (
+      {Array.from({ length: total }, (_, i) => i + 1).map((n) => (
         <div key={n} className="flex items-center gap-2">
           <div
             className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition ${
               n === current
-                ? "bg-[#D4AF37] text-[#0A0A0A] shadow-md shadow-[#D4AF37]/30"
+                ? "bg-[#0D7377] text-white shadow-md shadow-[#0D7377]/30"
                 : n < current
-                  ? "bg-[#D4AF37]/20 text-[#F0D060]"
-                  : "bg-[#1A1A1A] text-[#a3a3a3]"
+                  ? "bg-[#0D7377]/15 text-[#0D7377]"
+                  : "bg-[#E2E8F0] text-[#4A5568]"
             }`}
           >
             {n}
           </div>
-          {n < TOTAL_STEPS && (
+          {n < total && (
             <div
               className={`hidden h-0.5 w-6 sm:block md:w-10 ${
-                n < current ? "bg-[#D4AF37]/50" : "bg-white/10"
+                n < current ? "bg-[#0D7377]/40" : "bg-[#E2E8F0]"
               }`}
             />
           )}
@@ -144,8 +144,14 @@ export default function BuilderPageClient() {
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
 
-  const showValidation = attemptedStep === step;
   const isBasic = selectedPlan === "basic";
+  const showValidation = attemptedStep === step;
+
+  // Basic plan has 5 visual steps (internal step 4 — mascot — is skipped).
+  // Pro plan has 6 visual steps.
+  const totalSteps = isBasic ? 5 : 6;
+  // Map internal step → visual step number shown in the indicator and "Step X of Y"
+  const visualStep = isBasic && step >= 5 ? step - 1 : step;
 
   const update = (patch) => setForm((f) => ({ ...f, ...patch }));
 
@@ -181,6 +187,11 @@ export default function BuilderPageClient() {
     setAttemptedStep(null);
     setErrors({});
     setSummary([]);
+    // Basic plan skips step 4 (mascot)
+    if (isBasic && step === 3) {
+      setStep(5);
+      return;
+    }
     setStep((s) => s + 1);
   };
 
@@ -190,9 +201,14 @@ export default function BuilderPageClient() {
     setSummary([]);
     if (step === 1 && preselectedPlan) {
       router.push("/#pricing");
-    } else {
-      setStep((s) => Math.max(0, s - 1));
+      return;
     }
+    // Basic plan skips step 4 (mascot)
+    if (isBasic && step === 5) {
+      setStep(3);
+      return;
+    }
+    setStep((s) => Math.max(0, s - 1));
   };
 
   const handleChoosePlan = (plan) => {
@@ -225,7 +241,7 @@ export default function BuilderPageClient() {
         setAuthError(error.message);
       }
     }
-    // On success, onAuthStateChange in AuthContext updates `user` automatically — no redirect needed.
+    // On success, onAuthStateChange in AuthContext updates `user` automatically.
   };
 
   const handleStripeCheckout = async () => {
@@ -285,16 +301,16 @@ export default function BuilderPageClient() {
   const svcLen = form.servicesDescription.trim().length;
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white">
-      <header className="border-b border-white/5 bg-[#0A0A0A]/90 backdrop-blur">
+    <div className="min-h-screen bg-[#F8F9FA] text-[#1A1A2E]">
+      <header className="border-b border-[#E2E8F0] bg-white/95 backdrop-blur-xl sticky top-0 z-10">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-2 font-bold text-white">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#D4AF37] text-sm font-black text-[#0A0A0A]">
+          <Link href="/" className="flex items-center gap-2.5 font-bold text-[#1A1A2E]">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0D7377] text-sm font-black text-white shadow-md">
               V
             </span>
-            VestaChatHost Builder
+            <span className="text-[#1A1A2E]">Vesta<span className="text-[#0D7377]">Chat</span>Host Builder</span>
           </Link>
-          <Link href="/" className="text-sm font-medium text-[#a3a3a3] hover:text-[#F0D060]">
+          <Link href="/" className="text-sm font-medium text-[#4A5568] transition hover:text-[#0D7377]">
             ← Back to home
           </Link>
         </div>
@@ -302,7 +318,7 @@ export default function BuilderPageClient() {
 
       <main className="mx-auto max-w-4xl px-6 py-10">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold text-white sm:text-3xl">
+          <h1 className="text-2xl font-bold text-[#1A1A2E] sm:text-3xl">
             {step === 0 && "Choose your plan"}
             {step === 1 && "Tell us about your business"}
             {step === 2 && "Business details & support"}
@@ -312,39 +328,39 @@ export default function BuilderPageClient() {
             {step === 6 && "Launch your chatbot"}
           </h1>
           {step === 0 ? (
-            <p className="mt-2 text-[#a3a3a3]">
+            <p className="mt-2 text-[#4A5568]">
               No payment until the final step — select the right plan to get started
             </p>
           ) : (
-            <p className="mt-2 text-[#a3a3a3]">
-              Step {step} of {TOTAL_STEPS}
+            <p className="mt-2 text-[#4A5568]">
+              Step {visualStep} of {totalSteps}
             </p>
           )}
         </div>
 
-        {step >= 1 && <StepIndicator current={step} />}
+        {step >= 1 && <StepIndicator current={visualStep} total={totalSteps} />}
 
         {/* ── Step 0: Plan Selection ── */}
         {step === 0 && (
           <div>
             <div className="grid gap-6 sm:grid-cols-2">
               {/* Basic */}
-              <div className="flex flex-col rounded-2xl border border-white/10 bg-[#1A1A1A] p-8">
-                <h3 className="text-xl font-bold text-white">Basic Plan</h3>
-                <div className="mt-2">
-                  <span className="text-sm text-[#666] line-through">$40/mo</span>
-                  <span className="ml-2 rounded-full bg-[#D4AF37]/20 px-2 py-0.5 text-xs font-bold text-[#F0D060]">
+              <div className="flex flex-col rounded-2xl border border-[#E2E8F0] bg-white p-8 transition-all hover:border-[#0D7377] hover:-translate-y-0.5 hover:shadow-lg">
+                <h3 className="text-xl font-bold text-[#1A1A2E]">Basic Plan</h3>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-sm text-[#9CA3AF] line-through">$40/mo</span>
+                  <span className="rounded-full bg-[#0D7377]/15 px-2 py-0.5 text-xs font-bold text-[#0D7377]">
                     20% OFF
                   </span>
                 </div>
-                <p className="mt-1 text-3xl font-bold text-white">
-                  $32<span className="text-base font-normal text-[#a3a3a3]">/mo</span>
+                <p className="mt-1 text-3xl font-bold text-[#0D7377]">
+                  $32<span className="text-base font-normal text-[#4A5568]">/mo</span>
                 </p>
-                <p className="mt-1 text-xs text-[#D4AF37]">with code FOUNDING20</p>
-                <ul className="mt-6 flex-1 space-y-3 text-sm text-[#a3a3a3]">
+                <p className="mt-1 text-xs text-[#0D7377]">with code FOUNDING20</p>
+                <ul className="mt-6 flex-1 space-y-3 text-sm text-[#4A5568]">
                   {BASIC_FEATURES.map((f) => (
                     <li key={f} className="flex items-start gap-3">
-                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#D4AF37]/20 text-xs text-[#F0D060]">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#0D7377]/15 text-xs text-[#0D7377]">
                         ✓
                       </span>
                       {f}
@@ -354,32 +370,32 @@ export default function BuilderPageClient() {
                 <button
                   type="button"
                   onClick={() => handleChoosePlan("basic")}
-                  className="mt-8 w-full rounded-xl border border-[#D4AF37]/50 py-3 text-sm font-bold text-[#F0D060] transition hover:bg-[#D4AF37]/10"
+                  className="mt-8 w-full rounded-xl border border-[#0D7377] py-3 text-sm font-bold text-[#0D7377] transition hover:bg-[#E8F4F4]"
                 >
                   Choose Basic
                 </button>
               </div>
 
               {/* Pro */}
-              <div className="relative flex flex-col rounded-2xl border border-[#D4AF37] bg-[#1A1A1A] p-8 shadow-2xl shadow-[#D4AF37]/10">
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#D4AF37] px-4 py-1 text-xs font-bold text-[#0A0A0A]">
+              <div className="relative flex flex-col rounded-2xl border border-[#1A1A2E] bg-[#1A1A2E] p-8 shadow-2xl">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#0D7377] px-4 py-1 text-xs font-bold text-white">
                   MOST POPULAR
                 </span>
                 <h3 className="text-xl font-bold text-white">Pro Plan</h3>
-                <div className="mt-2">
-                  <span className="text-sm text-[#666] line-through">$60/mo</span>
-                  <span className="ml-2 rounded-full bg-[#D4AF37]/20 px-2 py-0.5 text-xs font-bold text-[#F0D060]">
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-sm text-white/40 line-through">$60/mo</span>
+                  <span className="rounded-full bg-[#0D7377] px-2.5 py-0.5 text-xs font-bold text-white">
                     20% OFF
                   </span>
                 </div>
                 <p className="mt-1 text-3xl font-bold text-white">
-                  $48<span className="text-base font-normal text-[#a3a3a3]">/mo</span>
+                  $48<span className="text-base font-normal text-white/60">/mo</span>
                 </p>
-                <p className="mt-1 text-xs text-[#D4AF37]">with code FOUNDING20</p>
-                <ul className="mt-6 flex-1 space-y-3 text-sm text-[#a3a3a3]">
+                <p className="mt-1 text-xs text-white/50">with code FOUNDING20</p>
+                <ul className="mt-6 flex-1 space-y-3 text-sm text-white/80">
                   {PRO_FEATURES.map((f) => (
                     <li key={f} className="flex items-start gap-3">
-                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#D4AF37]/20 text-xs text-[#F0D060]">
+                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#0D7377]/30 text-xs text-[#7DD5D8]">
                         ✓
                       </span>
                       {f}
@@ -389,14 +405,14 @@ export default function BuilderPageClient() {
                 <button
                   type="button"
                   onClick={() => handleChoosePlan("pro")}
-                  className="mt-8 w-full rounded-xl bg-[#D4AF37] py-3 text-sm font-bold text-[#0A0A0A] shadow-lg shadow-[#D4AF37]/20 transition hover:bg-[#F0D060]"
+                  className="mt-8 w-full rounded-xl border border-white/20 py-3 text-sm font-bold text-white transition hover:bg-white/10"
                 >
                   Choose Pro
                 </button>
               </div>
             </div>
 
-            <p className="mt-6 text-center text-sm text-[#a3a3a3]">
+            <p className="mt-6 text-center text-sm text-[#4A5568]">
               🎉 First 100 founding members get 20% off forever — discount auto-applied at checkout
             </p>
           </div>
@@ -404,7 +420,7 @@ export default function BuilderPageClient() {
 
         {/* ── Steps 1–6 ── */}
         {step >= 1 && (
-          <div className="rounded-2xl border border-white/5 bg-[#1A1A1A] p-6 shadow-sm sm:p-8">
+          <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm sm:p-8">
             <ErrorSummary summary={summary} show={showValidation} />
 
             {step === 1 && (
@@ -454,9 +470,7 @@ export default function BuilderPageClient() {
                     validateBusinessDescription(f.businessDescription)
                   )}
                   counter={
-                    <span
-                      className={`text-xs ${descLen >= 50 ? "text-green-400" : "text-[#a3a3a3]"}`}
-                    >
+                    <span className={`text-xs ${descLen >= 50 ? "text-green-600" : "text-[#4A5568]"}`}>
                       {descLen}/50
                     </span>
                   }
@@ -487,9 +501,7 @@ export default function BuilderPageClient() {
                     validateServicesDescription(f.servicesDescription)
                   )}
                   counter={
-                    <span
-                      className={`text-xs ${svcLen >= 20 ? "text-green-400" : "text-[#a3a3a3]"}`}
-                    >
+                    <span className={`text-xs ${svcLen >= 20 ? "text-green-600" : "text-[#4A5568]"}`}>
                       {svcLen}/20
                     </span>
                   }
@@ -580,8 +592,7 @@ export default function BuilderPageClient() {
                       isValid={
                         showValidation &&
                         !errors.bookingUrl &&
-                        (!form.bookingUrl.trim() ||
-                          validateHttpsUrl(form.bookingUrl) === null)
+                        (!form.bookingUrl.trim() || validateHttpsUrl(form.bookingUrl) === null)
                       }
                       hint="Customers will be sent here to book appointments. Leave blank if you don't take online bookings yet."
                     >
@@ -611,8 +622,7 @@ export default function BuilderPageClient() {
                       isValid={
                         showValidation &&
                         !errors.payNowUrl &&
-                        (!form.payNowUrl.trim() ||
-                          validateHttpsUrl(form.payNowUrl) === null)
+                        (!form.payNowUrl.trim() || validateHttpsUrl(form.payNowUrl) === null)
                       }
                       hint="Must start with https:// if provided"
                     >
@@ -636,11 +646,11 @@ export default function BuilderPageClient() {
                 )}
 
                 {businessInfo && (
-                  <div className="rounded-xl border border-[#D4AF37]/20 bg-[#111111] p-4">
-                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#D4AF37]">
+                  <div className="rounded-xl border border-[#0D7377]/20 bg-[#E8F4F4] p-4">
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#0D7377]">
                       AI preview
                     </p>
-                    <p className="text-xs leading-relaxed text-[#a3a3a3]">{businessInfo}</p>
+                    <p className="text-xs leading-relaxed text-[#4A5568]">{businessInfo}</p>
                   </div>
                 )}
               </div>
@@ -676,23 +686,24 @@ export default function BuilderPageClient() {
               </div>
             )}
 
+            {/* Step 4 is Pro-only — Basic users jump from step 3 directly to step 5 */}
             {step === 4 && (
               <div className="flex flex-col items-center gap-8 sm:flex-row sm:items-start">
                 <div
-                  className={`flex flex-col items-center rounded-2xl border bg-[#111111] p-8 ${
+                  className={`flex flex-col items-center rounded-2xl border bg-[#F8F9FA] p-8 ${
                     showValidation && errors.industry
-                      ? "border-red-500/50"
-                      : "border-[#D4AF37]/20"
+                      ? "border-red-400"
+                      : "border-[#E2E8F0]"
                   }`}
                 >
                   {form.industry ? (
                     <MascotCharacter industry={form.industry} animation="bounce" size={120} />
                   ) : (
-                    <div className="flex h-[120px] w-[120px] items-center justify-center rounded-full bg-[#0A0A0A] text-[#a3a3a3]">
+                    <div className="flex h-[120px] w-[120px] items-center justify-center rounded-full bg-[#E2E8F0] text-[#4A5568]">
                       ?
                     </div>
                   )}
-                  <p className="mt-4 text-sm font-medium text-[#F0D060]">
+                  <p className="mt-4 text-sm font-medium text-[#0D7377]">
                     {form.industry
                       ? `${INDUSTRY_LABELS[form.industry]} mascot`
                       : "Select an industry in Step 1"}
@@ -700,61 +711,52 @@ export default function BuilderPageClient() {
                 </div>
                 <div className="flex-1 space-y-4">
                   {showValidation && errors.industry && (
-                    <p className="text-sm text-red-400" role="alert">
+                    <p className="text-sm text-red-600" role="alert">
                       {errors.industry}
                     </p>
                   )}
-                  {isBasic ? (
-                    <p className="rounded-lg bg-[#111111] p-4 text-sm text-[#a3a3a3]">
-                      Your mascot character is included with your plan. Upgrade to Pro to give your
-                      mascot a custom name that appears in the chat header.
-                    </p>
-                  ) : (
-                    <>
-                      <p className="text-sm text-[#a3a3a3]">
-                        Give your mascot a friendly name. It appears in the chat header and helps your
-                        brand feel personal.
-                      </p>
-                      <FormField
-                        label="Mascot name"
-                        htmlFor="mascot-name"
-                        showValidation={showValidation}
-                        error={errors.mascotName}
-                        isValid={fieldValid("mascotName", (f) => validateMascotName(f.mascotName))}
-                      >
-                        <input
-                          id="mascot-name"
-                          type="text"
-                          value={form.mascotName}
-                          onChange={(e) => update({ mascotName: e.target.value })}
-                          placeholder="e.g. Smiley, Coach Max, Leafy"
-                          maxLength={20}
-                          className={inputClassName(
-                            showValidation,
-                            errors.mascotName,
-                            fieldValid("mascotName", (f) => validateMascotName(f.mascotName))
-                          )}
-                        />
-                      </FormField>
-                      <p className="rounded-lg bg-[#111111] p-4 text-xs text-[#a3a3a3]">
-                        Letters and spaces only · 2–20 characters
-                      </p>
-                    </>
-                  )}
+                  <p className="text-sm text-[#4A5568]">
+                    Give your mascot a friendly name. It appears in the chat header and helps your
+                    brand feel personal.
+                  </p>
+                  <FormField
+                    label="Mascot name"
+                    htmlFor="mascot-name"
+                    showValidation={showValidation}
+                    error={errors.mascotName}
+                    isValid={fieldValid("mascotName", (f) => validateMascotName(f.mascotName))}
+                  >
+                    <input
+                      id="mascot-name"
+                      type="text"
+                      value={form.mascotName}
+                      onChange={(e) => update({ mascotName: e.target.value })}
+                      placeholder="e.g. Smiley, Coach Max, Leafy"
+                      maxLength={20}
+                      className={inputClassName(
+                        showValidation,
+                        errors.mascotName,
+                        fieldValid("mascotName", (f) => validateMascotName(f.mascotName))
+                      )}
+                    />
+                  </FormField>
+                  <p className="rounded-lg bg-[#F8F9FA] border border-[#E2E8F0] p-4 text-xs text-[#4A5568]">
+                    Letters and spaces only · 2–20 characters
+                  </p>
                 </div>
               </div>
             )}
 
             {step === 5 && (
               <div>
-                <p className="mb-6 text-center text-sm text-[#a3a3a3]">
+                <p className="mb-6 text-center text-sm text-[#4A5568]">
                   This is how customers will see your chatbot on your website.
                 </p>
                 <div
-                  className={`relative mx-auto min-h-[520px] max-w-md overflow-hidden rounded-2xl border border-[#D4AF37]/25 p-4 ${
+                  className={`relative mx-auto min-h-[520px] max-w-md overflow-hidden rounded-2xl border border-[#E2E8F0] p-4 ${
                     form.chatTheme === "glass"
                       ? "bg-gradient-to-br from-slate-600 via-slate-800 to-slate-900"
-                      : "bg-[#111111]"
+                      : "bg-[#F8F9FA]"
                   }`}
                 >
                   <ChatWidget key={JSON.stringify(chatConfig)} config={chatConfig} defaultOpen embedded />
@@ -765,24 +767,23 @@ export default function BuilderPageClient() {
             {step === 6 && (
               <div className="mx-auto max-w-md space-y-6 text-center">
                 {/* Plan summary */}
-                <div className="rounded-xl border border-[#D4AF37]/20 bg-[#111111] px-5 py-4 text-left">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[#a3a3a3]">
+                <div className="rounded-xl border border-[#E2E8F0] bg-[#F8F9FA] px-5 py-4 text-left">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[#4A5568]">
                     Your chosen plan
                   </p>
-                  <p className="mt-1 text-lg font-bold text-white">
+                  <p className="mt-1 text-lg font-bold text-[#1A1A2E]">
                     {PLAN_META[selectedPlan].label} —{" "}
-                    <span className="text-[#F0D060]">{PLAN_META[selectedPlan].price}</span>
+                    <span className="text-[#0D7377]">{PLAN_META[selectedPlan].price}</span>
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-[#D4AF37]/20 bg-[#111111] p-6">
+                <div className="rounded-2xl border border-[#E2E8F0] bg-[#F8F9FA] p-6">
                   <MascotCharacter industry={form.industry || "other"} animation="celebrate" size={80} />
-                  <h2 className="mt-4 text-xl font-bold text-white">
+                  <h2 className="mt-4 text-xl font-bold text-[#1A1A2E]">
                     Almost there{form.mascotName ? `, ${form.mascotName} is ready to go` : ""}!
                   </h2>
-                  <p className="mt-2 text-sm text-[#a3a3a3]">
-                    Enter your website URL, then complete payment to activate your VestaChatHost
-                    chatbot.
+                  <p className="mt-2 text-sm text-[#4A5568]">
+                    Enter your website URL, then complete payment to activate your VestaChatHost chatbot.
                   </p>
                 </div>
 
@@ -811,12 +812,12 @@ export default function BuilderPageClient() {
 
                 {/* ── Auth panel (shown only when logged out) ── */}
                 {!user && (
-                  <div className="rounded-2xl border border-[#D4AF37]/20 bg-[#111111] p-6 text-left">
-                    <p className="mb-4 text-sm font-semibold text-white">
+                  <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6 text-left shadow-sm">
+                    <p className="mb-4 text-sm font-semibold text-[#1A1A2E]">
                       Create an account or log in to save your chatbot and continue to payment
                     </p>
 
-                    <div className="mb-5 flex rounded-xl border border-white/10 bg-[#0A0A0A] p-1">
+                    <div className="mb-5 flex rounded-xl border border-[#E2E8F0] bg-[#F8F9FA] p-1">
                       {["login", "signup"].map((tab) => (
                         <button
                           key={tab}
@@ -824,8 +825,8 @@ export default function BuilderPageClient() {
                           onClick={() => { setAuthTab(tab); setAuthError(""); }}
                           className={`flex-1 rounded-lg py-2 text-sm font-semibold transition ${
                             authTab === tab
-                              ? "bg-[#D4AF37] text-[#0A0A0A]"
-                              : "text-[#a3a3a3] hover:text-white"
+                              ? "bg-[#0D7377] text-white shadow-sm"
+                              : "text-[#4A5568] hover:text-[#1A1A2E]"
                           }`}
                         >
                           {tab === "login" ? "Log In" : "Sign Up"}
@@ -835,42 +836,42 @@ export default function BuilderPageClient() {
 
                     <div className="space-y-4">
                       <div>
-                        <label className="mb-1.5 block text-xs font-medium text-[#a3a3a3]">Email</label>
+                        <label className="mb-1.5 block text-xs font-medium text-[#4A5568]">Email</label>
                         <input
                           type="email"
                           autoComplete="email"
                           value={authEmail}
                           onChange={(e) => setAuthEmail(e.target.value)}
                           placeholder="you@example.com"
-                          className="w-full rounded-xl border border-white/10 bg-[#0A0A0A] px-4 py-3 text-sm text-white placeholder-[#555] outline-none transition focus:border-[#D4AF37]/60 focus:ring-1 focus:ring-[#D4AF37]/30"
+                          className="w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#1A1A2E] placeholder-[#9CA3AF] outline-none transition focus:border-[#0D7377]/50 focus:ring-2 focus:ring-[#0D7377]/20"
                         />
                       </div>
                       <div>
-                        <label className="mb-1.5 block text-xs font-medium text-[#a3a3a3]">Password</label>
+                        <label className="mb-1.5 block text-xs font-medium text-[#4A5568]">Password</label>
                         <input
                           type="password"
                           autoComplete={authTab === "login" ? "current-password" : "new-password"}
                           value={authPassword}
                           onChange={(e) => setAuthPassword(e.target.value)}
                           placeholder={authTab === "signup" ? "At least 8 characters" : "Your password"}
-                          className="w-full rounded-xl border border-white/10 bg-[#0A0A0A] px-4 py-3 text-sm text-white placeholder-[#555] outline-none transition focus:border-[#D4AF37]/60 focus:ring-1 focus:ring-[#D4AF37]/30"
+                          className="w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#1A1A2E] placeholder-[#9CA3AF] outline-none transition focus:border-[#0D7377]/50 focus:ring-2 focus:ring-[#0D7377]/20"
                         />
                       </div>
                       {authTab === "signup" && (
                         <div>
-                          <label className="mb-1.5 block text-xs font-medium text-[#a3a3a3]">Confirm password</label>
+                          <label className="mb-1.5 block text-xs font-medium text-[#4A5568]">Confirm password</label>
                           <input
                             type="password"
                             autoComplete="new-password"
                             value={authConfirm}
                             onChange={(e) => setAuthConfirm(e.target.value)}
                             placeholder="Repeat your password"
-                            className="w-full rounded-xl border border-white/10 bg-[#0A0A0A] px-4 py-3 text-sm text-white placeholder-[#555] outline-none transition focus:border-[#D4AF37]/60 focus:ring-1 focus:ring-[#D4AF37]/30"
+                            className="w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#1A1A2E] placeholder-[#9CA3AF] outline-none transition focus:border-[#0D7377]/50 focus:ring-2 focus:ring-[#0D7377]/20"
                           />
                         </div>
                       )}
                       {authError && (
-                        <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                        <p className="rounded-xl border border-red-400/30 bg-red-50 px-4 py-3 text-sm text-red-600">
                           {authError}
                         </p>
                       )}
@@ -878,7 +879,7 @@ export default function BuilderPageClient() {
                         type="button"
                         onClick={handleInlineAuth}
                         disabled={authLoading}
-                        className="w-full rounded-xl bg-[#D4AF37] py-3 text-sm font-bold text-[#0A0A0A] shadow-lg shadow-[#D4AF37]/20 transition hover:bg-[#F0D060] disabled:opacity-50"
+                        className="w-full rounded-xl bg-[#0D7377] py-3 text-sm font-bold text-white shadow-md shadow-[#0D7377]/20 transition hover:bg-[#0A5D61] disabled:opacity-50"
                       >
                         {authLoading
                           ? (authTab === "login" ? "Signing in…" : "Creating account…")
@@ -890,14 +891,14 @@ export default function BuilderPageClient() {
 
                 {/* ── Logged-in confirmation ── */}
                 {user && (
-                  <div className="flex items-center justify-between rounded-xl border border-[#D4AF37]/20 bg-[#111111] px-4 py-3 text-left">
-                    <p className="text-sm text-[#a3a3a3]">
-                      Logged in as <span className="font-medium text-white">{user.email}</span>
+                  <div className="flex items-center justify-between rounded-xl border border-[#E2E8F0] bg-[#F8F9FA] px-4 py-3 text-left">
+                    <p className="text-sm text-[#4A5568]">
+                      Logged in as <span className="font-medium text-[#1A1A2E]">{user.email}</span>
                     </p>
                     <button
                       type="button"
                       onClick={() => signOut()}
-                      className="text-xs text-[#D4AF37] transition hover:text-[#F0D060]"
+                      className="text-xs text-[#0D7377] transition hover:text-[#0A5D61]"
                     >
                       Not you? Sign out
                     </button>
@@ -913,16 +914,16 @@ export default function BuilderPageClient() {
                   {isSaving ? "Saving..." : "Subscribe with Stripe"}
                 </button>
                 {!user && (
-                  <p className="text-xs text-[#a3a3a3]">Sign in or create an account above to continue.</p>
+                  <p className="text-xs text-[#4A5568]">Sign in or create an account above to continue.</p>
                 )}
-                {saveError && <p className="text-sm text-red-400">{saveError}</p>}
-                <p className="text-xs text-[#a3a3a3]">
+                {saveError && <p className="text-sm text-red-600">{saveError}</p>}
+                <p className="text-xs text-[#4A5568]">
                   By subscribing, you agree to our{" "}
-                  <Link href="/terms" className="text-[#F0D060] hover:underline">Terms of Service</Link>
+                  <Link href="/terms" className="text-[#0D7377] hover:underline">Terms of Service</Link>
                   {" "}and{" "}
-                  <Link href="/privacy" className="text-[#F0D060] hover:underline">Privacy Policy</Link>.
+                  <Link href="/privacy" className="text-[#0D7377] hover:underline">Privacy Policy</Link>.
                 </p>
-                <p className="text-xs text-[#a3a3a3]">
+                <p className="text-xs text-[#4A5568]">
                   Your FOUNDING20 discount is applied automatically at checkout.
                 </p>
               </div>
@@ -932,15 +933,15 @@ export default function BuilderPageClient() {
               <button
                 type="button"
                 onClick={handleBack}
-                className="rounded-xl border border-white/10 px-6 py-2.5 text-sm font-medium text-[#a3a3a3] transition hover:bg-[#111111]"
+                className="rounded-xl border border-[#E2E8F0] px-6 py-2.5 text-sm font-medium text-[#4A5568] transition hover:bg-[#F8F9FA]"
               >
                 Back
               </button>
-              {step < TOTAL_STEPS ? (
+              {step < 6 ? (
                 <button
                   type="button"
                   onClick={handleContinue}
-                  className="rounded-xl bg-[#D4AF37] px-6 py-2.5 text-sm font-bold text-[#0A0A0A] transition hover:bg-[#F0D060]"
+                  className="rounded-xl bg-[#0D7377] px-6 py-2.5 text-sm font-bold text-white transition hover:bg-[#0A5D61]"
                 >
                   Continue
                 </button>

@@ -5,7 +5,7 @@ import FieldTooltip from "./FieldTooltip";
 function CheckIcon() {
   return (
     <span
-      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-500/20 text-green-400"
+      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-500/15 text-green-600"
       aria-hidden
     >
       ✓
@@ -17,11 +17,11 @@ export function ErrorSummary({ summary, show }) {
   if (!show || !summary?.length) return null;
   return (
     <div
-      className="mb-6 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3"
+      className="mb-6 rounded-xl border border-red-500/30 bg-red-50 px-4 py-3"
       role="alert"
     >
-      <p className="text-sm font-semibold text-red-300">Please fix the following:</p>
-      <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-red-200/90">
+      <p className="text-sm font-semibold text-red-700">Please fix the following:</p>
+      <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-red-600">
         {summary.map((msg) => (
           <li key={msg}>{msg}</li>
         ))}
@@ -47,7 +47,7 @@ export function FormField({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between gap-2">
-        <label htmlFor={htmlFor} className="flex items-center gap-1.5 text-sm font-medium text-[#a3a3a3]">
+        <label htmlFor={htmlFor} className="flex items-center gap-1.5 text-sm font-medium text-[#4A5568]">
           <span>{label}</span>
           {tooltip && <FieldTooltip text={tooltip} />}
         </label>
@@ -57,9 +57,9 @@ export function FormField({
         </div>
       </div>
       {children}
-      {hint && !showError && <p className="mt-1.5 text-xs text-[#a3a3a3]">{hint}</p>}
+      {hint && !showError && <p className="mt-1.5 text-xs text-[#4A5568]">{hint}</p>}
       {showError && (
-        <p className="mt-1.5 text-sm text-red-400" role="alert">
+        <p className="mt-1.5 text-sm text-red-600" role="alert">
           {error}
         </p>
       )}
@@ -69,12 +69,12 @@ export function FormField({
 
 export function inputClassName(showValidation, error, isValid) {
   const base =
-    "w-full rounded-xl border bg-[#111111] px-4 py-3 text-sm text-white outline-none transition focus:ring-2";
+    "w-full rounded-xl border bg-white px-4 py-3 text-sm text-[#1A1A2E] outline-none transition placeholder-[#9CA3AF] focus:ring-2";
   if (showValidation && error) {
-    return `${base} border-red-500 focus:border-red-500 focus:ring-red-500/20`;
+    return `${base} border-red-400 focus:border-red-400 focus:ring-red-400/20`;
   }
   if (showValidation && isValid) {
     return `${base} border-green-500/60 focus:border-green-500/60 focus:ring-green-500/20`;
   }
-  return `${base} border-white/10 focus:border-[#D4AF37]/50 focus:ring-[#D4AF37]/20`;
+  return `${base} border-[#E2E8F0] focus:border-[#0D7377]/50 focus:ring-[#0D7377]/20`;
 }
