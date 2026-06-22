@@ -196,21 +196,20 @@ export default function BuilderPageClient() {
 
   const businessInfo = useMemo(() => composeBusinessInfo(form), [form]);
 
-  const chatConfig = useMemo(
-    () => ({
-      businessName: form.businessName || "Your Business",
-      businessInfo: businessInfo || "Add your business details in the builder.",
-      supportPhone: form.supportPhone || "(555) 000-0000",
-      supportEmail: form.supportEmail || "support@yourbusiness.com",
-      payNowUrl: form.payNowUrl,
-      quickReplies: form.quickReplies.filter(Boolean).slice(0, 8),
-      brandColor: form.brandColor,
-      chatTheme: form.chatTheme || "light",
-      industry: form.industry || "other",
-      mascotName: form.mascotName,
-    }),
-    [form, businessInfo]
-  );
+  // Not memoized — must always reflect the latest form.quickReplies so the Step 5
+  // preview is never stale after the user edits or removes quick replies in Step 3.
+  const chatConfig = {
+    businessName: form.businessName || "Your Business",
+    businessInfo: businessInfo || "Add your business details in the builder.",
+    supportPhone: form.supportPhone || "(555) 000-0000",
+    supportEmail: form.supportEmail || "support@yourbusiness.com",
+    payNowUrl: form.payNowUrl,
+    quickReplies: form.quickReplies.filter(Boolean).slice(0, 8),
+    brandColor: form.brandColor,
+    chatTheme: form.chatTheme || "light",
+    industry: form.industry || "other",
+    mascotName: form.mascotName,
+  };
 
   const fieldValid = (key, validator) =>
     showValidation && !errors[key] && validator(form) === null;
