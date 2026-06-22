@@ -36,9 +36,8 @@ import { useAuth } from "../../lib/AuthContext";
 const TOTAL_STEPS = 6;
 
 const STRIPE_CHECKOUT_LINKS = {
-  basic:
-    "https://buy.stripe.com/test_8x2dR8ePrdylcO8a99c7u01?prefilled_promo_code=FOUNDING20",
-  pro: "https://buy.stripe.com/test_fZu28q22FdylbK4gxxc7u02?prefilled_promo_code=FOUNDING20",
+  basic: "https://buy.stripe.com/eVq8wO5g06j56rU73BdfG00",
+  pro: "https://buy.stripe.com/00w28qcIsbDp4jMgEbdfG01",
 };
 
 const PLAN_META = {
