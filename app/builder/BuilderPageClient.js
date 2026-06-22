@@ -187,6 +187,7 @@ export default function BuilderPageClient() {
     setAttemptedStep(null);
     setErrors({});
     setSummary([]);
+    window.scrollTo({ top: 0, behavior: "instant" });
     // Basic plan skips step 4 (mascot)
     if (isBasic && step === 3) {
       setStep(5);
@@ -199,6 +200,7 @@ export default function BuilderPageClient() {
     setAttemptedStep(null);
     setErrors({});
     setSummary([]);
+    window.scrollTo({ top: 0, behavior: "instant" });
     if (step === 1 && preselectedPlan) {
       router.push("/#pricing");
       return;
