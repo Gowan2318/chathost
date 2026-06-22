@@ -838,7 +838,8 @@ export default function BuilderPageClient() {
                       <div>
                         <label className="mb-1.5 block text-xs font-medium text-[#4A5568]">Email</label>
                         <input
-                          type="email"
+                          type="text"
+                          inputMode="email"
                           autoComplete="email"
                           value={authEmail}
                           onChange={(e) => setAuthEmail(e.target.value)}
