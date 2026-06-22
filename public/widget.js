@@ -155,7 +155,19 @@
     var supportEmail = config.supportEmail || "";
     var payNowUrl = config.payNowUrl || "";
     var bookingUrl = config.booking_url || config.bookingUrl || "";
-    var quickReplies = (config.quickReplies || []).filter(Boolean).slice(0, 8);
+    var quickReplies = (config.quickReplies || []).filter(Boolean);
+    var customQA = Array.isArray(config.customQA) ? config.customQA : [];
+    var qaAnswerMap = {};
+    customQA.forEach(function (qa) {
+      if (qa && qa.question && qa.question.trim() && qa.answer && qa.answer.trim()) {
+        qaAnswerMap[qa.question.trim().toLowerCase()] = qa.answer.trim();
+      }
+    });
+    var allButtons = quickReplies.concat(
+      customQA
+        .filter(function (qa) { return qa && qa.question && qa.question.trim(); })
+        .map(function (qa) { return qa.question.trim(); })
+    ).slice(0, 8);
     var brandColor = config.brandColor || "#D4AF37";
     var brandDark = shadeHex(brandColor, -25);
     var theme = resolveTheme(config.chatTheme || "light", brandColor);
@@ -511,7 +523,7 @@
     }
 
     function renderQuickReplies() {
-      var showInitial = state.showQuickReplies && !state.chatClosed && quickReplies.length;
+      var showInitial = state.showQuickReplies && !state.chatClosed && allButtons.length;
       var showContextual =
         !state.showQuickReplies &&
         !state.chatClosed &&
@@ -521,7 +533,7 @@
       if (showInitial || showContextual) {
         quickEl.style.display = "grid";
         quickEl.innerHTML = "";
-        var toShow = showInitial ? quickReplies : state.contextualQuickReplies;
+        var toShow = showInitial ? allButtons : state.contextualQuickReplies;
         toShow.forEach(function (label) {
           var btn = document.createElement("button");
           btn.type = "button";
@@ -678,6 +690,12 @@
       }
       if (isTalkToSomeoneIntent(trimmed)) {
         completeWithFollowUp(supportMessage());
+        return;
+      }
+
+      var qaAnswer = qaAnswerMap[trimmed.toLowerCase()];
+      if (qaAnswer) {
+        completeWithFollowUp(qaAnswer);
         return;
       }
 

@@ -177,6 +177,7 @@ export default function ChatWidget({
     supportEmail = "",
     payNowUrl = "",
     quickReplies = [],
+    customQA = [],
     brandColor = "#059669",
     industry = "other",
     mascotName = "",
@@ -324,6 +325,12 @@ We're happy to assist you!`;
       return;
     }
 
+    const qaAnswer = qaAnswerMap[trimmed.toLowerCase()];
+    if (qaAnswer) {
+      completeWithFollowUp(qaAnswer);
+      return;
+    }
+
     const nextMessages = [...messages, userMessage];
     setIsTyping(true);
     try {
@@ -361,7 +368,17 @@ We're happy to assist you!`;
       ? "Choose an option above…"
       : "Type your message…";
 
-  const replies = quickReplies.filter(Boolean).slice(0, 8);
+  const qaAnswerMap = Object.fromEntries(
+    (Array.isArray(customQA) ? customQA : [])
+      .filter((qa) => qa?.question?.trim() && qa?.answer?.trim())
+      .map((qa) => [qa.question.trim().toLowerCase(), qa.answer.trim()])
+  );
+  const allButtons = [
+    ...quickReplies.filter(Boolean),
+    ...(Array.isArray(customQA) ? customQA : [])
+      .filter((qa) => qa?.question?.trim())
+      .map((qa) => qa.question.trim()),
+  ].slice(0, 8);
   const positionClass = embedded
     ? "relative flex flex-col items-stretch"
     : "fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4";
@@ -458,7 +475,7 @@ We're happy to assist you!`;
             </div>
           </div>
 
-          {showQuickReplies && !awaitingFollowUp && !chatClosed && replies.length > 0 && (
+          {showQuickReplies && !awaitingFollowUp && !chatClosed && allButtons.length > 0 && (
             <div
               className="grid grid-cols-2 gap-2 border-t p-3"
               style={{
@@ -466,7 +483,7 @@ We're happy to assist you!`;
                 borderColor: theme.footerBorder,
               }}
             >
-              {replies.map((label) => (
+              {allButtons.map((label) => (
                 <button
                   key={label}
                   type="button"

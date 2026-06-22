@@ -205,6 +205,7 @@ export default function BuilderPageClient() {
     supportEmail: form.supportEmail || "support@yourbusiness.com",
     payNowUrl: form.payNowUrl,
     quickReplies: form.quickReplies.filter(Boolean).slice(0, 8),
+    customQA: form.customQA,
     brandColor: form.brandColor,
     chatTheme: form.chatTheme || "light",
     industry: form.industry || "other",
