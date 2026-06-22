@@ -39,7 +39,7 @@ function configToForm(config) {
     supportEmail: config.supportEmail || "",
     bookingUrl: config.booking_url || "",
     payNowUrl: config.payNowUrl || "",
-    brandColor: config.brandColor || "#D4AF37",
+    brandColor: config.brandColor || "#0D7377",
     chatTheme: config.chatTheme || "light",
     quickReplies: Array.isArray(config.quickReplies) ? config.quickReplies : [],
     customQA: Array.isArray(config.customQA) ? config.customQA : [],
@@ -173,7 +173,7 @@ export default function EditBotPage() {
 
   if (loading || !user || fetchLoading || !form) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0A0A0A] text-[#a3a3a3]">
+      <div className="flex min-h-screen items-center justify-center bg-[#F8F9FA] text-[#4A5568]">
         Loading…
       </div>
     );
@@ -186,51 +186,48 @@ export default function EditBotPage() {
   const svcLen = form.servicesDescription.trim().length;
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white">
-      {/* Background glow */}
-      <div className="pointer-events-none fixed inset-0 bg-gradient-to-b from-[#D4AF37]/8 via-transparent to-transparent" aria-hidden />
-
+    <div className="min-h-screen bg-[#F8F9FA]">
       {/* Header */}
-      <header className="relative z-10 border-b border-white/5 bg-[#0A0A0A]/90 backdrop-blur-xl">
+      <header className="border-b border-[#E2E8F0] bg-white">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
           <Link href="/" className="flex items-center gap-2.5 transition hover:opacity-90">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#F0D060] text-lg font-black text-[#0A0A0A]">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#0D7377] to-[#14A3A8] text-lg font-black text-white">
               V
             </span>
-            <span className="text-lg font-bold tracking-tight text-white">
-              Vesta<span className="text-[#D4AF37]">Chat</span>Host
+            <span className="text-lg font-bold tracking-tight text-[#1A1A2E]">
+              Vesta<span className="text-[#0D7377]">Chat</span>Host
             </span>
           </Link>
           <Link
             href="/dashboard"
-            className="text-sm font-medium text-[#a3a3a3] transition hover:text-[#F0D060]"
+            className="text-sm font-medium text-[#4A5568] transition hover:text-[#0D7377]"
           >
             ← Back to Dashboard
           </Link>
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto max-w-4xl px-6 py-10">
-        <div className="mb-2 text-sm font-semibold uppercase tracking-widest text-[#D4AF37]">
+      <main className="mx-auto max-w-4xl px-6 py-10">
+        <div className="mb-2 text-sm font-semibold uppercase tracking-widest text-[#0D7377]">
           Configure Bot
         </div>
-        <h1 className="mb-8 text-2xl font-bold text-white sm:text-3xl">
+        <h1 className="mb-8 text-2xl font-bold text-[#1A1A2E] sm:text-3xl">
           Edit Your Chatbot
         </h1>
 
         {saveSuccess && (
-          <div className="mb-6 flex items-center gap-3 rounded-2xl border border-green-500/30 bg-green-500/10 px-5 py-4">
-            <svg className="h-5 w-5 shrink-0 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+          <div className="mb-6 flex items-center gap-3 rounded-2xl border border-green-500/30 bg-green-50 px-5 py-4">
+            <svg className="h-5 w-5 shrink-0 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
-            <p className="text-sm font-medium text-green-400">Changes saved successfully!</p>
+            <p className="text-sm font-medium text-green-700">Changes saved successfully!</p>
           </div>
         )}
 
         {Object.keys(errors).length > 0 && attempted && (
-          <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-4">
-            <p className="text-sm font-semibold text-red-400">Please fix the following errors:</p>
-            <ul className="mt-2 space-y-1 text-sm text-red-300">
+          <div className="mb-6 rounded-2xl border border-red-400/30 bg-red-50 px-5 py-4">
+            <p className="text-sm font-semibold text-red-600">Please fix the following errors:</p>
+            <ul className="mt-2 space-y-1 text-sm text-red-500">
               {Object.values(errors).map((e, i) => (
                 <li key={i}>• {e}</li>
               ))}
@@ -240,8 +237,8 @@ export default function EditBotPage() {
 
         <div className="space-y-6">
           {/* Business basics */}
-          <section className="rounded-2xl border border-white/5 bg-[#1A1A1A] p-6 sm:p-8">
-            <h2 className="mb-5 text-base font-semibold text-white">Business Basics</h2>
+          <section className="rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm sm:p-8">
+            <h2 className="mb-5 text-base font-semibold text-[#1A1A2E]">Business Basics</h2>
             <div className="space-y-5">
               <FormField
                 label="Business name"
@@ -264,12 +261,12 @@ export default function EditBotPage() {
                 />
               </FormField>
 
-              <div className="rounded-xl border border-white/10 bg-[#111111] px-4 py-3">
-                <p className="text-xs font-medium text-[#a3a3a3]">Industry</p>
-                <p className="mt-0.5 text-sm font-medium text-white">
+              <div className="rounded-xl border border-[#E2E8F0] bg-[#F8F9FA] px-4 py-3">
+                <p className="text-xs font-medium text-[#4A5568]">Industry</p>
+                <p className="mt-0.5 text-sm font-medium text-[#1A1A2E]">
                   {INDUSTRY_LABELS[form.industry] || form.industry || "—"}
                 </p>
-                <p className="mt-1 text-xs text-[#555]">Industry cannot be changed after setup.</p>
+                <p className="mt-1 text-xs text-[#9CA3AF]">Industry cannot be changed after setup.</p>
               </div>
 
               <FormField
@@ -279,7 +276,7 @@ export default function EditBotPage() {
                 error={errors.businessDescription}
                 isValid={field("businessDescription", (f) => validateBusinessDescription(f.businessDescription))}
                 counter={
-                  <span className={`text-xs ${descLen >= 50 ? "text-green-400" : "text-[#a3a3a3]"}`}>
+                  <span className={`text-xs ${descLen >= 50 ? "text-green-600" : "text-[#4A5568]"}`}>
                     {descLen}/50
                   </span>
                 }
@@ -305,7 +302,7 @@ export default function EditBotPage() {
                 error={errors.servicesDescription}
                 isValid={field("servicesDescription", (f) => validateServicesDescription(f.servicesDescription))}
                 counter={
-                  <span className={`text-xs ${svcLen >= 20 ? "text-green-400" : "text-[#a3a3a3]"}`}>
+                  <span className={`text-xs ${svcLen >= 20 ? "text-green-600" : "text-[#4A5568]"}`}>
                     {svcLen}/20
                   </span>
                 }
@@ -327,8 +324,8 @@ export default function EditBotPage() {
           </section>
 
           {/* Hours, location, contact */}
-          <section className="rounded-2xl border border-white/5 bg-[#1A1A1A] p-6 sm:p-8">
-            <h2 className="mb-5 text-base font-semibold text-white">Hours, Location &amp; Contact</h2>
+          <section className="rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm sm:p-8">
+            <h2 className="mb-5 text-base font-semibold text-[#1A1A2E]">Hours, Location &amp; Contact</h2>
             <div className="space-y-5">
               <BusinessHoursEditor
                 hours={form.businessHours}
@@ -424,8 +421,8 @@ export default function EditBotPage() {
           </section>
 
           {/* Branding */}
-          <section className="rounded-2xl border border-white/5 bg-[#1A1A1A] p-6 sm:p-8">
-            <h2 className="mb-5 text-base font-semibold text-white">Branding</h2>
+          <section className="rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm sm:p-8">
+            <h2 className="mb-5 text-base font-semibold text-[#1A1A2E]">Branding</h2>
             <div className="space-y-6">
               <BrandColorPicker
                 value={form.brandColor}
@@ -443,8 +440,8 @@ export default function EditBotPage() {
           </section>
 
           {/* Quick replies */}
-          <section className="rounded-2xl border border-white/5 bg-[#1A1A1A] p-6 sm:p-8">
-            <h2 className="mb-5 text-base font-semibold text-white">Quick Replies &amp; Custom Q&amp;A</h2>
+          <section className="rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm sm:p-8">
+            <h2 className="mb-5 text-base font-semibold text-[#1A1A2E]">Quick Replies &amp; Custom Q&amp;A</h2>
             <QuickRepliesEditor
               industry={form.industry || "other"}
               quickReplies={form.quickReplies}
@@ -457,17 +454,17 @@ export default function EditBotPage() {
           </section>
 
           {/* Mascot */}
-          <section className="rounded-2xl border border-white/5 bg-[#1A1A1A] p-6 sm:p-8">
-            <h2 className="mb-5 text-base font-semibold text-white">Mascot</h2>
+          <section className="rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm sm:p-8">
+            <h2 className="mb-5 text-base font-semibold text-[#1A1A2E]">Mascot</h2>
             <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
-              <div className="flex flex-col items-center gap-2 rounded-2xl border border-[#D4AF37]/20 bg-[#111111] px-8 py-6">
+              <div className="flex flex-col items-center gap-2 rounded-2xl border border-[#0D7377]/20 bg-[#F8F9FA] px-8 py-6">
                 <MascotCharacter industry={form.industry || "other"} animation="bounce" size={100} />
-                <p className="text-sm font-medium text-[#F0D060]">
+                <p className="text-sm font-medium text-[#0D7377]">
                   {INDUSTRY_LABELS[form.industry] || "Your"} mascot
                 </p>
               </div>
               <div className="flex-1">
-                <p className="mb-3 text-sm text-[#a3a3a3]">
+                <p className="mb-3 text-sm text-[#4A5568]">
                   Give your mascot a friendly name. It appears in the chat header and helps your brand feel personal.
                 </p>
                 <FormField
@@ -491,7 +488,7 @@ export default function EditBotPage() {
                     )}
                   />
                 </FormField>
-                <p className="mt-2 rounded-lg bg-[#0A0A0A] px-3 py-2 text-xs text-[#a3a3a3]">
+                <p className="mt-2 rounded-lg bg-[#F8F9FA] px-3 py-2 text-xs text-[#4A5568]">
                   Letters and spaces only · 2–20 characters
                 </p>
               </div>
@@ -504,20 +501,20 @@ export default function EditBotPage() {
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className="rounded-xl bg-[#D4AF37] px-8 py-3 text-sm font-bold text-[#0A0A0A] shadow-lg shadow-[#D4AF37]/20 transition hover:bg-[#F0D060] disabled:opacity-60"
+              className="rounded-xl bg-[#0D7377] px-8 py-3 text-sm font-bold text-white shadow-lg shadow-[#0D7377]/20 transition hover:bg-[#0A5D61] disabled:opacity-60"
             >
               {saving ? "Saving…" : "Save Changes"}
             </button>
             <Link
               href="/dashboard"
-              className="text-sm font-medium text-[#a3a3a3] transition hover:text-[#F0D060]"
+              className="text-sm font-medium text-[#4A5568] transition hover:text-[#0D7377]"
             >
               Cancel
             </Link>
           </div>
 
           {saveError && (
-            <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            <p className="rounded-xl border border-red-400/30 bg-red-50 px-4 py-3 text-sm text-red-600">
               {saveError}
             </p>
           )}

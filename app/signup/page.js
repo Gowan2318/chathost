@@ -56,38 +56,29 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#0A0A0A] text-white">
-      <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#D4AF37]/10 via-transparent to-transparent"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute left-1/2 top-0 h-96 w-96 -translate-x-1/2 rounded-full bg-[#D4AF37]/10 blur-[120px]"
-        aria-hidden
-      />
-
-      <main className="relative z-10 mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 py-16">
+    <div className="min-h-screen bg-[#F8F9FA]">
+      <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 py-16">
         <Link href="/" className="mb-10 flex items-center gap-3 transition hover:opacity-90">
-          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#F0D060] text-xl font-black text-[#0A0A0A] shadow-lg shadow-[#D4AF37]/25">
+          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#0D7377] to-[#14A3A8] text-xl font-black text-white shadow-lg shadow-[#0D7377]/25">
             V
           </span>
-          <span className="text-2xl font-bold tracking-tight">
-            Vesta<span className="text-[#D4AF37]">Chat</span>Host
+          <span className="text-2xl font-bold tracking-tight text-[#1A1A2E]">
+            Vesta<span className="text-[#0D7377]">Chat</span>Host
           </span>
         </Link>
 
-        <div className="w-full rounded-2xl border border-white/10 bg-[#1A1A1A]/90 p-8 backdrop-blur-sm">
-          <h1 className="text-2xl font-bold text-white">Create your account</h1>
-          <p className="mt-2 text-sm text-[#a3a3a3]">
+        <div className="w-full rounded-2xl border border-[#E2E8F0] bg-white p-8 shadow-sm">
+          <h1 className="text-2xl font-bold text-[#1A1A2E]">Create your account</h1>
+          <p className="mt-2 text-sm text-[#4A5568]">
             Already have an account?{" "}
-            <Link href="/login" className="font-medium text-[#D4AF37] hover:text-[#F0D060]">
+            <Link href="/login" className="font-medium text-[#0D7377] hover:text-[#0A5D61]">
               Log in
             </Link>
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-[#a3a3a3]">
+              <label htmlFor="email" className="block text-sm font-medium text-[#4A5568]">
                 Email
               </label>
               <input
@@ -97,13 +88,13 @@ export default function SignupPage() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-[#0A0A0A] px-4 py-3 text-sm text-white placeholder-[#555] outline-none transition focus:border-[#D4AF37]/60 focus:ring-1 focus:ring-[#D4AF37]/30"
+                className="mt-2 w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#1A1A2E] placeholder-[#9CA3AF] outline-none transition focus:border-[#0D7377]/60 focus:ring-2 focus:ring-[#0D7377]/20"
                 placeholder="you@example.com"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-[#a3a3a3]">
+              <label htmlFor="password" className="block text-sm font-medium text-[#4A5568]">
                 Password
               </label>
               <input
@@ -113,13 +104,13 @@ export default function SignupPage() {
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-[#0A0A0A] px-4 py-3 text-sm text-white placeholder-[#555] outline-none transition focus:border-[#D4AF37]/60 focus:ring-1 focus:ring-[#D4AF37]/30"
+                className="mt-2 w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#1A1A2E] placeholder-[#9CA3AF] outline-none transition focus:border-[#0D7377]/60 focus:ring-2 focus:ring-[#0D7377]/20"
                 placeholder="At least 8 characters"
               />
             </div>
 
             <div>
-              <label htmlFor="confirm" className="block text-sm font-medium text-[#a3a3a3]">
+              <label htmlFor="confirm" className="block text-sm font-medium text-[#4A5568]">
                 Confirm password
               </label>
               <input
@@ -129,13 +120,13 @@ export default function SignupPage() {
                 autoComplete="new-password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-white/10 bg-[#0A0A0A] px-4 py-3 text-sm text-white placeholder-[#555] outline-none transition focus:border-[#D4AF37]/60 focus:ring-1 focus:ring-[#D4AF37]/30"
+                className="mt-2 w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#1A1A2E] placeholder-[#9CA3AF] outline-none transition focus:border-[#0D7377]/60 focus:ring-2 focus:ring-[#0D7377]/20"
                 placeholder="Repeat your password"
               />
             </div>
 
             {error && (
-              <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+              <p className="rounded-xl border border-red-400/30 bg-red-50 px-4 py-3 text-sm text-red-600">
                 {error}
               </p>
             )}
@@ -143,7 +134,7 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-[#D4AF37] py-3.5 text-sm font-bold text-[#0A0A0A] shadow-lg shadow-[#D4AF37]/20 transition hover:bg-[#F0D060] disabled:opacity-50"
+              className="w-full rounded-xl bg-[#0D7377] py-3.5 text-sm font-bold text-white shadow-lg shadow-[#0D7377]/20 transition hover:bg-[#0A5D61] disabled:opacity-50"
             >
               {loading ? "Creating account…" : "Create account"}
             </button>

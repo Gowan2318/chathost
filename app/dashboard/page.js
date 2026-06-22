@@ -11,22 +11,22 @@ import MascotCharacter from "../../components/mascots/MascotCharacter";
 
 function DashboardHeader({ email, onSignOut }) {
   return (
-    <header className="relative z-10 border-b border-white/5 bg-[#0A0A0A]/90 backdrop-blur-xl">
+    <header className="border-b border-[#E2E8F0] bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <Link href="/" className="flex items-center gap-2.5 transition hover:opacity-90">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#F0D060] text-lg font-black text-[#0A0A0A] shadow-lg shadow-[#D4AF37]/20">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#0D7377] to-[#14A3A8] text-lg font-black text-white shadow-lg shadow-[#0D7377]/20">
             V
           </span>
-          <span className="text-lg font-bold tracking-tight text-white">
-            Vesta<span className="text-[#D4AF37]">Chat</span>Host
+          <span className="text-lg font-bold tracking-tight text-[#1A1A2E]">
+            Vesta<span className="text-[#0D7377]">Chat</span>Host
           </span>
         </Link>
         <div className="flex items-center gap-3">
-          <span className="hidden text-sm text-[#a3a3a3] sm:block">{email}</span>
+          <span className="hidden text-sm text-[#4A5568] sm:block">{email}</span>
           <button
             type="button"
             onClick={onSignOut}
-            className="rounded-xl border border-[#D4AF37]/40 px-4 py-2 text-sm font-semibold text-[#F0D060] transition hover:bg-[#D4AF37]/10"
+            className="rounded-xl border border-[#0D7377]/40 px-4 py-2 text-sm font-semibold text-[#0D7377] transition hover:bg-[#0D7377]/10"
           >
             Sign Out
           </button>
@@ -39,9 +39,9 @@ function DashboardHeader({ email, onSignOut }) {
 function EmptyState() {
   return (
     <div className="flex flex-col items-center py-24 text-center">
-      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#D4AF37]/10">
+      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#0D7377]/10">
         <svg
-          className="h-10 w-10 text-[#D4AF37]"
+          className="h-10 w-10 text-[#0D7377]"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -55,15 +55,15 @@ function EmptyState() {
           />
         </svg>
       </div>
-      <h2 className="mt-6 text-2xl font-bold text-white">
+      <h2 className="mt-6 text-2xl font-bold text-[#1A1A2E]">
         You haven&apos;t built a chatbot yet
       </h2>
-      <p className="mt-3 max-w-sm text-[#a3a3a3]">
+      <p className="mt-3 max-w-sm text-[#4A5568]">
         Set up your AI chatbot in about 15 minutes. We&apos;ll walk you through every step.
       </p>
       <Link
         href="/builder"
-        className="mt-8 rounded-xl bg-[#D4AF37] px-8 py-3 text-sm font-bold text-[#0A0A0A] shadow-lg shadow-[#D4AF37]/20 transition hover:bg-[#F0D060]"
+        className="mt-8 rounded-xl bg-[#0D7377] px-8 py-3 text-sm font-bold text-white shadow-lg shadow-[#0D7377]/20 transition hover:bg-[#0A5D61]"
       >
         Build Your Chatbot
       </Link>
@@ -84,15 +84,15 @@ const STATUS_LABELS = {
 };
 
 const STATUS_COLORS = {
-  active: "text-green-400",
-  trialing: "text-green-400",
-  past_due: "text-yellow-400",
-  unpaid: "text-yellow-400",
-  canceled: "text-red-400",
-  incomplete_expired: "text-red-400",
-  inactive: "text-[#a3a3a3]",
-  paused: "text-[#a3a3a3]",
-  incomplete: "text-[#a3a3a3]",
+  active: "text-green-600",
+  trialing: "text-green-600",
+  past_due: "text-yellow-600",
+  unpaid: "text-yellow-600",
+  canceled: "text-red-600",
+  incomplete_expired: "text-red-600",
+  inactive: "text-[#9CA3AF]",
+  paused: "text-[#9CA3AF]",
+  incomplete: "text-[#9CA3AF]",
 };
 
 export default function DashboardPage() {
@@ -163,7 +163,7 @@ export default function DashboardPage() {
 
   if (loading || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0A0A0A] text-[#a3a3a3]">
+      <div className="flex min-h-screen items-center justify-center bg-[#F8F9FA] text-[#4A5568]">
         Loading…
       </div>
     );
@@ -172,30 +172,21 @@ export default function DashboardPage() {
   const config = chatbot?.config ?? null;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#0A0A0A] text-white">
-      <div
-        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#D4AF37]/10 via-transparent to-transparent"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute left-1/2 top-0 h-96 w-96 -translate-x-1/2 rounded-full bg-[#D4AF37]/10 blur-[120px]"
-        aria-hidden
-      />
-
+    <div className="min-h-screen bg-[#F8F9FA]">
       <DashboardHeader email={user.email} onSignOut={handleSignOut} />
 
-      <main className="relative z-10 mx-auto max-w-4xl px-6 py-12">
-        <p className="text-sm font-semibold uppercase tracking-widest text-[#D4AF37]">Dashboard</p>
-        <h1 className="mt-2 text-3xl font-bold text-white sm:text-4xl">
+      <main className="mx-auto max-w-4xl px-6 py-12">
+        <p className="text-sm font-semibold uppercase tracking-widest text-[#0D7377]">Dashboard</p>
+        <h1 className="mt-2 text-3xl font-bold text-[#1A1A2E] sm:text-4xl">
           Welcome back
         </h1>
 
         {fetchLoading && (
-          <p className="mt-12 text-[#a3a3a3]">Loading your chatbot…</p>
+          <p className="mt-12 text-[#4A5568]">Loading your chatbot…</p>
         )}
 
         {fetchError && (
-          <p className="mt-12 text-red-400">{fetchError}</p>
+          <p className="mt-12 text-red-600">{fetchError}</p>
         )}
 
         {!fetchLoading && !fetchError && !chatbot && <EmptyState />}
@@ -203,27 +194,27 @@ export default function DashboardPage() {
         {!fetchLoading && !fetchError && chatbot && config && (
           <div className="mt-10 space-y-6">
             {/* Summary card */}
-            <div className="flex flex-col gap-6 rounded-2xl border border-white/5 bg-[#1A1A1A] p-6 sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-6 rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm sm:flex-row sm:items-center">
               <div className="flex shrink-0 flex-col items-center gap-2">
                 <MascotCharacter
                   industry={config.industry || "other"}
                   animation="idle"
                   size={80}
                 />
-                <p className="text-sm font-medium text-[#F0D060]">
+                <p className="text-sm font-medium text-[#0D7377]">
                   {config.mascotName || "Your Mascot"}
                 </p>
               </div>
               <div className="flex-1">
-                <p className="text-xs font-semibold uppercase tracking-widest text-[#D4AF37]">
+                <p className="text-xs font-semibold uppercase tracking-widest text-[#0D7377]">
                   Your Chatbot
                 </p>
-                <h2 className="mt-1 text-2xl font-bold text-white">
+                <h2 className="mt-1 text-2xl font-bold text-[#1A1A2E]">
                   {config.businessName}
                 </h2>
-                <p className="mt-1 text-sm text-[#a3a3a3]">
+                <p className="mt-1 text-sm text-[#4A5568]">
                   {INDUSTRY_LABELS[config.industry] || "Business"}{" "}
-                  <span className={`font-medium ${STATUS_COLORS[chatbot.subscription_status] ?? "text-[#a3a3a3]"}`}>
+                  <span className={`font-medium ${STATUS_COLORS[chatbot.subscription_status] ?? "text-[#9CA3AF]"}`}>
                     · {STATUS_LABELS[chatbot.subscription_status] ?? chatbot.subscription_status ?? "—"}
                   </span>
                 </p>
@@ -232,7 +223,7 @@ export default function DashboardPage() {
                     href={config.websiteUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-2 inline-block text-xs text-[#D4AF37] transition hover:text-[#F0D060]"
+                    className="mt-2 inline-block text-xs text-[#0D7377] transition hover:text-[#0A5D61]"
                   >
                     {config.websiteUrl} ↗
                   </a>
@@ -241,8 +232,8 @@ export default function DashboardPage() {
             </div>
 
             {/* Embed code */}
-            <div className="rounded-2xl border border-white/5 bg-[#1A1A1A] p-6">
-              <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-[#D4AF37]">
+            <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm">
+              <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-[#0D7377]">
                 Embed Code
               </p>
               <EmbedCodeCard clientId={chatbot.client_id} />
@@ -251,41 +242,41 @@ export default function DashboardPage() {
             {/* Action cards */}
             <div className="grid gap-4 sm:grid-cols-2">
               {/* Configure bot */}
-              <div className="flex flex-col justify-between rounded-2xl border border-white/5 bg-[#1A1A1A] p-6">
+              <div className="flex flex-col justify-between rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm">
                 <div>
-                  <p className="text-sm font-semibold uppercase tracking-widest text-[#D4AF37]">
+                  <p className="text-sm font-semibold uppercase tracking-widest text-[#0D7377]">
                     Configure Bot
                   </p>
-                  <p className="mt-2 text-sm leading-relaxed text-[#a3a3a3]">
+                  <p className="mt-2 text-sm leading-relaxed text-[#4A5568]">
                     Update your business info, hours, mascot, quick replies, and
                     branding.
                   </p>
                 </div>
                 <Link
                   href="/dashboard/edit"
-                  className="mt-5 inline-block rounded-xl border border-[#D4AF37]/40 px-5 py-2.5 text-center text-sm font-semibold text-[#F0D060] transition hover:bg-[#D4AF37]/10"
+                  className="mt-5 inline-block rounded-xl border border-[#0D7377]/40 px-5 py-2.5 text-center text-sm font-semibold text-[#0D7377] transition hover:bg-[#0D7377]/10"
                 >
                   Edit Settings
                 </Link>
               </div>
 
               {/* Subscription */}
-              <div className="flex flex-col justify-between rounded-2xl border border-white/5 bg-[#1A1A1A] p-6">
+              <div className="flex flex-col justify-between rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm">
                 <div>
-                  <p className="text-sm font-semibold uppercase tracking-widest text-[#D4AF37]">
+                  <p className="text-sm font-semibold uppercase tracking-widest text-[#0D7377]">
                     Subscription
                   </p>
-                  <p className="mt-1.5 text-sm text-[#a3a3a3]">
+                  <p className="mt-1.5 text-sm text-[#4A5568]">
                     Status:{" "}
-                    <span className={`font-semibold ${STATUS_COLORS[chatbot.subscription_status] ?? "text-white"}`}>
+                    <span className={`font-semibold ${STATUS_COLORS[chatbot.subscription_status] ?? "text-[#1A1A2E]"}`}>
                       {STATUS_LABELS[chatbot.subscription_status] ?? chatbot.subscription_status ?? "—"}
                     </span>
                   </p>
-                  <p className="mt-2 text-sm leading-relaxed text-[#a3a3a3]">
+                  <p className="mt-2 text-sm leading-relaxed text-[#4A5568]">
                     Update payment method, view invoices, or cancel your plan through the Stripe portal.
                   </p>
                   {portalError && (
-                    <p className="mt-2 text-xs text-red-400">{portalError}</p>
+                    <p className="mt-2 text-xs text-red-600">{portalError}</p>
                   )}
                 </div>
 
@@ -294,18 +285,18 @@ export default function DashboardPage() {
                     type="button"
                     onClick={handleManageSubscription}
                     disabled={portalLoading}
-                    className="mt-5 rounded-xl border border-[#D4AF37]/40 px-5 py-2.5 text-center text-sm font-semibold text-[#F0D060] transition hover:bg-[#D4AF37]/10 disabled:opacity-60"
+                    className="mt-5 rounded-xl border border-[#0D7377]/40 px-5 py-2.5 text-center text-sm font-semibold text-[#0D7377] transition hover:bg-[#0D7377]/10 disabled:opacity-60"
                   >
                     {portalLoading ? "Opening…" : "Manage Subscription"}
                   </button>
                 ) : (
                   <div className="mt-5 space-y-2">
-                    <p className="text-xs text-[#a3a3a3]">
+                    <p className="text-xs text-[#9CA3AF]">
                       Subscription linking pending — if you have paid, the portal link will appear shortly.
                     </p>
                     <a
                       href="mailto:support@vestachathost.com?subject=Manage%20my%20VestaChatHost%20subscription"
-                      className="inline-block rounded-xl border border-white/10 px-5 py-2.5 text-center text-sm font-semibold text-[#a3a3a3] transition hover:bg-[#1A1A1A]"
+                      className="inline-block rounded-xl border border-[#E2E8F0] px-5 py-2.5 text-center text-sm font-semibold text-[#4A5568] transition hover:bg-[#F8F9FA]"
                     >
                       Contact Support
                     </a>
