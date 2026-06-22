@@ -45,7 +45,46 @@ function configToForm(config) {
     customQA: Array.isArray(config.customQA) ? config.customQA : [],
     mascotName: config.mascotName || "",
     websiteUrl: config.websiteUrl || "",
+    // Industry-specific fields
+    menuUrl: config.menuUrl || "",
+    reservationLink: config.reservationLink || "",
+    hasDelivery: Boolean(config.hasDelivery),
+    dietaryOptions: config.dietaryOptions || "",
+    insurancePlans: config.insurancePlans || "",
+    newPatientFormUrl: config.newPatientFormUrl || "",
+    hasPaymentPlans: Boolean(config.hasPaymentPlans),
+    walkInsWelcome: Boolean(config.walkInsWelcome),
+    servicesPricing: config.servicesPricing || "",
+    membershipOptions: config.membershipOptions || "",
+    hasFreeTrial: Boolean(config.hasFreeTrial),
+    classScheduleUrl: config.classScheduleUrl || "",
+    practiceAreas: config.practiceAreas || "",
+    freeConsultation: Boolean(config.freeConsultation),
+    worksOnContingency: Boolean(config.worksOnContingency),
+    serviceArea: config.serviceArea || "",
+    freeEstimates: Boolean(config.freeEstimates),
+    recurringPlans: Boolean(config.recurringPlans),
+    clientType: config.clientType || "both",
+    areasServed: config.areasServed || "",
+    extraInfo: config.extraInfo || "",
   };
+}
+
+function Toggle({ label, hint, checked, onChange }) {
+  return (
+    <div
+      className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-[#E2E8F0] bg-white px-4 py-3"
+      onClick={() => onChange(!checked)}
+    >
+      <div>
+        <span className="text-sm font-medium text-[#1A1A2E]">{label}</span>
+        {hint && <p className="mt-0.5 text-xs text-[#9CA3AF]">{hint}</p>}
+      </div>
+      <div className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${checked ? "bg-[#0D7377]" : "bg-[#CBD5E0]"}`}>
+        <div className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`} />
+      </div>
+    </div>
+  );
 }
 
 function validateForm(form) {
@@ -92,6 +131,7 @@ export default function EditBotPage() {
 
   const [fetchLoading, setFetchLoading] = useState(true);
   const [clientId, setClientId] = useState(null);
+  const [chatbotPlan, setChatbotPlan] = useState("pro");
   const [form, setForm] = useState(null);
   const [errors, setErrors] = useState({});
   const [attempted, setAttempted] = useState(false);
@@ -120,6 +160,7 @@ export default function EditBotPage() {
           return;
         }
         setClientId(data[0].client_id);
+        setChatbotPlan(data[0].config?.plan === "basic" ? "basic" : "pro");
         setForm(configToForm(data[0].config));
         setFetchLoading(false);
       });
@@ -419,6 +460,113 @@ export default function EditBotPage() {
               </FormField>
             </div>
           </section>
+
+          {/* Industry Details — Pro only */}
+          {chatbotPlan === "pro" && form.industry && (
+            <section className="rounded-2xl border border-[#0D7377]/20 bg-white p-6 shadow-sm sm:p-8">
+              <h2 className="mb-1 text-base font-semibold text-[#1A1A2E]">Industry Details</h2>
+              <p className="mb-5 text-sm text-[#4A5568]">These details help your chatbot answer industry-specific questions accurately.</p>
+              <div className="space-y-4">
+
+                {form.industry === "restaurant" && (
+                  <>
+                    <FormField label="Menu URL" htmlFor="edit-menu-url" hint="Link to your online menu" showValidation={false} error={null} isValid={false}>
+                      <input id="edit-menu-url" type="url" value={form.menuUrl} onChange={(e) => update({ menuUrl: e.target.value })} placeholder="https://yourbusiness.com/menu" className={inputClassName(false, null, false)} />
+                    </FormField>
+                    <FormField label="Reservation link" htmlFor="edit-reservation-link" hint="Link to your reservation system (OpenTable, Resy, etc.)" showValidation={false} error={null} isValid={false}>
+                      <input id="edit-reservation-link" type="url" value={form.reservationLink} onChange={(e) => update({ reservationLink: e.target.value })} placeholder="https://opentable.com/yourbusiness" className={inputClassName(false, null, false)} />
+                    </FormField>
+                    <Toggle label="Do you offer delivery or takeout?" checked={form.hasDelivery} onChange={(v) => update({ hasDelivery: v })} />
+                    <FormField label="Dietary options available" htmlFor="edit-dietary" hint="e.g. Vegetarian, Vegan, Gluten-free, Halal" showValidation={false} error={null} isValid={false}>
+                      <textarea id="edit-dietary" rows={2} value={form.dietaryOptions} onChange={(e) => update({ dietaryOptions: e.target.value })} placeholder="e.g. Vegetarian, Vegan, Gluten-free, Halal" className={inputClassName(false, null, false)} />
+                    </FormField>
+                  </>
+                )}
+
+                {form.industry === "dental" && (
+                  <>
+                    <FormField label="Insurance plans accepted" htmlFor="edit-insurance" hint="e.g. Delta Dental, Cigna, MetLife, or 'We do not accept insurance'" showValidation={false} error={null} isValid={false}>
+                      <textarea id="edit-insurance" rows={2} value={form.insurancePlans} onChange={(e) => update({ insurancePlans: e.target.value })} placeholder="e.g. Delta Dental, Cigna, MetLife" className={inputClassName(false, null, false)} />
+                    </FormField>
+                    <FormField label="New patient form URL" htmlFor="edit-new-patient" hint="Link to your new patient intake form if you have one" showValidation={false} error={null} isValid={false}>
+                      <input id="edit-new-patient" type="url" value={form.newPatientFormUrl} onChange={(e) => update({ newPatientFormUrl: e.target.value })} placeholder="https://yourbusiness.com/new-patient" className={inputClassName(false, null, false)} />
+                    </FormField>
+                    <Toggle label="Do you offer payment plans?" checked={form.hasPaymentPlans} onChange={(v) => update({ hasPaymentPlans: v })} />
+                  </>
+                )}
+
+                {(form.industry === "salon" || form.industry === "barber") && (
+                  <>
+                    <Toggle label="Do you accept walk-ins?" checked={form.walkInsWelcome} onChange={(v) => update({ walkInsWelcome: v })} />
+                    <FormField label="Services & pricing" htmlFor="edit-services-pricing" hint="List your main services and prices, e.g. Haircut $35, Color $80+" showValidation={false} error={null} isValid={false}>
+                      <textarea id="edit-services-pricing" rows={3} value={form.servicesPricing} onChange={(e) => update({ servicesPricing: e.target.value })} placeholder="e.g. Haircut $35, Color $80+, Blowout $45" className={inputClassName(false, null, false)} />
+                    </FormField>
+                  </>
+                )}
+
+                {form.industry === "gym" && (
+                  <>
+                    <FormField label="Membership options & pricing" htmlFor="edit-membership" hint="e.g. Monthly $49, Annual $399, Day pass $15" showValidation={false} error={null} isValid={false}>
+                      <textarea id="edit-membership" rows={3} value={form.membershipOptions} onChange={(e) => update({ membershipOptions: e.target.value })} placeholder="e.g. Monthly $49, Annual $399, Day pass $15" className={inputClassName(false, null, false)} />
+                    </FormField>
+                    <Toggle label="Do you offer a free trial or guest pass?" checked={form.hasFreeTrial} onChange={(v) => update({ hasFreeTrial: v })} />
+                    <FormField label="Class schedule URL" htmlFor="edit-class-schedule" hint="Link to your class schedule if available" showValidation={false} error={null} isValid={false}>
+                      <input id="edit-class-schedule" type="url" value={form.classScheduleUrl} onChange={(e) => update({ classScheduleUrl: e.target.value })} placeholder="https://yourgym.com/schedule" className={inputClassName(false, null, false)} />
+                    </FormField>
+                  </>
+                )}
+
+                {form.industry === "law" && (
+                  <>
+                    <FormField label="Practice areas" htmlFor="edit-practice-areas" hint="e.g. Personal injury, Family law, Criminal defense" showValidation={false} error={null} isValid={false}>
+                      <textarea id="edit-practice-areas" rows={2} value={form.practiceAreas} onChange={(e) => update({ practiceAreas: e.target.value })} placeholder="e.g. Personal injury, Family law, Criminal defense" className={inputClassName(false, null, false)} />
+                    </FormField>
+                    <Toggle label="Do you offer free consultations?" checked={form.freeConsultation} onChange={(v) => update({ freeConsultation: v })} />
+                    <Toggle label="Do you work on contingency?" checked={form.worksOnContingency} onChange={(v) => update({ worksOnContingency: v })} />
+                  </>
+                )}
+
+                {form.industry === "lawn" && (
+                  <>
+                    <FormField label="Service area" htmlFor="edit-service-area" hint="e.g. We service Pittsburgh and surrounding suburbs within 20 miles" showValidation={false} error={null} isValid={false}>
+                      <textarea id="edit-service-area" rows={2} value={form.serviceArea} onChange={(e) => update({ serviceArea: e.target.value })} placeholder="e.g. Pittsburgh and surrounding suburbs within 20 miles" className={inputClassName(false, null, false)} />
+                    </FormField>
+                    <Toggle label="Do you offer free estimates?" checked={form.freeEstimates} onChange={(v) => update({ freeEstimates: v })} />
+                    <Toggle label="Do you offer recurring service plans?" checked={form.recurringPlans} onChange={(v) => update({ recurringPlans: v })} />
+                  </>
+                )}
+
+                {form.industry === "real_estate" && (
+                  <>
+                    <div>
+                      <p className="mb-2 text-sm font-medium text-[#1A1A2E]">Who do you work with?</p>
+                      <div className="flex gap-3">
+                        {[
+                          { value: "buyers", label: "Buyers" },
+                          { value: "sellers", label: "Sellers" },
+                          { value: "both", label: "Both" },
+                        ].map(({ value, label }) => (
+                          <label key={value} className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition ${form.clientType === value ? "border-[#0D7377] bg-[#0D7377]/10 text-[#0D7377]" : "border-[#E2E8F0] bg-[#F8F9FA] text-[#4A5568]"}`}>
+                            <input type="radio" name="edit-client-type" value={value} checked={form.clientType === value} onChange={() => update({ clientType: value })} className="sr-only" />
+                            {label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <FormField label="Areas served" htmlFor="edit-areas-served" hint="e.g. Pittsburgh, Mt. Lebanon, Bethel Park" showValidation={false} error={null} isValid={false}>
+                      <textarea id="edit-areas-served" rows={2} value={form.areasServed} onChange={(e) => update({ areasServed: e.target.value })} placeholder="e.g. Pittsburgh, Mt. Lebanon, Bethel Park" className={inputClassName(false, null, false)} />
+                    </FormField>
+                  </>
+                )}
+
+                {form.industry === "other" && (
+                  <FormField label="Additional business information" htmlFor="edit-extra-info" hint="Add any extra details your chatbot should know to answer customer questions" showValidation={false} error={null} isValid={false}>
+                    <textarea id="edit-extra-info" rows={4} value={form.extraInfo} onChange={(e) => update({ extraInfo: e.target.value })} placeholder="Add any extra details your chatbot should know…" className={inputClassName(false, null, false)} />
+                  </FormField>
+                )}
+              </div>
+            </section>
+          )}
 
           {/* Branding */}
           <section className="rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm sm:p-8">

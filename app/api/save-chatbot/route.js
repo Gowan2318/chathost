@@ -20,6 +20,14 @@ const ALLOWED_CONFIG_KEYS = new Set([
   "booking_url", "payNowUrl", "brandColor", "chatTheme",
   "quickReplies", "customQA", "mascotName", "websiteUrl",
   "industry", "plan",
+  // Industry-specific fields (Pro)
+  "menuUrl", "reservationLink", "hasDelivery", "dietaryOptions",
+  "insurancePlans", "newPatientFormUrl", "hasPaymentPlans",
+  "walkInsWelcome", "servicesPricing",
+  "membershipOptions", "hasFreeTrial", "classScheduleUrl",
+  "practiceAreas", "freeConsultation", "worksOnContingency",
+  "serviceArea", "freeEstimates", "recurringPlans",
+  "clientType", "areasServed", "extraInfo",
 ]);
 
 function applyPlanEnforcement(config, plan) {
@@ -68,6 +76,32 @@ function validateConfig(config) {
   strMax("Website URL", "websiteUrl", 500);
   strMax("Brand color", "brandColor", 7);
   strMax("Mascot name", "mascotName", 20);
+  // Industry-specific field validation
+  strMax("Menu URL", "menuUrl", 500);
+  strMax("Reservation link", "reservationLink", 500);
+  strMax("New patient form URL", "newPatientFormUrl", 500);
+  strMax("Class schedule URL", "classScheduleUrl", 500);
+  strMax("Dietary options", "dietaryOptions", 1000);
+  strMax("Insurance plans", "insurancePlans", 1000);
+  strMax("Services pricing", "servicesPricing", 1000);
+  strMax("Membership options", "membershipOptions", 1000);
+  strMax("Practice areas", "practiceAreas", 1000);
+  strMax("Service area", "serviceArea", 1000);
+  strMax("Areas served", "areasServed", 1000);
+  strMax("Extra info", "extraInfo", 1000);
+
+  const BOOL_FIELDS = ["hasDelivery", "hasPaymentPlans", "walkInsWelcome", "hasFreeTrial",
+    "freeConsultation", "worksOnContingency", "freeEstimates", "recurringPlans"];
+  for (const f of BOOL_FIELDS) {
+    if (config[f] != null && typeof config[f] !== "boolean") {
+      errors.push(`${f} must be a boolean`);
+    }
+  }
+
+  const VALID_CLIENT_TYPES = new Set(["buyers", "sellers", "both"]);
+  if (config.clientType != null && !VALID_CLIENT_TYPES.has(config.clientType)) {
+    errors.push("clientType must be 'buyers', 'sellers', or 'both'");
+  }
 
   if (config.brandColor != null && !/^#[0-9A-Fa-f]{6}$/.test(config.brandColor)) {
     errors.push("Brand color must be a valid hex color (e.g. #0D7377)");
