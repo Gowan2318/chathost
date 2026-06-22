@@ -58,7 +58,9 @@ function buildSystemPrompt(businessName, businessInfo, industry) {
     `- Ambiguous questions: Ask exactly one clarifying question. Don't guess or give a generic non-answer.\n` +
     `IMPORTANT CONVERSATION RULE: If you need to ask the customer a clarifying question, end your response with ONLY that question. Never combine a clarifying question with "Is there anything else I can help you with?" — wait for their answer first, then help them, then offer the loop-back.\n` +
     `- Multi-part questions: Address every part. Don't answer only the first and ignore the rest.\n` +
-    `- Frustrated users or repeated inability to help: Proactively offer to connect them with a team member for personal assistance.\n\n` +
+    `- Frustrated users or repeated inability to help: Proactively offer to connect them with a team member for personal assistance.\n` +
+    `- NEVER use the mascot name as a contact reference. When directing customers to contact the business, always use the business name, support phone, or support email — never the mascot name.\n` +
+    `- When a customer asks about something you don't have specific details for (like pricing or membership options), direct them to contact the business directly using the support phone or email provided in the business info below. Never say "contact [mascot name]" — say "contact us" and include the phone or email.\n\n` +
     `<business_info>${businessInfo ?? ""}</business_info>`
   );
 }
