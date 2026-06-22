@@ -31,8 +31,8 @@ export default function AddressInput({
     address.zip?.trim();
 
   return (
-    <div className="space-y-4 rounded-xl border border-white/10 bg-[#111111] p-4">
-      <p className="flex items-center gap-1.5 text-sm font-medium text-[#D4AF37]">
+    <div className="space-y-4 rounded-xl border border-[#E2E8F0] bg-[#F8F9FA] p-4">
+      <p className="flex items-center gap-1.5 text-sm font-medium text-[#0D7377]">
         <span>Business address</span>
         {tooltip && <FieldTooltip text={tooltip} />}
       </p>
@@ -119,11 +119,11 @@ export default function AddressInput({
       </FormField>
 
       {showPreview && (
-        <div className="rounded-xl border border-[#D4AF37]/25 bg-[#0A0A0A] px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#a3a3a3]">
+        <div className="rounded-xl border border-[#0D7377]/25 bg-[#E8F4F4] px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#4A5568]">
             Formatted address
           </p>
-          <p className="mt-1 text-sm font-medium text-[#F0D060]">{formatted}</p>
+          <p className="mt-1 text-sm font-medium text-[#0D7377]">{formatted}</p>
         </div>
       )}
     </div>

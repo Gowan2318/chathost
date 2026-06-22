@@ -35,14 +35,14 @@ export default function FieldTooltip({ text }) {
         aria-expanded={visible}
         aria-describedby={visible ? tooltipId : undefined}
         onClick={() => setPinned((open) => !open)}
-        className="flex h-4 w-4 items-center justify-center rounded-full border border-[#D4AF37]/50 bg-[#D4AF37]/10 text-[10px] font-bold leading-none text-[#F0D060] transition hover:border-[#D4AF37] hover:bg-[#D4AF37]/20"
+        className="flex h-4 w-4 items-center justify-center rounded-full border border-[#0D7377]/50 bg-[#0D7377]/10 text-[10px] font-bold leading-none text-[#0D7377] transition hover:border-[#0D7377] hover:bg-[#0D7377]/20"
       >
         ?
       </button>
       <span
         id={tooltipId}
         role="tooltip"
-        className={`pointer-events-none absolute left-1/2 top-full z-50 mt-2 w-64 max-w-[min(16rem,calc(100vw-3rem))] -translate-x-1/2 rounded-xl border border-[#D4AF37]/30 bg-[#1A1A1A] px-3 py-2.5 text-left text-xs leading-relaxed text-[#a3a3a3] shadow-lg shadow-black/40 transition-opacity duration-150 sm:bottom-full sm:top-auto sm:mb-2 sm:mt-0 ${
+        className={`pointer-events-none absolute left-1/2 top-full z-50 mt-2 w-64 max-w-[min(16rem,calc(100vw-3rem))] -translate-x-1/2 rounded-xl border border-[#E2E8F0] bg-white px-3 py-2.5 text-left text-xs leading-relaxed text-[#4A5568] shadow-lg shadow-black/10 transition-opacity duration-150 sm:bottom-full sm:top-auto sm:mb-2 sm:mt-0 ${
           visible ? "opacity-100" : "opacity-0"
         }`}
       >

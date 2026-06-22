@@ -15,18 +15,18 @@ export default function IndustrySelector({
   return (
     <div>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <label className="text-sm font-medium text-[#a3a3a3]">
+        <label className="text-sm font-medium text-[#4A5568]">
           Industry — pick your mascot
         </label>
         {showValidation && isValid && !error && (
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/20 text-sm text-green-400">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500/15 text-sm text-green-600">
             ✓
           </span>
         )}
       </div>
       <div
         className={`grid grid-cols-2 gap-3 sm:grid-cols-4 rounded-xl p-1 ${
-          showValidation && error ? "ring-2 ring-red-500/50" : ""
+          showValidation && error ? "ring-2 ring-red-400/50" : ""
         }`}
       >
         {INDUSTRIES.map((ind) => {
@@ -46,23 +46,23 @@ export default function IndustrySelector({
               }
               className={`relative flex flex-col items-center gap-3 rounded-2xl border p-4 text-center transition ${
                 selected
-                  ? "border-[#D4AF37] bg-gradient-to-b from-[#D4AF37]/20 to-[#1A1A1A] shadow-lg shadow-[#D4AF37]/15 ring-2 ring-[#D4AF37]"
-                  : "border-white/10 bg-[#111111] hover:border-[#D4AF37]/50 hover:bg-[#1A1A1A]"
+                  ? "border-[#0D7377] bg-gradient-to-b from-[#E8F4F4] to-white shadow-lg shadow-[#0D7377]/15 ring-2 ring-[#0D7377]"
+                  : "border-[#E2E8F0] bg-white hover:border-[#0D7377]/50 hover:bg-[#F8F9FA]"
               }`}
             >
               {selected && (
-                <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[#D4AF37] text-[10px] font-bold text-[#0A0A0A]">
+                <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-[#0D7377] text-[10px] font-bold text-white">
                   ✓
                 </span>
               )}
               <div
-                className={`rounded-2xl p-2 ${selected ? "bg-[#D4AF37]/10" : "bg-[#0A0A0A]"}`}
+                className={`rounded-2xl p-2 ${selected ? "bg-[#0D7377]/10" : "bg-[#F8F9FA]"}`}
               >
                 <MascotCharacter industry={ind.id} size={52} />
               </div>
               <span
                 className={`text-xs font-semibold leading-tight ${
-                  selected ? "text-[#F0D060]" : "text-[#a3a3a3]"
+                  selected ? "text-[#0D7377]" : "text-[#4A5568]"
                 }`}
               >
                 {ind.label}
@@ -72,7 +72,7 @@ export default function IndustrySelector({
         })}
       </div>
       {showValidation && error && (
-        <p className="mt-2 text-sm text-red-400" role="alert">
+        <p className="mt-2 text-sm text-red-600" role="alert">
           {error}
         </p>
       )}

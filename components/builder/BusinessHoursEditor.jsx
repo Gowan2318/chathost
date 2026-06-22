@@ -13,24 +13,24 @@ export default function BusinessHoursEditor({ hours, onChange, tooltip }) {
 
   return (
     <div className="space-y-3">
-      <p className="flex items-center gap-1.5 text-sm font-medium text-[#a3a3a3]">
+      <p className="flex items-center gap-1.5 text-sm font-medium text-[#4A5568]">
         <span>Business hours</span>
         {tooltip && <FieldTooltip text={tooltip} />}
       </p>
-      <div className="space-y-2 rounded-xl border border-white/10 bg-[#111111] p-3">
+      <div className="space-y-1 rounded-xl border border-[#E2E8F0] bg-[#F8F9FA] p-3">
         {WEEKDAYS.map((day) => {
           const slot = hours[day.key];
           return (
             <div
               key={day.key}
-              className="flex flex-col gap-2 border-b border-white/5 py-3 last:border-0 sm:flex-row sm:items-center sm:gap-3"
+              className="flex flex-col gap-2 border-b border-[#E2E8F0] py-3 last:border-0 sm:flex-row sm:items-center sm:gap-3"
             >
-              <label className="flex min-w-[120px] items-center gap-2 text-sm text-white">
+              <label className="flex min-w-[120px] items-center gap-2 text-sm font-medium text-[#1A1A2E]">
                 <input
                   type="checkbox"
                   checked={slot.open}
                   onChange={(e) => updateDay(day.key, { open: e.target.checked })}
-                  className="h-4 w-4 rounded border-white/20 accent-[#D4AF37]"
+                  className="h-4 w-4 rounded border-[#E2E8F0] accent-[#0D7377]"
                 />
                 {day.label}
               </label>
@@ -39,7 +39,7 @@ export default function BusinessHoursEditor({ hours, onChange, tooltip }) {
                   <select
                     value={slot.openTime}
                     onChange={(e) => updateDay(day.key, { openTime: e.target.value })}
-                    className="flex-1 rounded-lg border border-white/10 bg-[#1A1A1A] px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/50"
+                    className="flex-1 rounded-lg border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#1A1A2E] outline-none focus:border-[#0D7377]/50 focus:ring-2 focus:ring-[#0D7377]/20"
                   >
                     {TIME_OPTIONS.map((t) => (
                       <option key={`open-${t.value}`} value={t.value}>
@@ -47,11 +47,11 @@ export default function BusinessHoursEditor({ hours, onChange, tooltip }) {
                       </option>
                     ))}
                   </select>
-                  <span className="text-xs text-[#a3a3a3]">to</span>
+                  <span className="text-xs text-[#4A5568]">to</span>
                   <select
                     value={slot.closeTime}
                     onChange={(e) => updateDay(day.key, { closeTime: e.target.value })}
-                    className="flex-1 rounded-lg border border-white/10 bg-[#1A1A1A] px-3 py-2 text-sm text-white outline-none focus:border-[#D4AF37]/50"
+                    className="flex-1 rounded-lg border border-[#E2E8F0] bg-white px-3 py-2 text-sm text-[#1A1A2E] outline-none focus:border-[#0D7377]/50 focus:ring-2 focus:ring-[#0D7377]/20"
                   >
                     {TIME_OPTIONS.map((t) => (
                       <option key={`close-${t.value}`} value={t.value}>
@@ -61,7 +61,7 @@ export default function BusinessHoursEditor({ hours, onChange, tooltip }) {
                   </select>
                 </div>
               ) : (
-                <span className="text-sm text-[#a3a3a3]">Closed</span>
+                <span className="text-sm text-[#9CA3AF]">Closed</span>
               )}
             </div>
           );

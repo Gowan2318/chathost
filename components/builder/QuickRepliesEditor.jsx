@@ -68,15 +68,15 @@ export default function QuickRepliesEditor({
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between rounded-xl border border-[#D4AF37]/25 bg-[#D4AF37]/5 px-4 py-3">
-        <p className="text-sm text-[#a3a3a3]">
+      <div className="flex items-center justify-between rounded-xl border border-[#0D7377]/25 bg-[#0D7377]/5 px-4 py-3">
+        <p className="text-sm text-[#4A5568]">
           Quick replies + custom Q&amp;A share one limit
         </p>
         <span
           className={`rounded-full px-3 py-1 text-sm font-bold ${
             atLimit
-              ? "bg-[#D4AF37] text-[#0A0A0A]"
-              : "bg-[#1A1A1A] text-[#F0D060] ring-1 ring-[#D4AF37]/40"
+              ? "bg-[#0D7377] text-white"
+              : "bg-[#0D7377]/10 text-[#0D7377] ring-1 ring-[#0D7377]/40"
           }`}
         >
           {used}/{MAX_KNOWLEDGE_SLOTS} used
@@ -85,7 +85,7 @@ export default function QuickRepliesEditor({
 
       <div className="space-y-4">
         <div>
-          <p className="text-sm font-medium text-[#a3a3a3]">
+          <p className="text-sm font-medium text-[#4A5568]">
             Suggested for {industry.replace("_", " ")}
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -101,8 +101,8 @@ export default function QuickRepliesEditor({
                   }
                   className={`rounded-full border px-3 py-1.5 text-xs font-medium transition disabled:opacity-40 ${
                     isActive
-                      ? "border-[#D4AF37] bg-[#D4AF37]/20 text-[#F0D060]"
-                      : "border-white/10 text-[#a3a3a3] hover:border-[#D4AF37]/40 hover:text-white"
+                      ? "border-[#0D7377] bg-[#0D7377]/15 text-[#0D7377]"
+                      : "border-[#E2E8F0] text-[#4A5568] hover:border-[#0D7377]/40 hover:text-[#1A1A2E]"
                   }`}
                 >
                   {isActive ? "✓ " : "+ "}
@@ -114,14 +114,14 @@ export default function QuickRepliesEditor({
         </div>
 
         {showValidation && fieldErrors.quickReplies && (
-          <p className="text-sm text-red-400" role="alert">
+          <p className="text-sm text-red-600" role="alert">
             {fieldErrors.quickReplies}
           </p>
         )}
 
         {active.length > 0 && (
           <div className="space-y-2">
-            <p className="text-sm font-medium text-[#a3a3a3]">Your quick replies</p>
+            <p className="text-sm font-medium text-[#4A5568]">Your quick replies</p>
             {active.map((reply, i) => {
               const rowError = fieldErrors[`quickReply_${i}`];
               const rowValid =
@@ -129,28 +129,28 @@ export default function QuickRepliesEditor({
                 !rowError &&
                 reply.trim().length >= 5;
               return (
-              <div key={`${reply}-${i}`} className="space-y-1">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={reply}
-                    onChange={(e) => updateReply(i, e.target.value)}
-                    className={`flex-1 ${inputClassName(showValidation, rowError, rowValid)} py-2.5`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeReply(i)}
-                    className="shrink-0 rounded-xl border border-white/10 px-3 text-[#a3a3a3] transition hover:border-red-500/50 hover:text-red-400"
-                    aria-label="Remove quick reply"
-                  >
-                    ✕
-                  </button>
+                <div key={`${reply}-${i}`} className="space-y-1">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={reply}
+                      onChange={(e) => updateReply(i, e.target.value)}
+                      className={`flex-1 ${inputClassName(showValidation, rowError, rowValid)} py-2.5`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeReply(i)}
+                      className="shrink-0 rounded-xl border border-[#E2E8F0] px-3 text-[#4A5568] transition hover:border-red-400/50 hover:text-red-500"
+                      aria-label="Remove quick reply"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  {showValidation && rowError && (
+                    <p className="text-xs text-red-600">{rowError}</p>
+                  )}
                 </div>
-                {showValidation && rowError && (
-                  <p className="text-xs text-red-400">{rowError}</p>
-                )}
-              </div>
-            );
+              );
             })}
           </div>
         )}
@@ -163,13 +163,13 @@ export default function QuickRepliesEditor({
               onChange={(e) => setCustom(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddCustomReply())}
               placeholder="Add a custom quick reply…"
-              className="flex-1 rounded-xl border border-white/10 bg-[#111111] px-4 py-2.5 text-sm text-white outline-none focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20"
+              className="flex-1 rounded-xl border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm text-[#1A1A2E] placeholder-[#9CA3AF] outline-none focus:border-[#0D7377]/50 focus:ring-2 focus:ring-[#0D7377]/20"
             />
             <button
               type="button"
               onClick={handleAddCustomReply}
               disabled={!custom.trim()}
-              className="shrink-0 rounded-xl bg-[#D4AF37]/20 px-4 py-2.5 text-sm font-semibold text-[#F0D060] transition hover:bg-[#D4AF37]/30 disabled:opacity-40"
+              className="shrink-0 rounded-xl bg-[#0D7377]/15 px-4 py-2.5 text-sm font-semibold text-[#0D7377] transition hover:bg-[#0D7377]/25 disabled:opacity-40"
             >
               Add
             </button>
@@ -177,10 +177,10 @@ export default function QuickRepliesEditor({
         )}
       </div>
 
-      <div className="border-t border-white/10 pt-8">
+      <div className="border-t border-[#E2E8F0] pt-8">
         <div className="mb-4">
-          <h3 className="text-base font-semibold text-white">Custom Questions &amp; Answers</h3>
-          <p className="mt-1 text-sm text-[#a3a3a3]">
+          <h3 className="text-base font-semibold text-[#1A1A2E]">Custom Questions &amp; Answers</h3>
+          <p className="mt-1 text-sm text-[#4A5568]">
             Teach your bot exact answers. Each pair uses one slot
             {remaining > 0 ? ` (${remaining} remaining).` : "."}
           </p>
@@ -191,23 +191,23 @@ export default function QuickRepliesEditor({
             {customQA.map((item) => (
               <div
                 key={item.id}
-                className="rounded-xl border border-[#D4AF37]/20 bg-[#111111] p-4"
+                className="rounded-xl border border-[#E2E8F0] bg-[#F8F9FA] p-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#D4AF37]">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#0D7377]">
                       Question
                     </p>
-                    <p className="mt-1 text-sm font-medium text-white">{item.question}</p>
-                    <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-[#a3a3a3]">
+                    <p className="mt-1 text-sm font-medium text-[#1A1A2E]">{item.question}</p>
+                    <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-[#4A5568]">
                       Answer preview
                     </p>
-                    <p className="mt-1 line-clamp-2 text-sm text-[#a3a3a3]">{item.answer}</p>
+                    <p className="mt-1 line-clamp-2 text-sm text-[#4A5568]">{item.answer}</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => removeQA(item.id)}
-                    className="shrink-0 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-[#a3a3a3] transition hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400"
+                    className="shrink-0 rounded-lg border border-[#E2E8F0] px-3 py-1.5 text-xs text-[#4A5568] transition hover:border-red-400/50 hover:bg-red-50 hover:text-red-500"
                   >
                     Delete
                   </button>
@@ -218,9 +218,9 @@ export default function QuickRepliesEditor({
         )}
 
         {!atLimit ? (
-          <div className="space-y-3 rounded-xl border border-white/10 bg-[#0A0A0A]/50 p-4">
+          <div className="space-y-3 rounded-xl border border-[#E2E8F0] bg-[#F8F9FA] p-4">
             <div>
-              <label className="mb-2 block text-sm font-medium text-[#a3a3a3]">
+              <label className="mb-2 block text-sm font-medium text-[#4A5568]">
                 Question
               </label>
               <input
@@ -228,11 +228,11 @@ export default function QuickRepliesEditor({
                 value={draftQuestion}
                 onChange={(e) => setDraftQuestion(e.target.value)}
                 placeholder="e.g. Do you offer emergency appointments?"
-                className="w-full rounded-xl border border-white/10 bg-[#111111] px-4 py-2.5 text-sm text-white outline-none focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20"
+                className="w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm text-[#1A1A2E] placeholder-[#9CA3AF] outline-none focus:border-[#0D7377]/50 focus:ring-2 focus:ring-[#0D7377]/20"
               />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-[#a3a3a3]">
+              <label className="mb-2 block text-sm font-medium text-[#4A5568]">
                 Answer
               </label>
               <textarea
@@ -240,20 +240,20 @@ export default function QuickRepliesEditor({
                 value={draftAnswer}
                 onChange={(e) => setDraftAnswer(e.target.value)}
                 placeholder="e.g. Yes! Call us at (555) 123-4567 for same-day emergency slots."
-                className="w-full rounded-xl border border-white/10 bg-[#111111] px-4 py-2.5 text-sm text-white outline-none focus:border-[#D4AF37]/50 focus:ring-2 focus:ring-[#D4AF37]/20"
+                className="w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm text-[#1A1A2E] placeholder-[#9CA3AF] outline-none focus:border-[#0D7377]/50 focus:ring-2 focus:ring-[#0D7377]/20"
               />
             </div>
             <button
               type="button"
               onClick={handleAddQA}
               disabled={!draftQuestion.trim() || !draftAnswer.trim()}
-              className="w-full rounded-xl bg-[#D4AF37] py-2.5 text-sm font-bold text-[#0A0A0A] transition hover:bg-[#F0D060] disabled:cursor-not-allowed disabled:opacity-40"
+              className="w-full rounded-xl bg-[#0D7377] py-2.5 text-sm font-bold text-white transition hover:bg-[#0A5D61] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Add Q&amp;A Pair
             </button>
           </div>
         ) : (
-          <p className="rounded-xl border border-[#D4AF37]/30 bg-[#D4AF37]/10 px-4 py-3 text-center text-sm text-[#F0D060]">
+          <p className="rounded-xl border border-[#0D7377]/30 bg-[#E8F4F4] px-4 py-3 text-center text-sm text-[#0D7377]">
             You&apos;ve reached the maximum of {MAX_KNOWLEDGE_SLOTS} items. Remove a quick reply or
             Q&amp;A pair to add more.
           </p>

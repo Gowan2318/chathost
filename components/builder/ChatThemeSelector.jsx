@@ -47,7 +47,7 @@ function MiniChatPreview({ themeId, brandColor }) {
 export default function ChatThemeSelector({ value, onChange, brandColor }) {
   return (
     <div>
-      <p className="mb-3 text-sm font-medium text-[#D4AF37]">Chat theme</p>
+      <p className="mb-3 text-sm font-medium text-[#4A5568]">Chat theme</p>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {CHAT_THEME_IDS.map((id) => {
           const theme = getChatTheme(id);
@@ -59,8 +59,8 @@ export default function ChatThemeSelector({ value, onChange, brandColor }) {
               onClick={() => onChange(id)}
               className={`rounded-xl border p-3 text-left transition ${
                 selected
-                  ? "border-[#D4AF37] bg-[#D4AF37]/10 ring-2 ring-[#D4AF37]/40"
-                  : "border-white/10 bg-[#111111] hover:border-[#D4AF37]/30"
+                  ? "border-[#0D7377] bg-[#0D7377]/10 ring-2 ring-[#0D7377]/40"
+                  : "border-[#E2E8F0] bg-white hover:border-[#0D7377]/30"
               }`}
             >
               <div
@@ -72,7 +72,7 @@ export default function ChatThemeSelector({ value, onChange, brandColor }) {
               </div>
               <span
                 className={`text-sm font-semibold ${
-                  selected ? "text-[#F0D060]" : "text-white"
+                  selected ? "text-[#0D7377]" : "text-[#1A1A2E]"
                 }`}
               >
                 {theme.name}
