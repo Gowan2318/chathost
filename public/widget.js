@@ -11,6 +11,8 @@
   var FRUSTRATION_PATTERN =
     /\b(frustrated|annoyed|angry|useless|doesn't work|not working|terrible|awful|horrible|stupid|ridiculous|worst|pointless|waste of time|forget it|nevermind|give up|no help)\b/i;
   var SERVICES_TOPIC_RESP = /\b(service|offer|provide|specialize|treatment|plan|package|include)\b/i;
+  var ACCEPTING_PATIENTS_PATTERN = /\b(accepting new patients|currently accepting)\b/i;
+  var CONTACT_REDIRECT_PATTERN = /\b(call us|email us|contact us|give us a call)\b/i;
 
   var MASCOT_SRC = {
     dental: "/mascots/dental.png",
@@ -206,6 +208,15 @@
     }
 
     function buildContextualReplies(botText, needsSupportPriority) {
+      if (ACCEPTING_PATIENTS_PATTERN.test(botText)) {
+        return ["Book an appointment", "I have another question", "No, I'm all set"];
+      }
+      if (/\b(book|appointment)\b/i.test(botText) && /https?:\/\//.test(botText)) {
+        return ["Yes, book now", "I have another question", "No, I'm all set"];
+      }
+      if (CONTACT_REDIRECT_PATTERN.test(botText)) {
+        return ["I have another question", "No, I'm all set"];
+      }
       var pool = [];
       if (needsSupportPriority && (supportPhone || supportEmail)) {
         pool.push("Talk to someone");
@@ -667,6 +678,19 @@
     function sendMessage(text) {
       var trimmed = String(text || "").trim();
       if (!trimmed || state.isTyping || state.awaitingFollowUp || state.chatClosed) {
+        return;
+      }
+
+      if (trimmed === "I have another question") {
+        state.contextualQuickReplies = [];
+        resetChat();
+        return;
+      }
+      if (trimmed === "No, I'm all set") {
+        state.contextualQuickReplies = [];
+        state.chatClosed = true;
+        addMessage(closingMessage(), { startNewChat: true });
+        render();
         return;
       }
 

@@ -12,6 +12,21 @@ const PAYMENT_PATTERN =
 const TALK_TO_SOMEONE_PATTERN = /\btalk to someone\b/i;
 const UNHELPFUL_AI_PATTERN =
   /\b(i(?:'m| am) not sure|i don(?:'t| not) know|cannot help|can't help|can not help|unable to help|please contact us|please call us|reach out to us|contact us directly|call us directly|don't have (?:that |those )?information|do not have (?:that |those )?information|outside (?:of )?my (?:knowledge|ability)|not able to (?:help|answer)|unable to (?:answer|assist))\b/i;
+const ACCEPTING_PATIENTS_PATTERN = /\b(accepting new patients|currently accepting)\b/i;
+const CONTACT_REDIRECT_PATTERN = /\b(call us|email us|contact us|give us a call)\b/i;
+
+function buildContextualReplies(botText) {
+  if (ACCEPTING_PATIENTS_PATTERN.test(botText)) {
+    return ["Book an appointment", "I have another question", "No, I'm all set"];
+  }
+  if (/\b(book|appointment)\b/i.test(botText) && /https?:\/\//.test(botText)) {
+    return ["Yes, book now", "I have another question", "No, I'm all set"];
+  }
+  if (CONTACT_REDIRECT_PATTERN.test(botText)) {
+    return ["I have another question", "No, I'm all set"];
+  }
+  return [];
+}
 
 function isBookingIntent(text) {
   return BOOKING_PATTERN.test(text);
@@ -215,6 +230,7 @@ We're happy to assist you!`;
   const [showQuickReplies, setShowQuickReplies] = useState(true);
   const [awaitingFollowUp, setAwaitingFollowUp] = useState(false);
   const [chatClosed, setChatClosed] = useState(false);
+  const [contextualReplies, setContextualReplies] = useState([]);
   const [mascotAnimation, setMascotAnimation] = useState("idle");
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -230,6 +246,7 @@ We're happy to assist you!`;
     setAwaitingFollowUp(false);
     setChatClosed(false);
     setInput("");
+    setContextualReplies([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessName, businessInfo, supportPhone, supportEmail]);
 
@@ -288,6 +305,7 @@ We're happy to assist you!`;
     setAwaitingFollowUp(false);
     setChatClosed(false);
     setInput("");
+    setContextualReplies([]);
   }, [initialMessage]);
 
   const handleBooking = useCallback(() => {
@@ -306,6 +324,7 @@ We're happy to assist you!`;
   const sendMessage = async (text) => {
     const trimmed = text.trim();
     if (!trimmed || isTyping || awaitingFollowUp || chatClosed) return;
+    setContextualReplies([]);
 
     const userMessage = { role: "user", content: trimmed };
     setMessages((prev) => [...prev, userMessage]);
@@ -346,12 +365,18 @@ We're happy to assist you!`;
       if (needsSupportFallback(data.message)) {
         assistantReplies.push({ role: "assistant", content: getSupportFallbackMessage() });
       }
-      setMessages((prev) => [
-        ...prev,
-        ...assistantReplies,
-        { role: "assistant", content: FOLLOW_UP_PROMPT, followUp: true },
-      ]);
-      setAwaitingFollowUp(true);
+      const contextual = buildContextualReplies(data.message);
+      if (contextual.length > 0) {
+        setMessages((prev) => [...prev, ...assistantReplies]);
+        setContextualReplies(contextual);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          ...assistantReplies,
+          { role: "assistant", content: FOLLOW_UP_PROMPT, followUp: true },
+        ]);
+        setAwaitingFollowUp(true);
+      }
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -361,6 +386,23 @@ We're happy to assist you!`;
       setIsTyping(false);
     }
   };
+
+  function handleContextualReply(label) {
+    if (isTyping) return;
+    setContextualReplies([]);
+    if (label === "I have another question") {
+      resetToStart();
+    } else if (label === "No, I'm all set") {
+      setChatClosed(true);
+      addAssistantMessage(getClosingMessage(), { startNewChat: true });
+    } else if (label === "Book an appointment" || label === "Yes, book now") {
+      setMessages((prev) => [...prev, { role: "user", content: label }]);
+      setShowQuickReplies(false);
+      handleBooking();
+    } else {
+      sendMessage(label);
+    }
+  }
 
   const inputPlaceholder = chatClosed
     ? "Chat ended"
@@ -475,7 +517,34 @@ We're happy to assist you!`;
             </div>
           </div>
 
-          {showQuickReplies && !awaitingFollowUp && !chatClosed && allButtons.length > 0 && (
+          {contextualReplies.length > 0 && !chatClosed && (
+            <div
+              className="grid grid-cols-2 gap-2 border-t p-3"
+              style={{
+                background: theme.quickReplyBackground,
+                borderColor: theme.footerBorder,
+              }}
+            >
+              {contextualReplies.map((label) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => handleContextualReply(label)}
+                  disabled={isTyping}
+                  className="rounded-xl border px-3 py-2.5 text-left text-xs font-medium leading-snug transition disabled:opacity-50"
+                  style={{
+                    borderColor: `${brandColor}35`,
+                    backgroundColor: `${brandColor}10`,
+                    color: shadeHex(brandColor, -50),
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {showQuickReplies && !awaitingFollowUp && !chatClosed && contextualReplies.length === 0 && allButtons.length > 0 && (
             <div
               className="grid grid-cols-2 gap-2 border-t p-3"
               style={{
