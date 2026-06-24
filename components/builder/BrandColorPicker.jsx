@@ -6,10 +6,16 @@ function BubblePreview({ color }) {
   return (
     <div className="mt-2 space-y-1.5 rounded-lg bg-[#F8F9FA] p-2">
       <div
-        className="ml-auto max-w-[85%] rounded-xl rounded-br-sm px-2 py-1 text-[9px] font-medium text-white"
+        className="relative ml-auto max-w-[85%] overflow-hidden rounded-xl rounded-br-sm"
         style={{ backgroundColor: color }}
       >
-        Hi there!
+        <div className="absolute inset-0 bg-black/40" />
+        <span
+          className="relative block px-2 py-1 text-[9px] font-semibold text-white"
+          style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}
+        >
+          Hi there!
+        </span>
       </div>
       <div className="max-w-[85%] rounded-xl rounded-bl-sm border border-[#E2E8F0] bg-white px-2 py-1 text-[9px] text-[#4A5568]">
         How can I help?
@@ -50,10 +56,10 @@ export default function BrandColorPicker({
               key={preset.id}
               type="button"
               onClick={() => onChange(preset.hex)}
-              className={`rounded-xl border p-3 text-left transition ${
+              className={`rounded-xl border-2 p-3 text-left transition ${
                 selected
                   ? "border-[#0D7377] ring-2 ring-[#0D7377]/40"
-                  : "border-[#E2E8F0] bg-white hover:border-[#0D7377]/30"
+                  : "border-gray-200 bg-white hover:border-[#0D7377]/50"
               }`}
             >
               <div className="flex items-center gap-2">

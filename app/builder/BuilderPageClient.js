@@ -128,8 +128,13 @@ function Toggle({ label, hint, checked, onChange }) {
         <span className="text-sm font-medium text-[#1A1A2E]">{label}</span>
         {hint && <p className="mt-0.5 text-xs text-[#9CA3AF]">{hint}</p>}
       </div>
-      <div className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${checked ? "bg-[#0D7377]" : "bg-[#CBD5E0]"}`}>
-        <div className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`} />
+      <div className="flex flex-shrink-0 items-center gap-2">
+        <div className={`relative h-6 w-11 rounded-full transition-colors ${checked ? "bg-[#0D7377]" : "bg-[#CBD5E0]"}`}>
+          <div className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`} />
+        </div>
+        <span className={`w-6 text-sm font-medium ${checked ? "text-[#0D7377]" : "text-[#9CA3AF]"}`}>
+          {checked ? "Yes" : "No"}
+        </span>
       </div>
     </div>
   );
