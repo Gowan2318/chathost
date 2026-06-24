@@ -20,14 +20,28 @@ const ALLOWED_CONFIG_KEYS = new Set([
   "booking_url", "payNowUrl", "brandColor", "chatTheme",
   "quickReplies", "customQA", "mascotName", "websiteUrl",
   "industry", "plan",
-  // Industry-specific fields (Pro)
-  "menuUrl", "reservationLink", "hasDelivery", "dietaryOptions",
-  "insurancePlans", "newPatientFormUrl", "hasPaymentPlans",
+  // Restaurant
+  "menuUrl", "hasReservations", "reservationLink", "hasDelivery", "dietaryOptions", "priceRange",
+  // Dental
+  "acceptingNewPatients", "insurancePlans", "hasPaymentPlans", "newPatientFormUrl",
+  // Salon / Barber / Lawncare / Other
   "walkInsWelcome", "servicesPricing",
-  "membershipUrl", "hasFreeTrial", "classScheduleUrl",
-  "practiceAreas", "freeConsultation", "worksOnContingency",
-  "serviceArea", "freeEstimates", "recurringPlans",
-  "clientType", "areasServed", "extraInfo",
+  // Salon
+  "hasGiftCards",
+  // Barber
+  "hasBeardTrim",
+  // Gym
+  "membershipUrl", "hasFreeTrial", "hasClasses", "classScheduleUrl", "hasTrainers", "equipmentInfo",
+  // Law + Real estate
+  "feesInfo",
+  // Law
+  "practiceAreas", "freeConsultation", "worksOnContingency", "caseTimeline",
+  // Lawncare
+  "serviceArea", "freeEstimates", "recurringPlans", "isLicensed",
+  // Real estate
+  "clientType", "areasServed", "listingsUrl", "acceptingClients",
+  // Other
+  "extraInfo", "paymentInfo",
 ]);
 
 function applyPlanEnforcement(config, plan) {
@@ -79,19 +93,41 @@ function validateConfig(config) {
   // Industry-specific field validation
   strMax("Menu URL", "menuUrl", 500);
   strMax("Reservation link", "reservationLink", 500);
-  strMax("New patient form URL", "newPatientFormUrl", 500);
-  strMax("Class schedule URL", "classScheduleUrl", 500);
   strMax("Dietary options", "dietaryOptions", 1000);
-  strMax("Insurance plans", "insurancePlans", 1000);
+  strMax("Price range", "priceRange", 200);
+  if (Array.isArray(config.insurancePlans)) {
+    if (config.insurancePlans.length > 20) {
+      errors.push("Too many insurance plans (max 20)");
+    }
+    for (const plan of config.insurancePlans) {
+      if (typeof plan === "string" && plan.length > 100) {
+        errors.push("Insurance plan name too long (max 100 characters)");
+        break;
+      }
+    }
+  }
+  strMax("New patient form URL", "newPatientFormUrl", 500);
   strMax("Services pricing", "servicesPricing", 1000);
   strMax("Membership URL", "membershipUrl", 500);
+  strMax("Class schedule URL", "classScheduleUrl", 500);
+  strMax("Equipment info", "equipmentInfo", 1000);
+  strMax("Fees info", "feesInfo", 200);
   strMax("Practice areas", "practiceAreas", 1000);
+  strMax("Case timeline", "caseTimeline", 200);
   strMax("Service area", "serviceArea", 1000);
   strMax("Areas served", "areasServed", 1000);
+  strMax("Listings URL", "listingsUrl", 500);
   strMax("Extra info", "extraInfo", 1000);
+  strMax("Payment info", "paymentInfo", 1000);
 
-  const BOOL_FIELDS = ["hasDelivery", "hasPaymentPlans", "walkInsWelcome", "hasFreeTrial",
-    "freeConsultation", "worksOnContingency", "freeEstimates", "recurringPlans"];
+  const BOOL_FIELDS = [
+    "hasReservations", "hasDelivery", "acceptingNewPatients", "hasPaymentPlans",
+    "walkInsWelcome", "hasGiftCards", "hasBeardTrim",
+    "hasFreeTrial", "hasClasses", "hasTrainers",
+    "freeConsultation", "worksOnContingency",
+    "freeEstimates", "recurringPlans", "isLicensed",
+    "acceptingClients",
+  ];
   for (const f of BOOL_FIELDS) {
     if (config[f] != null && typeof config[f] !== "boolean") {
       errors.push(`${f} must be a boolean`);

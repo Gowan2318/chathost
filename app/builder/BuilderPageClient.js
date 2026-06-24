@@ -9,6 +9,7 @@ import ChatThemeSelector from "../../components/builder/ChatThemeSelector";
 import BusinessHoursEditor from "../../components/builder/BusinessHoursEditor";
 import { ErrorSummary, FormField, inputClassName } from "../../components/builder/FormField";
 import IndustrySelector from "../../components/builder/IndustrySelector";
+import InsuranceSelector from "../../components/builder/InsuranceSelector";
 import QuickRepliesEditor from "../../components/builder/QuickRepliesEditor";
 import ChatWidget from "../../components/ChatWidget";
 import MascotCharacter from "../../components/mascots/MascotCharacter";
@@ -69,27 +70,52 @@ const INITIAL = {
   mascotName: "",
   websiteUrl: "",
   // Industry-specific fields (Pro only)
+  // Restaurant
   menuUrl: "",
+  hasReservations: false,
   reservationLink: "",
   hasDelivery: false,
   dietaryOptions: "",
-  insurancePlans: "",
-  newPatientFormUrl: "",
+  priceRange: "",
+  // Dental
+  acceptingNewPatients: false,
+  insurancePlans: [],
   hasPaymentPlans: false,
+  newPatientFormUrl: "",
+  // Salon / Barber / Lawncare / Other
   walkInsWelcome: false,
   servicesPricing: "",
+  // Salon
+  hasGiftCards: false,
+  // Barber
+  hasBeardTrim: false,
+  // Gym
   membershipUrl: "",
   hasFreeTrial: false,
+  hasClasses: false,
   classScheduleUrl: "",
+  hasTrainers: false,
+  equipmentInfo: "",
+  // Law + Real estate
+  feesInfo: "",
+  // Law
   practiceAreas: "",
   freeConsultation: false,
   worksOnContingency: false,
+  caseTimeline: "",
+  // Lawncare
   serviceArea: "",
   freeEstimates: false,
   recurringPlans: false,
+  isLicensed: false,
+  // Real estate
   clientType: "both",
   areasServed: "",
+  listingsUrl: "",
+  acceptingClients: false,
+  // Other
   extraInfo: "",
+  paymentInfo: "",
 };
 
 function Toggle({ label, hint, checked, onChange }) {
@@ -489,7 +515,6 @@ export default function BuilderPageClient() {
                 {!isBasic && (
                   <IndustrySelector
                     value={form.industry}
-                    customQACount={form.customQA.length}
                     onChange={(patch) => update(patch)}
                     showValidation={showValidation}
                     error={errors.industry}
@@ -698,48 +723,73 @@ export default function BuilderPageClient() {
 
                     {form.industry === "restaurant" && (
                       <div className="space-y-4">
-                        <FormField label="Menu URL" htmlFor="menu-url" hint="Link to your online menu (e.g. your website menu page)" showValidation={false} error={null} isValid={false}>
+                        <FormField label="Menu URL" htmlFor="menu-url" hint="Link to your online menu" showValidation={false} error={null} isValid={false}>
                           <input id="menu-url" type="url" value={form.menuUrl} onChange={(e) => update({ menuUrl: e.target.value })} placeholder="https://yourbusiness.com/menu" className={inputClassName(false, null, false)} />
                         </FormField>
-                        <FormField label="Reservation link" htmlFor="reservation-link" hint="Link to your reservation system (OpenTable, Resy, etc.)" showValidation={false} error={null} isValid={false}>
-                          <input id="reservation-link" type="url" value={form.reservationLink} onChange={(e) => update({ reservationLink: e.target.value })} placeholder="https://opentable.com/yourbusiness" className={inputClassName(false, null, false)} />
-                        </FormField>
+                        <Toggle label="Do you take reservations?" checked={form.hasReservations} onChange={(v) => update({ hasReservations: v })} />
+                        {form.hasReservations && (
+                          <FormField label="Reservation link" htmlFor="reservation-link" hint="Link to your reservation system (OpenTable, Resy, etc.)" showValidation={false} error={null} isValid={false}>
+                            <input id="reservation-link" type="url" value={form.reservationLink} onChange={(e) => update({ reservationLink: e.target.value })} placeholder="https://opentable.com/yourbusiness" className={inputClassName(false, null, false)} />
+                          </FormField>
+                        )}
                         <Toggle label="Do you offer delivery or takeout?" checked={form.hasDelivery} onChange={(v) => update({ hasDelivery: v })} />
-                        <FormField label="Dietary options available" htmlFor="dietary-options" hint="e.g. Vegetarian, Vegan, Gluten-free, Halal" showValidation={false} error={null} isValid={false}>
+                        <FormField label="Dietary options" htmlFor="dietary-options" hint="e.g. Vegetarian, Vegan, Gluten-free, Halal" showValidation={false} error={null} isValid={false}>
                           <textarea id="dietary-options" rows={2} value={form.dietaryOptions} onChange={(e) => update({ dietaryOptions: e.target.value })} placeholder="e.g. Vegetarian, Vegan, Gluten-free, Halal" className={inputClassName(false, null, false)} />
+                        </FormField>
+                        <FormField label="Price range" htmlFor="price-range" hint="e.g. $10-20 per person" showValidation={false} error={null} isValid={false}>
+                          <input id="price-range" type="text" value={form.priceRange} onChange={(e) => update({ priceRange: e.target.value })} placeholder="e.g. $10-20 per person" className={inputClassName(false, null, false)} />
                         </FormField>
                       </div>
                     )}
 
                     {form.industry === "dental" && (
                       <div className="space-y-4">
-                        <FormField label="Insurance plans accepted" htmlFor="insurance-plans" hint="e.g. Delta Dental, Cigna, MetLife, or 'We do not accept insurance'" showValidation={false} error={null} isValid={false}>
-                          <textarea id="insurance-plans" rows={2} value={form.insurancePlans} onChange={(e) => update({ insurancePlans: e.target.value })} placeholder="e.g. Delta Dental, Cigna, MetLife" className={inputClassName(false, null, false)} />
-                        </FormField>
-                        <FormField label="New patient form URL" htmlFor="new-patient-form" hint="Link to your new patient intake form if you have one" showValidation={false} error={null} isValid={false}>
-                          <input id="new-patient-form" type="url" value={form.newPatientFormUrl} onChange={(e) => update({ newPatientFormUrl: e.target.value })} placeholder="https://yourbusiness.com/new-patient" className={inputClassName(false, null, false)} />
-                        </FormField>
+                        <Toggle label="Are you accepting new patients?" checked={form.acceptingNewPatients} onChange={(v) => update({ acceptingNewPatients: v })} />
+                        <InsuranceSelector value={form.insurancePlans} onChange={(insurancePlans) => update({ insurancePlans })} />
                         <Toggle label="Do you offer payment plans?" checked={form.hasPaymentPlans} onChange={(v) => update({ hasPaymentPlans: v })} />
+                        {form.acceptingNewPatients && (
+                          <FormField label="New patient form URL" htmlFor="new-patient-form" hint="Link to your new patient intake form" showValidation={false} error={null} isValid={false}>
+                            <input id="new-patient-form" type="url" value={form.newPatientFormUrl} onChange={(e) => update({ newPatientFormUrl: e.target.value })} placeholder="https://yourbusiness.com/new-patient" className={inputClassName(false, null, false)} />
+                          </FormField>
+                        )}
                       </div>
                     )}
 
-                    {(form.industry === "salon" || form.industry === "barber") && (
+                    {form.industry === "salon" && (
                       <div className="space-y-4">
                         <Toggle label="Do you accept walk-ins?" checked={form.walkInsWelcome} onChange={(v) => update({ walkInsWelcome: v })} />
-                        <FormField label="Services & pricing" htmlFor="services-pricing" hint="List your main services and prices, e.g. Haircut $35, Color $80+" showValidation={false} error={null} isValid={false}>
-                          <textarea id="services-pricing" rows={3} value={form.servicesPricing} onChange={(e) => update({ servicesPricing: e.target.value })} placeholder="e.g. Haircut $35, Color $80+, Blowout $45" className={inputClassName(false, null, false)} />
+                        <FormField label="Services & pricing" htmlFor="services-pricing-salon" hint="List your main services and prices" showValidation={false} error={null} isValid={false}>
+                          <textarea id="services-pricing-salon" rows={3} value={form.servicesPricing} onChange={(e) => update({ servicesPricing: e.target.value })} placeholder="e.g. Haircut $35, Color $80+, Blowout $45" className={inputClassName(false, null, false)} />
                         </FormField>
+                        <Toggle label="Do you offer gift cards?" checked={form.hasGiftCards} onChange={(v) => update({ hasGiftCards: v })} />
+                      </div>
+                    )}
+
+                    {form.industry === "barber" && (
+                      <div className="space-y-4">
+                        <Toggle label="Do you accept walk-ins?" checked={form.walkInsWelcome} onChange={(v) => update({ walkInsWelcome: v })} />
+                        <FormField label="Services & pricing" htmlFor="services-pricing-barber" hint="List your main services and prices" showValidation={false} error={null} isValid={false}>
+                          <textarea id="services-pricing-barber" rows={3} value={form.servicesPricing} onChange={(e) => update({ servicesPricing: e.target.value })} placeholder="e.g. Haircut $30, Fade $35, Beard Trim $15" className={inputClassName(false, null, false)} />
+                        </FormField>
+                        <Toggle label="Do you offer beard trims?" checked={form.hasBeardTrim} onChange={(v) => update({ hasBeardTrim: v })} />
                       </div>
                     )}
 
                     {form.industry === "gym" && (
                       <div className="space-y-4">
-                        <FormField label="Membership page URL" htmlFor="membership-url" hint="Link to your memberships/pricing page (e.g. your website's membership section)" showValidation={false} error={null} isValid={false}>
+                        <FormField label="Membership page URL" htmlFor="membership-url" hint="Link to your memberships/pricing page" showValidation={false} error={null} isValid={false}>
                           <input id="membership-url" type="url" value={form.membershipUrl} onChange={(e) => update({ membershipUrl: e.target.value })} placeholder="https://yourgym.com/memberships" className={inputClassName(false, null, false)} />
                         </FormField>
                         <Toggle label="Do you offer a free trial or guest pass?" checked={form.hasFreeTrial} onChange={(v) => update({ hasFreeTrial: v })} />
-                        <FormField label="Class schedule URL" htmlFor="class-schedule-url" hint="Link to your class schedule if available" showValidation={false} error={null} isValid={false}>
-                          <input id="class-schedule-url" type="url" value={form.classScheduleUrl} onChange={(e) => update({ classScheduleUrl: e.target.value })} placeholder="https://yourgym.com/schedule" className={inputClassName(false, null, false)} />
+                        <Toggle label="Do you offer classes?" checked={form.hasClasses} onChange={(v) => update({ hasClasses: v })} />
+                        {form.hasClasses && (
+                          <FormField label="Class schedule URL" htmlFor="class-schedule-url" hint="Link to your class schedule" showValidation={false} error={null} isValid={false}>
+                            <input id="class-schedule-url" type="url" value={form.classScheduleUrl} onChange={(e) => update({ classScheduleUrl: e.target.value })} placeholder="https://yourgym.com/schedule" className={inputClassName(false, null, false)} />
+                          </FormField>
+                        )}
+                        <Toggle label="Do you have personal trainers?" checked={form.hasTrainers} onChange={(v) => update({ hasTrainers: v })} />
+                        <FormField label="Equipment info" htmlFor="equipment-info" hint="Brief description of your main equipment" showValidation={false} error={null} isValid={false}>
+                          <textarea id="equipment-info" rows={2} value={form.equipmentInfo} onChange={(e) => update({ equipmentInfo: e.target.value })} placeholder="e.g. Free weights, treadmills, squat racks, cable machines" className={inputClassName(false, null, false)} />
                         </FormField>
                       </div>
                     )}
@@ -750,17 +800,27 @@ export default function BuilderPageClient() {
                           <textarea id="practice-areas" rows={2} value={form.practiceAreas} onChange={(e) => update({ practiceAreas: e.target.value })} placeholder="e.g. Personal injury, Family law, Criminal defense" className={inputClassName(false, null, false)} />
                         </FormField>
                         <Toggle label="Do you offer free consultations?" checked={form.freeConsultation} onChange={(v) => update({ freeConsultation: v })} />
+                        <FormField label="Fee structure" htmlFor="fees-info" hint="e.g. Contingency fee, hourly rate starting at $X" showValidation={false} error={null} isValid={false}>
+                          <input id="fees-info" type="text" value={form.feesInfo} onChange={(e) => update({ feesInfo: e.target.value })} placeholder="e.g. Contingency fee (no win, no fee)" className={inputClassName(false, null, false)} />
+                        </FormField>
                         <Toggle label="Do you work on contingency?" checked={form.worksOnContingency} onChange={(v) => update({ worksOnContingency: v })} />
+                        <FormField label="Typical case timeline" htmlFor="case-timeline" hint="e.g. Most cases resolve in 6-12 months" showValidation={false} error={null} isValid={false}>
+                          <input id="case-timeline" type="text" value={form.caseTimeline} onChange={(e) => update({ caseTimeline: e.target.value })} placeholder="e.g. Most cases resolve in 6-12 months" className={inputClassName(false, null, false)} />
+                        </FormField>
                       </div>
                     )}
 
                     {form.industry === "lawn" && (
                       <div className="space-y-4">
-                        <FormField label="Service area" htmlFor="service-area" hint="e.g. We service Pittsburgh and surrounding suburbs within 20 miles" showValidation={false} error={null} isValid={false}>
+                        <FormField label="Service area" htmlFor="service-area" hint="e.g. Pittsburgh and suburbs within 20 miles" showValidation={false} error={null} isValid={false}>
                           <textarea id="service-area" rows={2} value={form.serviceArea} onChange={(e) => update({ serviceArea: e.target.value })} placeholder="e.g. Pittsburgh and surrounding suburbs within 20 miles" className={inputClassName(false, null, false)} />
                         </FormField>
                         <Toggle label="Do you offer free estimates?" checked={form.freeEstimates} onChange={(v) => update({ freeEstimates: v })} />
                         <Toggle label="Do you offer recurring service plans?" checked={form.recurringPlans} onChange={(v) => update({ recurringPlans: v })} />
+                        <Toggle label="Are you licensed and insured?" checked={form.isLicensed} onChange={(v) => update({ isLicensed: v })} />
+                        <FormField label="Services & pricing" htmlFor="services-pricing-lawn" hint="e.g. Lawn mowing from $35, Mulching from $150" showValidation={false} error={null} isValid={false}>
+                          <textarea id="services-pricing-lawn" rows={2} value={form.servicesPricing} onChange={(e) => update({ servicesPricing: e.target.value })} placeholder="e.g. Lawn mowing from $35, Mulching from $150" className={inputClassName(false, null, false)} />
+                        </FormField>
                       </div>
                     )}
 
@@ -784,13 +844,28 @@ export default function BuilderPageClient() {
                         <FormField label="Areas served" htmlFor="areas-served" hint="e.g. Pittsburgh, Mt. Lebanon, Bethel Park" showValidation={false} error={null} isValid={false}>
                           <textarea id="areas-served" rows={2} value={form.areasServed} onChange={(e) => update({ areasServed: e.target.value })} placeholder="e.g. Pittsburgh, Mt. Lebanon, Bethel Park" className={inputClassName(false, null, false)} />
                         </FormField>
+                        <FormField label="Listings page URL" htmlFor="listings-url" hint="Link to your active listings" showValidation={false} error={null} isValid={false}>
+                          <input id="listings-url" type="url" value={form.listingsUrl} onChange={(e) => update({ listingsUrl: e.target.value })} placeholder="https://youragent.com/listings" className={inputClassName(false, null, false)} />
+                        </FormField>
+                        <Toggle label="Are you accepting new clients?" checked={form.acceptingClients} onChange={(v) => update({ acceptingClients: v })} />
+                        <FormField label="Fee/commission info" htmlFor="fees-info-re" hint="e.g. Standard 3% buyer's agent commission" showValidation={false} error={null} isValid={false}>
+                          <input id="fees-info-re" type="text" value={form.feesInfo} onChange={(e) => update({ feesInfo: e.target.value })} placeholder="e.g. Standard 3% buyer's agent commission" className={inputClassName(false, null, false)} />
+                        </FormField>
                       </div>
                     )}
 
                     {form.industry === "other" && (
-                      <FormField label="Additional business information" htmlFor="extra-info" hint="Add any extra details your chatbot should know to answer customer questions" showValidation={false} error={null} isValid={false}>
-                        <textarea id="extra-info" rows={4} value={form.extraInfo} onChange={(e) => update({ extraInfo: e.target.value })} placeholder="Add any extra details your chatbot should know…" className={inputClassName(false, null, false)} />
-                      </FormField>
+                      <div className="space-y-4">
+                        <FormField label="Services & pricing" htmlFor="other-services-pricing" hint="List your main services and prices" showValidation={false} error={null} isValid={false}>
+                          <textarea id="other-services-pricing" rows={3} value={form.servicesPricing} onChange={(e) => update({ servicesPricing: e.target.value })} placeholder="e.g. Web design from $500, Logo design $200" className={inputClassName(false, null, false)} />
+                        </FormField>
+                        <FormField label="Payment methods accepted" htmlFor="payment-info" hint="e.g. Cash, Card, Venmo, Zelle" showValidation={false} error={null} isValid={false}>
+                          <textarea id="payment-info" rows={2} value={form.paymentInfo} onChange={(e) => update({ paymentInfo: e.target.value })} placeholder="e.g. Cash, Card, Venmo, Zelle" className={inputClassName(false, null, false)} />
+                        </FormField>
+                        <FormField label="Additional information" htmlFor="extra-info" hint="Add any extra details your chatbot should know" showValidation={false} error={null} isValid={false}>
+                          <textarea id="extra-info" rows={4} value={form.extraInfo} onChange={(e) => update({ extraInfo: e.target.value })} placeholder="Add any extra details your chatbot should know…" className={inputClassName(false, null, false)} />
+                        </FormField>
+                      </div>
                     )}
                   </div>
                 )}
@@ -832,6 +907,7 @@ export default function BuilderPageClient() {
                   onCustomQAChange={(customQA) => update({ customQA })}
                   showValidation={showValidation}
                   fieldErrors={errors}
+                  formFields={form}
                 />
               </div>
             )}
