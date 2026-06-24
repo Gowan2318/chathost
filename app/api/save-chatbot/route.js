@@ -244,6 +244,8 @@ export async function POST(req) {
 
   const configToSave = applyPlanEnforcement({ ...sanitizedConfig, plan: validPlan }, validPlan);
 
+  console.log("[save-chatbot] booking_url:", configToSave.booking_url);
+
   const { error } = await db.from("chatbots").insert(
     { client_id: clientId, config: configToSave, user_id: user.id }
   );
