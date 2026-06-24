@@ -222,20 +222,58 @@ export default function BuilderPageClient() {
 
   const businessInfo = useMemo(() => composeBusinessInfo(form), [form]);
 
-  // Not memoized — must always reflect the latest form.quickReplies so the Step 5
-  // preview is never stale after the user edits or removes quick replies in Step 3.
+  // Not memoized — must always reflect the latest form state so the Step 5
+  // preview is never stale. businessInfo is composed fresh so booking URL and
+  // industry details are live without requiring a save first.
   const chatConfig = {
     businessName: form.businessName || "Your Business",
-    businessInfo: businessInfo || "Add your business details in the builder.",
+    businessInfo: composeBusinessInfo(form) || "Add your business details in the builder.",
     supportPhone: form.supportPhone || "(555) 000-0000",
     supportEmail: form.supportEmail || "support@yourbusiness.com",
     payNowUrl: form.payNowUrl,
+    booking_url: form.bookingUrl || "",
     quickReplies: form.quickReplies.filter(Boolean).slice(0, 8),
     customQA: form.customQA,
     brandColor: form.brandColor,
     chatTheme: form.chatTheme || "light",
     industry: form.industry || "other",
     mascotName: form.mascotName,
+    // Industry-specific fields — available for live preview logic
+    acceptingNewPatients: form.acceptingNewPatients,
+    insurancePlans: form.insurancePlans,
+    hasPaymentPlans: form.hasPaymentPlans,
+    newPatientFormUrl: form.newPatientFormUrl,
+    walkInsWelcome: form.walkInsWelcome,
+    hasGiftCards: form.hasGiftCards,
+    hasBeardTrim: form.hasBeardTrim,
+    menuUrl: form.menuUrl,
+    hasReservations: form.hasReservations,
+    reservationLink: form.reservationLink,
+    hasDelivery: form.hasDelivery,
+    dietaryOptions: form.dietaryOptions,
+    priceRange: form.priceRange,
+    membershipUrl: form.membershipUrl,
+    hasFreeTrial: form.hasFreeTrial,
+    hasClasses: form.hasClasses,
+    classScheduleUrl: form.classScheduleUrl,
+    hasTrainers: form.hasTrainers,
+    equipmentInfo: form.equipmentInfo,
+    practiceAreas: form.practiceAreas,
+    freeConsultation: form.freeConsultation,
+    feesInfo: form.feesInfo,
+    worksOnContingency: form.worksOnContingency,
+    caseTimeline: form.caseTimeline,
+    serviceArea: form.serviceArea,
+    freeEstimates: form.freeEstimates,
+    recurringPlans: form.recurringPlans,
+    isLicensed: form.isLicensed,
+    servicesPricing: form.servicesPricing,
+    clientType: form.clientType,
+    areasServed: form.areasServed,
+    listingsUrl: form.listingsUrl,
+    acceptingClients: form.acceptingClients,
+    extraInfo: form.extraInfo,
+    paymentInfo: form.paymentInfo,
   };
 
   const fieldValid = (key, validator) =>

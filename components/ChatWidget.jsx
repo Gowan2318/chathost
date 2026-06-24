@@ -353,10 +353,14 @@ We're happy to assist you!`;
     const nextMessages = [...messages, userMessage];
     setIsTyping(true);
     try {
+      const effectiveBusinessInfo =
+        bookingUrl && !businessInfo.includes(bookingUrl)
+          ? `${businessInfo}. To book an appointment online: ${bookingUrl}`
+          : businessInfo;
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: nextMessages, businessName, businessInfo }),
+        body: JSON.stringify({ messages: nextMessages, businessName, businessInfo: effectiveBusinessInfo }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Request failed");

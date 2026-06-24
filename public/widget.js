@@ -629,13 +629,18 @@
       state.isTyping = true;
       render();
 
+      var effectiveBusinessInfo =
+        bookingUrl && businessInfo.indexOf(bookingUrl) === -1
+          ? businessInfo + ". To book an appointment online: " + bookingUrl
+          : businessInfo;
+      console.log("[widget] businessInfo being sent:", effectiveBusinessInfo.substring(0, 500));
       return fetch(baseUrl + "/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: toApiMessages(state.messages),
           businessName: businessName,
-          businessInfo: businessInfo,
+          businessInfo: effectiveBusinessInfo,
           industry: industry,
         }),
       })
