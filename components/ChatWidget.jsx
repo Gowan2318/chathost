@@ -12,7 +12,7 @@ const PAYMENT_PATTERN =
 const TALK_TO_SOMEONE_PATTERN = /\btalk to someone\b/i;
 const ACCEPTING_PATIENTS_PATTERN = /\b(accepting new patients|currently accepting)\b/i;
 const AFFIRMATIVE_PATTERN = /^(yes|yeah|yep|sure|ok|okay|please|definitely|absolutely)\.?$/i;
-const FOLLOW_UP_BOT_PATTERN = /anything else|help you with|else I can/i;
+const CONVERSATION_END_PATTERN = /Is there anything else|anything else I can|else I can help|help you with|Have a great day|Feel free to reach out|Hope that helps/i;
 
 function buildContextualReplies(botText) {
   if (ACCEPTING_PATIENTS_PATTERN.test(botText)) {
@@ -36,7 +36,7 @@ function isTalkToSomeoneIntent(text) {
 function lastBotWasFollowUp(messages) {
   for (let i = messages.length - 1; i >= 0; i--) {
     if (messages[i].role === "assistant") {
-      return FOLLOW_UP_BOT_PATTERN.test(messages[i].content);
+      return CONVERSATION_END_PATTERN.test(messages[i].content);
     }
   }
   return false;
@@ -194,6 +194,7 @@ We're happy to assist you!`;
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
+  const reShowTimerRef = useRef(null);
 
   const pricingInfo =
     config.pricingInfo ||
@@ -248,6 +249,10 @@ We're happy to assist you!`;
   }, []);
 
   const resetToStart = useCallback(() => {
+    if (reShowTimerRef.current) {
+      clearTimeout(reShowTimerRef.current);
+      reShowTimerRef.current = null;
+    }
     setMessages([initialMessage]);
     setShowQuickReplies(true);
     setInput("");
@@ -270,6 +275,10 @@ We're happy to assist you!`;
   const sendMessage = async (text) => {
     const trimmed = text.trim();
     if (!trimmed || isTyping) return;
+    if (reShowTimerRef.current) {
+      clearTimeout(reShowTimerRef.current);
+      reShowTimerRef.current = null;
+    }
     setContextualReplies([]);
 
     const userMessage = { role: "user", content: trimmed };
@@ -319,6 +328,12 @@ We're happy to assist you!`;
 
       setMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
       setContextualReplies(buildContextualReplies(data.message));
+      if (CONVERSATION_END_PATTERN.test(data.message) && allButtons.length > 0) {
+        reShowTimerRef.current = setTimeout(() => {
+          setShowQuickReplies(true);
+          reShowTimerRef.current = null;
+        }, 1000);
+      }
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -471,28 +486,33 @@ We're happy to assist you!`;
 
           {showQuickReplies && contextualReplies.length === 0 && allButtons.length > 0 && (
             <div
-              className="grid grid-cols-2 gap-2 border-t p-3"
+              className="border-t p-3"
               style={{
                 background: theme.quickReplyBackground,
                 borderColor: theme.footerBorder,
               }}
             >
-              {allButtons.map((label) => (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => sendMessage(label)}
-                  disabled={isTyping}
-                  className="rounded-xl border px-3 py-2.5 text-left text-xs font-medium leading-snug transition disabled:opacity-50"
-                  style={{
-                    borderColor: `${brandColor}35`,
-                    backgroundColor: `${brandColor}10`,
-                    color: shadeHex(brandColor, -50),
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
+              <p className="mb-2 text-[11px] font-medium" style={{ color: theme.botText, opacity: 0.55 }}>
+                Quick questions:
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {allButtons.map((label) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => sendMessage(label)}
+                    disabled={isTyping}
+                    className="rounded-xl border px-3 py-2.5 text-left text-xs font-medium leading-snug transition disabled:opacity-50"
+                    style={{
+                      borderColor: `${brandColor}35`,
+                      backgroundColor: `${brandColor}10`,
+                      color: shadeHex(brandColor, -50),
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 

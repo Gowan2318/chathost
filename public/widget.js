@@ -9,7 +9,7 @@
   var SERVICES_TOPIC_RESP = /\b(service|offer|provide|specialize|treatment|plan|package|include)\b/i;
   var ACCEPTING_PATIENTS_PATTERN = /\b(accepting new patients|currently accepting)\b/i;
   var AFFIRMATIVE_PATTERN = /^(yes|yeah|yep|sure|ok|okay|please|definitely|absolutely)\.?$/i;
-  var FOLLOW_UP_BOT_PATTERN = /anything else|help you with|else I can/i;
+  var CONVERSATION_END_PATTERN = /Is there anything else|anything else I can|else I can help|help you with|Have a great day|Feel free to reach out|Hope that helps/i;
   var MASCOT_SRC = {
     dental: "/mascots/dental.png",
     gym: "/mascots/gym.png",
@@ -145,7 +145,7 @@
   function lastBotWasFollowUp(messages) {
     for (var i = messages.length - 1; i >= 0; i--) {
       if (messages[i].role === "assistant") {
-        return FOLLOW_UP_BOT_PATTERN.test(String(messages[i].content || ""));
+        return CONVERSATION_END_PATTERN.test(String(messages[i].content || ""));
       }
     }
     return false;
@@ -233,6 +233,7 @@
       showQuickReplies: true,
       contextualQuickReplies: [],
     };
+    var reShowTimer = null;
 
     var host = document.createElement("div");
     host.id = "vestachathost-widget";
@@ -293,11 +294,15 @@
       ".vch-dot:nth-child(2){animation-delay:0.15s}" +
       ".vch-dot:nth-child(3){animation-delay:0.3s}" +
       "@keyframes vch-bounce{0%,80%,100%{transform:translateY(0);opacity:0.5}40%{transform:translateY(-6px);opacity:1}}" +
-      ".vch-quick{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px;border-top:1px solid " +
+      ".vch-quick{display:flex;flex-direction:column;padding:12px;border-top:1px solid " +
       theme.footerBorder +
       ";background:" +
       theme.quickReplyBackground +
       "}" +
+      ".vch-quick-label{font-size:11px;font-weight:600;opacity:0.55;margin:0 0 8px;color:" +
+      theme.botText +
+      "}" +
+      ".vch-quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}" +
       ".vch-quick-btn{border-radius:12px;border:1px solid " +
       brandColor +
       "35;background:" +
@@ -475,8 +480,19 @@
         state.contextualQuickReplies.length;
 
       if (showInitial || showContextual) {
-        quickEl.style.display = "grid";
+        quickEl.style.display = "flex";
         quickEl.innerHTML = "";
+
+        if (showInitial) {
+          var lbl = document.createElement("p");
+          lbl.className = "vch-quick-label";
+          lbl.textContent = "Quick questions:";
+          quickEl.appendChild(lbl);
+        }
+
+        var grid = document.createElement("div");
+        grid.className = "vch-quick-grid";
+
         var toShow = showInitial ? allButtons : state.contextualQuickReplies;
         toShow.forEach(function (label) {
           var btn = document.createElement("button");
@@ -487,8 +503,10 @@
           btn.addEventListener("click", function () {
             sendMessage(label);
           });
-          quickEl.appendChild(btn);
+          grid.appendChild(btn);
         });
+
+        quickEl.appendChild(grid);
       } else {
         quickEl.style.display = "none";
         quickEl.innerHTML = "";
@@ -515,6 +533,7 @@
     }
 
     function resetChat() {
+      if (reShowTimer) { clearTimeout(reShowTimer); reShowTimer = null; }
       state.messages = [welcomeMessage];
       state.showQuickReplies = true;
       state.input = "";
@@ -570,6 +589,13 @@
           state.messages.push({ role: "assistant", content: botText });
           state.contextualQuickReplies = buildContextualReplies(botText);
           render();
+          if (CONVERSATION_END_PATTERN.test(botText) && allButtons.length > 0) {
+            reShowTimer = setTimeout(function () {
+              state.showQuickReplies = true;
+              reShowTimer = null;
+              render();
+            }, 1000);
+          }
         })
         .catch(function () {
           state.isTyping = false;
@@ -584,6 +610,8 @@
       if (!trimmed || state.isTyping) {
         return;
       }
+
+      if (reShowTimer) { clearTimeout(reShowTimer); reShowTimer = null; }
 
       state.messages.push({ role: "user", content: trimmed });
       state.input = "";
