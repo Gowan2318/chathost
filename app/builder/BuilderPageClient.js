@@ -239,6 +239,7 @@ export default function BuilderPageClient() {
   const [importStatus, setImportStatus] = useState(null); // null | "success" | "error"
   const [importDone, setImportDone] = useState(false);
   const [hoursNote, setHoursNote] = useState("");
+  const [pasteText, setPasteText] = useState("");
 
   // Step 2 accordion expanded state
   const [expandedSections, setExpandedSections] = useState({
@@ -426,6 +427,60 @@ export default function BuilderPageClient() {
 
       if (extracted.businessHours) {
         setHoursNote(`Hours found: "${extracted.businessHours}" — please set them manually in the hours section below.`);
+      }
+
+      setImportStatus("success");
+      setImportDone(true);
+    } catch {
+      setImportStatus("error");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handlePasteImport = async () => {
+    const trimmed = pasteText.trim();
+    if (!trimmed || isImporting) return;
+    setIsImporting(true);
+    setImportStatus(null);
+    setHoursNote("");
+    try {
+      const res = await fetch("/api/import-website", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: trimmed }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Extraction failed");
+
+      const { extracted } = data;
+      const patch = {};
+
+      if (extracted.businessName) patch.businessName = extracted.businessName;
+      if (extracted.businessDescription) patch.businessDescription = extracted.businessDescription;
+      if (extracted.servicesDescription) patch.servicesDescription = extracted.servicesDescription;
+      if (extracted.supportPhone) patch.supportPhone = extracted.supportPhone;
+      if (extracted.supportEmail) patch.supportEmail = extracted.supportEmail;
+      if (extracted.websiteUrl) patch.websiteUrl = extracted.websiteUrl;
+
+      if (extracted.address && typeof extracted.address === "object") {
+        patch.address = {
+          street: extracted.address.street ?? form.address.street,
+          city: extracted.address.city ?? form.address.city,
+          state: extracted.address.state ?? form.address.state,
+          zip: extracted.address.zip ?? form.address.zip,
+        };
+      }
+
+      if (!form.industry && extracted.industry_hint) {
+        const mapped = INDUSTRY_HINT_MAP[extracted.industry_hint] ?? extracted.industry_hint;
+        if (VALID_INDUSTRIES.has(mapped)) patch.industry = mapped;
+      }
+
+      update(patch);
+
+      if (extracted.businessHours) {
+        setHoursNote(`Hours found: "${extracted.businessHours}" — please set them manually in the hours section.`);
       }
 
       setImportStatus("success");
@@ -703,8 +758,41 @@ export default function BuilderPageClient() {
                 )}
 
                 {importStatus === "error" && (
-                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-                    Couldn&apos;t fetch that website. Click Continue to fill in your info manually.
+                  <div className="space-y-4">
+                    <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                      Couldn&apos;t fetch that website — it may be blocking automated requests.
+                    </div>
+                    <div className="rounded-xl border border-[#E2E8F0] bg-[#F8F9FA] p-5">
+                      <p className="text-sm font-semibold text-[#1A1A2E]">No problem! Here&apos;s how to import manually:</p>
+                      <ol className="mt-2 space-y-1 text-sm text-[#4A5568]">
+                        <li>1. Open your website in a new tab</li>
+                        <li>2. Press <kbd className="rounded bg-[#E2E8F0] px-1.5 py-0.5 font-mono text-xs">Ctrl+A</kbd> to select all text, then <kbd className="rounded bg-[#E2E8F0] px-1.5 py-0.5 font-mono text-xs">Ctrl+C</kbd> to copy</li>
+                        <li>3. Paste it below and we&apos;ll extract your business info</li>
+                      </ol>
+                      <textarea
+                        value={pasteText}
+                        onChange={(e) => setPasteText(e.target.value)}
+                        placeholder="Paste your website text here..."
+                        rows={6}
+                        className="mt-4 w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#1A1A2E] placeholder-[#9CA3AF] outline-none transition focus:border-[#0D7377]/50 focus:ring-2 focus:ring-[#0D7377]/20"
+                      />
+                      <button
+                        type="button"
+                        onClick={handlePasteImport}
+                        disabled={!pasteText.trim() || isImporting}
+                        className="mt-3 flex items-center gap-2 rounded-xl bg-[#0D7377] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0A5D61] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isImporting ? (
+                          <>
+                            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden>
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                            Extracting…
+                          </>
+                        ) : "Extract from text"}
+                      </button>
+                    </div>
                   </div>
                 )}
 

@@ -81,54 +81,70 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { url } = body;
+    const { url, text: pastedText } = body;
 
-    if (!url || typeof url !== "string") {
-      return json({ error: "URL is required" }, { status: 400 });
-    }
-    if (url.length > 500) {
-      return json({ error: "URL too long (max 500 characters)" }, { status: 400 });
-    }
+    let content; // plain text to send to Claude
 
-    let parsed;
-    try {
-      parsed = new URL(url);
-    } catch {
-      return json({ error: "Invalid URL format" }, { status: 400 });
-    }
-
-    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-      return json({ error: "URL must use http:// or https://" }, { status: 400 });
-    }
-
-    if (isInternalHost(parsed.hostname)) {
-      return json({ error: "URL must be a publicly accessible website" }, { status: 400 });
-    }
-
-    // Fetch the website HTML
-    let html;
-    try {
-      const fetchRes = await fetch(url, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        },
-        signal: AbortSignal.timeout(10000),
-        redirect: "follow",
-      });
-      if (!fetchRes.ok) {
-        return json({ error: "Could not fetch that website (it may be blocking bots)" }, { status: 422 });
+    if (pastedText != null) {
+      // Manual paste path — skip fetching entirely
+      if (typeof pastedText !== "string") {
+        return json({ error: "Invalid text" }, { status: 400 });
       }
-      html = await fetchRes.text();
-    } catch {
-      return json({ error: "Could not reach that website" }, { status: 422 });
-    }
+      if (pastedText.length > 100000) {
+        return json({ error: "Pasted text too long" }, { status: 400 });
+      }
+      content = stripHtml(pastedText).slice(0, 8000);
+      if (content.length < 50) {
+        return json({ error: "Please paste more text from your website (at least a few sentences)" }, { status: 400 });
+      }
+    } else {
+      // URL fetch path
+      if (!url || typeof url !== "string") {
+        return json({ error: "URL is required" }, { status: 400 });
+      }
+      if (url.length > 500) {
+        return json({ error: "URL too long (max 500 characters)" }, { status: 400 });
+      }
 
-    const text = stripHtml(html).slice(0, 8000);
+      let parsed;
+      try {
+        parsed = new URL(url);
+      } catch {
+        return json({ error: "Invalid URL format" }, { status: 400 });
+      }
 
-    if (text.length < 50) {
-      return json({ error: "Could not extract readable content from that page" }, { status: 422 });
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+        return json({ error: "URL must use http:// or https://" }, { status: 400 });
+      }
+
+      if (isInternalHost(parsed.hostname)) {
+        return json({ error: "URL must be a publicly accessible website" }, { status: 400 });
+      }
+
+      let html;
+      try {
+        const fetchRes = await fetch(url, {
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          },
+          signal: AbortSignal.timeout(10000),
+          redirect: "follow",
+        });
+        if (!fetchRes.ok) {
+          return json({ error: "Could not fetch that website (it may be blocking bots)" }, { status: 422 });
+        }
+        html = await fetchRes.text();
+      } catch {
+        return json({ error: "Could not reach that website" }, { status: 422 });
+      }
+
+      content = stripHtml(html).slice(0, 8000);
+
+      if (content.length < 50) {
+        return json({ error: "Could not extract readable content from that page" }, { status: 422 });
+      }
     }
 
     const response = await client.messages.create({
@@ -137,7 +153,7 @@ export async function POST(request) {
       messages: [
         {
           role: "user",
-          content: `${EXTRACTION_PROMPT}\n\nWebsite text:\n${text}`,
+          content: `${EXTRACTION_PROMPT}\n\nWebsite text:\n${content}`,
         },
       ],
     });
