@@ -2,12 +2,10 @@
 
 import MascotCharacter from "../mascots/MascotCharacter";
 import { INDUSTRIES } from "../../lib/industries";
-import { getIndustryQuickReplySuggestions } from "../../lib/builder-quick-replies";
 
 export default function IndustrySelector({
   value,
   onChange,
-  customQACount = 0,
   showValidation = false,
   error,
   isValid = false,
@@ -35,15 +33,7 @@ export default function IndustrySelector({
             <button
               key={ind.id}
               type="button"
-              onClick={() =>
-                onChange({
-                  industry: ind.id,
-                  quickReplies: getIndustryQuickReplySuggestions(ind.id).slice(
-                    0,
-                    Math.max(0, 8 - customQACount)
-                  ),
-                })
-              }
+              onClick={() => onChange({ industry: ind.id, quickReplies: [] })}
               className={`relative flex flex-col items-center gap-3 rounded-2xl border p-4 text-center transition ${
                 selected
                   ? "border-[#0D7377] bg-gradient-to-b from-[#E8F4F4] to-white shadow-lg shadow-[#0D7377]/15 ring-2 ring-[#0D7377]"
