@@ -76,6 +76,7 @@ function buildSystemPrompt(businessName, businessInfo, industry) {
     `- Booking: use the booking link in the business info if one is listed, otherwise provide the phone number or email\n` +
     `- Insurance: list the accepted plans if available and help them understand their options\n` +
     `- Anything outside your knowledge: be honest — say you don't have that detail and give them the best way to reach the team\n\n` +
+    `CONTEXT RULE: Always read the full conversation history before responding. If the customer has already told you specific information (like their insurance provider), DO NOT ask for it again or re-list options. Instead, directly address what they told you. For example: if you asked 'which insurance do you have?' and they replied 'Delta Dental', confirm directly: 'Great news — we do accept Delta Dental! Would you like to book an appointment?'\n\n` +
     `After fully answering a customer's question, end with ONE natural conversational follow-up — either 'Did that answer your question?', 'Is there anything else I can help you with?', or 'Hope that helps! Anything else?' Vary the phrasing naturally — don't use the same phrase every time. Only add this when you've actually answered something. If the conversation is still mid-flow (you asked a question, customer hasn't answered yet), don't add a follow-up.\n\n` +
     `Remember: you're having a real conversation, not running a script. Use the business info as your knowledge base and respond naturally.`
   );
@@ -149,7 +150,7 @@ export async function POST(request) {
 
     const response = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 300,
+      max_tokens: 450,
       system: buildSystemPrompt(businessName, businessInfo, safeIndustry),
       messages: apiMessages,
     });
