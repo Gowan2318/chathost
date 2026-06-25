@@ -140,6 +140,33 @@ function Toggle({ label, hint, checked, onChange }) {
   );
 }
 
+function SectionBlock({ title, summary, expanded, onToggle, children }) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-[#E2E8F0]">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between bg-white px-5 py-4 transition hover:bg-[#F8F9FA]"
+      >
+        <div className="text-left">
+          <p className="text-sm font-semibold text-[#1A1A2E]">{title}</p>
+          {!expanded && summary && (
+            <p className="mt-0.5 max-w-xs truncate text-xs text-[#4A5568]">{summary}</p>
+          )}
+        </div>
+        <span className="ml-4 shrink-0 text-xs font-semibold text-[#0D7377]">
+          {expanded ? "Done ↑" : "Edit ↓"}
+        </span>
+      </button>
+      {expanded && (
+        <div className="space-y-5 border-t border-[#E2E8F0] bg-white px-5 pb-6 pt-4">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // current = visual step (1-based, already accounting for skipped steps)
 // total   = total visual steps for this plan
 function StepIndicator({ current, total }) {
@@ -210,7 +237,13 @@ export default function BuilderPageClient() {
   const [importUrl, setImportUrl] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const [importStatus, setImportStatus] = useState(null); // null | "success" | "error"
+  const [importDone, setImportDone] = useState(false);
   const [hoursNote, setHoursNote] = useState("");
+
+  // Step 2 accordion expanded state
+  const [expandedSections, setExpandedSections] = useState({
+    businessInfo: true, contact: true, location: true, hours: false, industryDetails: false,
+  });
 
   // Inline auth panel state (Step 6 only)
   const [authTab, setAuthTab] = useState("login");
@@ -223,11 +256,11 @@ export default function BuilderPageClient() {
   const isBasic = selectedPlan === "basic";
   const showValidation = attemptedStep === step;
 
-  // Basic plan has 5 visual steps (internal step 4 — mascot — is skipped).
+  // Basic plan has 5 visual steps (step 3 — mascot & branding — is skipped).
   // Pro plan has 6 visual steps.
   const totalSteps = isBasic ? 5 : 6;
   // Map internal step → visual step number shown in the indicator and "Step X of Y"
-  const visualStep = isBasic && step >= 5 ? step - 1 : step;
+  const visualStep = isBasic && step >= 4 ? step - 1 : step;
 
   const update = (patch) => setForm((f) => ({ ...f, ...patch }));
 
@@ -302,9 +335,19 @@ export default function BuilderPageClient() {
     setErrors({});
     setSummary([]);
     window.scrollTo({ top: 0, behavior: "instant" });
-    // Basic plan skips step 4 (mascot)
-    if (isBasic && step === 3) {
-      setStep(5);
+    // When advancing to step 2, auto-expand sections that need completion
+    if (step === 1) {
+      setExpandedSections({
+        businessInfo: !form.businessName.trim() || !form.businessDescription.trim() || !form.servicesDescription.trim() || (!isBasic && !form.industry),
+        contact: !form.supportPhone.trim() || !form.supportEmail.trim(),
+        location: !form.address.street.trim() || !form.address.city.trim() || !form.address.state || !form.address.zip.trim(),
+        hours: false,
+        industryDetails: false,
+      });
+    }
+    // Basic plan skips step 3 (mascot & branding)
+    if (isBasic && step === 2) {
+      setStep(4);
       return;
     }
     setStep((s) => s + 1);
@@ -319,9 +362,9 @@ export default function BuilderPageClient() {
       router.push("/#pricing");
       return;
     }
-    // Basic plan skips step 4 (mascot)
-    if (isBasic && step === 5) {
-      setStep(3);
+    // Basic plan skips step 3 (mascot & branding)
+    if (isBasic && step === 4) {
+      setStep(2);
       return;
     }
     setStep((s) => Math.max(0, s - 1));
@@ -386,6 +429,7 @@ export default function BuilderPageClient() {
       }
 
       setImportStatus("success");
+      setImportDone(true);
     } catch {
       setImportStatus("error");
     } finally {
@@ -497,10 +541,10 @@ export default function BuilderPageClient() {
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-bold text-[#1A1A2E] sm:text-3xl">
             {step === 0 && "Choose your plan"}
-            {step === 1 && "Tell us about your business"}
-            {step === 2 && "Business details & support"}
-            {step === 3 && "Brand & quick replies"}
-            {step === 4 && "Meet your mascot"}
+            {step === 1 && "Let's set up your chatbot"}
+            {step === 2 && "Review & complete your info"}
+            {step === 3 && "Mascot & branding"}
+            {step === 4 && "Quick replies"}
             {step === 5 && "Preview your chatbot"}
             {step === 6 && "Launch your chatbot"}
           </h1>
@@ -602,291 +646,278 @@ export default function BuilderPageClient() {
 
             {step === 1 && (
               <div className="space-y-6">
-                {/* ── Website import ── */}
-                <div className="rounded-xl border border-[#E2E8F0] bg-[#F8F9FA] p-5">
-                  <p className="text-sm font-semibold text-[#1A1A2E]">
-                    Import from your website{" "}
-                    <span className="ml-1 text-xs font-normal text-[#9CA3AF]">(optional)</span>
-                  </p>
-                  <p className="mt-0.5 text-xs text-[#4A5568]">
-                    Paste your website URL and we&apos;ll automatically fill in your business details
-                  </p>
-                  <div className="mt-3 flex gap-2">
-                    <input
-                      type="url"
-                      value={importUrl}
-                      onChange={(e) => setImportUrl(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleImport(); } }}
-                      placeholder="https://yourbusiness.com"
-                      disabled={isImporting}
-                      className="flex-1 rounded-xl border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm text-[#1A1A2E] placeholder-[#9CA3AF] outline-none transition focus:border-[#0D7377]/50 focus:ring-2 focus:ring-[#0D7377]/20 disabled:opacity-60"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleImport}
-                      disabled={!importUrl.trim() || isImporting}
-                      className="flex shrink-0 items-center gap-2 rounded-xl bg-[#0D7377] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0A5D61] disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {isImporting ? (
-                        <>
-                          <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden>
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                          </svg>
-                          Importing…
-                        </>
-                      ) : "Import"}
-                    </button>
-                  </div>
-                  <p className="mt-2 text-xs text-[#9CA3AF]">
-                    We&apos;ll extract what we can — you can review and edit everything after
-                  </p>
-                  {importStatus === "success" && (
-                    <div className="mt-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-                      ✓ Business info imported! Review the fields below and make any adjustments.
-                    </div>
-                  )}
-                  {hoursNote && (
-                    <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
-                      {hoursNote}
-                    </div>
-                  )}
-                  {importStatus === "error" && (
-                    <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-                      Couldn&apos;t extract info from that URL. You can fill in the details manually.
-                    </div>
-                  )}
+                <p className="text-center text-sm text-[#4A5568]">
+                  Enter your website URL and we&apos;ll automatically pull in your business info — or skip and fill it in manually.
+                </p>
+
+                {/* Primary import input */}
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <input
+                    type="url"
+                    value={importUrl}
+                    onChange={(e) => setImportUrl(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleImport(); } }}
+                    placeholder="https://yourbusiness.com"
+                    disabled={isImporting}
+                    className="flex-1 rounded-xl border border-[#E2E8F0] bg-white px-5 py-4 text-base text-[#1A1A2E] placeholder-[#9CA3AF] outline-none transition focus:border-[#0D7377]/50 focus:ring-2 focus:ring-[#0D7377]/20 disabled:opacity-60"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleImport}
+                    disabled={!importUrl.trim() || isImporting}
+                    className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#0D7377] px-6 py-4 text-base font-bold text-white transition hover:bg-[#0A5D61] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isImporting ? (
+                      <>
+                        <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden>
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Scanning…
+                      </>
+                    ) : "Build My Chatbot"}
+                  </button>
                 </div>
 
-                <FormField
-                  label="Business name"
-                  htmlFor="business-name"
-                  showValidation={showValidation}
-                  error={errors.businessName}
-                  isValid={fieldValid("businessName", (f) => validateBusinessName(f.businessName))}
-                >
-                  <input
-                    id="business-name"
-                    type="text"
-                    value={form.businessName}
-                    onChange={(e) => update({ businessName: e.target.value })}
-                    placeholder="e.g. Sunrise Dental Studio"
-                    className={inputClassName(
-                      showValidation,
-                      errors.businessName,
-                      fieldValid("businessName", (f) => validateBusinessName(f.businessName))
+                {/* Import result summary */}
+                {importStatus === "success" && (
+                  <div className="rounded-xl border border-green-200 bg-green-50 p-5">
+                    <p className="text-sm font-semibold text-green-800">We found your business info!</p>
+                    <ul className="mt-3 space-y-1.5 text-sm text-green-700">
+                      {form.businessName && <li>Business name: <strong>{form.businessName}</strong></li>}
+                      {form.industry && <li>Industry: <strong>{INDUSTRY_LABELS[form.industry] || form.industry}</strong></li>}
+                      {form.supportPhone && <li>Phone: <strong>{form.supportPhone}</strong></li>}
+                      {form.supportEmail && <li>Email: <strong>{form.supportEmail}</strong></li>}
+                      {form.address?.city && <li>Location: <strong>{[form.address.city, form.address.state].filter(Boolean).join(", ")}</strong></li>}
+                      {form.businessDescription && <li>Description: <strong>{form.businessDescription.slice(0, 60)}{form.businessDescription.length > 60 ? "…" : ""}</strong></li>}
+                    </ul>
+                    {hoursNote && (
+                      <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                        {hoursNote}
+                      </p>
                     )}
-                  />
-                </FormField>
-                {!isBasic && (
-                  <IndustrySelector
-                    value={form.industry}
-                    onChange={(patch) => update(patch)}
-                    showValidation={showValidation}
-                    error={errors.industry}
-                    isValid={fieldValid("industry", (f) => validateIndustry(f.industry))}
-                  />
+                    <p className="mt-3 text-xs text-green-600">
+                      Review and complete anything missing in the next step.
+                    </p>
+                  </div>
+                )}
+
+                {importStatus === "error" && (
+                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                    Couldn&apos;t fetch that website. Click Continue to fill in your info manually.
+                  </div>
+                )}
+
+                {!importDone && (
+                  <p className="text-center text-sm text-[#9CA3AF]">
+                    No website yet?{" "}
+                    <button
+                      type="button"
+                      onClick={handleContinue}
+                      className="font-medium text-[#0D7377] underline hover:text-[#0A5D61]"
+                    >
+                      Fill in my info manually
+                    </button>
+                  </p>
                 )}
               </div>
             )}
 
             {step === 2 && (
-              <div className="space-y-6">
-                <FormField
-                  label="Business description"
-                  htmlFor="business-description"
-                  tooltip="A brief overview of your business — what you do and what makes you special. This helps the AI chatbot answer questions about your business accurately."
-                  showValidation={showValidation}
-                  error={errors.businessDescription}
-                  isValid={fieldValid("businessDescription", (f) =>
-                    validateBusinessDescription(f.businessDescription)
-                  )}
-                  counter={
-                    <span className={`text-xs ${descLen >= 50 ? "text-green-600" : "text-[#4A5568]"}`}>
-                      {descLen}/50
-                    </span>
-                  }
+              <div className="space-y-3">
+                {/* ── Section: Business Info ── */}
+                <SectionBlock
+                  title="Business Info"
+                  summary={[form.businessName, form.industry ? INDUSTRY_LABELS[form.industry] : null].filter(Boolean).join(" · ") || "Required"}
+                  expanded={expandedSections.businessInfo}
+                  onToggle={() => setExpandedSections((p) => ({ ...p, businessInfo: !p.businessInfo }))}
                 >
-                  <textarea
-                    id="business-description"
-                    rows={4}
-                    value={form.businessDescription}
-                    onChange={(e) => update({ businessDescription: e.target.value })}
-                    placeholder="Tell customers about your business, mission, and what makes you unique…"
-                    className={inputClassName(
-                      showValidation,
-                      errors.businessDescription,
-                      fieldValid("businessDescription", (f) =>
-                        validateBusinessDescription(f.businessDescription)
-                      )
-                    )}
-                  />
-                </FormField>
-
-                <FormField
-                  label="Services"
-                  htmlFor="services"
-                  tooltip="List the main services or products you offer, separated by commas. The chatbot will use this to tell customers what you provide."
-                  showValidation={showValidation}
-                  error={errors.servicesDescription}
-                  isValid={fieldValid("servicesDescription", (f) =>
-                    validateServicesDescription(f.servicesDescription)
-                  )}
-                  counter={
-                    <span className={`text-xs ${svcLen >= 20 ? "text-green-600" : "text-[#4A5568]"}`}>
-                      {svcLen}/20
-                    </span>
-                  }
-                >
-                  <textarea
-                    id="services"
-                    rows={3}
-                    value={form.servicesDescription}
-                    onChange={(e) => update({ servicesDescription: e.target.value })}
-                    placeholder="List your main services, packages, or specialties…"
-                    className={inputClassName(
-                      showValidation,
-                      errors.servicesDescription,
-                      fieldValid("servicesDescription", (f) =>
-                        validateServicesDescription(f.servicesDescription)
-                      )
-                    )}
-                  />
-                </FormField>
-
-                <BusinessHoursEditor
-                  hours={form.businessHours}
-                  onChange={(businessHours) => update({ businessHours })}
-                  tooltip="Set when you're open each day. The chatbot will tell customers your hours and let them know if you're currently open or closed."
-                />
-
-                <AddressInput
-                  address={form.address}
-                  onChange={(address) => update({ address })}
-                  showValidation={showValidation}
-                  errors={errors}
-                  tooltip="Your business location. The chatbot will share this when customers ask where you're located."
-                />
-
-                <div className="grid gap-5 sm:grid-cols-2">
                   <FormField
-                    label="Support phone"
-                    htmlFor="support-phone"
-                    tooltip="Your business phone number. The chatbot will share this when customers want to talk to someone or need to reach you directly."
+                    label="Business name"
+                    htmlFor="business-name"
                     showValidation={showValidation}
-                    error={errors.supportPhone}
-                    isValid={fieldValid("supportPhone", (f) => validatePhone(f.supportPhone))}
+                    error={errors.businessName}
+                    isValid={fieldValid("businessName", (f) => validateBusinessName(f.businessName))}
                   >
                     <input
-                      id="support-phone"
-                      type="tel"
-                      value={form.supportPhone}
-                      onChange={(e) => update({ supportPhone: e.target.value })}
-                      placeholder="(555) 123-4567"
-                      className={inputClassName(
-                        showValidation,
-                        errors.supportPhone,
-                        fieldValid("supportPhone", (f) => validatePhone(f.supportPhone))
-                      )}
+                      id="business-name"
+                      type="text"
+                      value={form.businessName}
+                      onChange={(e) => update({ businessName: e.target.value })}
+                      placeholder="e.g. Sunrise Dental Studio"
+                      className={inputClassName(showValidation, errors.businessName, fieldValid("businessName", (f) => validateBusinessName(f.businessName)))}
+                    />
+                  </FormField>
+                  {!isBasic && (
+                    <IndustrySelector
+                      value={form.industry}
+                      onChange={(patch) => update(patch)}
+                      showValidation={showValidation}
+                      error={errors.industry}
+                      isValid={fieldValid("industry", (f) => validateIndustry(f.industry))}
+                    />
+                  )}
+                  <FormField
+                    label="Business description"
+                    htmlFor="business-description"
+                    tooltip="A brief overview of your business — what you do and what makes you special."
+                    showValidation={showValidation}
+                    error={errors.businessDescription}
+                    isValid={fieldValid("businessDescription", (f) => validateBusinessDescription(f.businessDescription))}
+                    counter={<span className={`text-xs ${descLen >= 50 ? "text-green-600" : "text-[#4A5568]"}`}>{descLen}/50</span>}
+                  >
+                    <textarea
+                      id="business-description"
+                      rows={4}
+                      value={form.businessDescription}
+                      onChange={(e) => update({ businessDescription: e.target.value })}
+                      placeholder="Tell customers about your business, mission, and what makes you unique…"
+                      className={inputClassName(showValidation, errors.businessDescription, fieldValid("businessDescription", (f) => validateBusinessDescription(f.businessDescription)))}
                     />
                   </FormField>
                   <FormField
-                    label="Support email"
-                    htmlFor="support-email"
-                    tooltip="Your business email address. The chatbot will share this when customers ask to contact you or need help from your team."
+                    label="Services"
+                    htmlFor="services"
+                    tooltip="List the main services or products you offer. The chatbot will use this to answer customer questions."
                     showValidation={showValidation}
-                    error={errors.supportEmail}
-                    isValid={fieldValid("supportEmail", (f) => validateEmail(f.supportEmail))}
+                    error={errors.servicesDescription}
+                    isValid={fieldValid("servicesDescription", (f) => validateServicesDescription(f.servicesDescription))}
+                    counter={<span className={`text-xs ${svcLen >= 20 ? "text-green-600" : "text-[#4A5568]"}`}>{svcLen}/20</span>}
                   >
-                    <input
-                      id="support-email"
-                      type="email"
-                      value={form.supportEmail}
-                      onChange={(e) => update({ supportEmail: e.target.value })}
-                      placeholder="support@yourbusiness.com"
-                      className={inputClassName(
-                        showValidation,
-                        errors.supportEmail,
-                        fieldValid("supportEmail", (f) => validateEmail(f.supportEmail))
-                      )}
+                    <textarea
+                      id="services"
+                      rows={3}
+                      value={form.servicesDescription}
+                      onChange={(e) => update({ servicesDescription: e.target.value })}
+                      placeholder="List your main services, packages, or specialties…"
+                      className={inputClassName(showValidation, errors.servicesDescription, fieldValid("servicesDescription", (f) => validateServicesDescription(f.servicesDescription)))}
                     />
                   </FormField>
-                </div>
+                </SectionBlock>
 
-                {!isBasic && (
-                  <>
+                {/* ── Section: Contact & Links ── */}
+                <SectionBlock
+                  title="Contact & Links"
+                  summary={[form.supportPhone, form.supportEmail].filter(Boolean).join(" · ") || "Required"}
+                  expanded={expandedSections.contact}
+                  onToggle={() => setExpandedSections((p) => ({ ...p, contact: !p.contact }))}
+                >
+                  <div className="grid gap-5 sm:grid-cols-2">
                     <FormField
-                      label="Appointment Booking Link (Calendly, Square, etc.)"
-                      htmlFor="booking-url"
-                      tooltip="This is your Calendly link (or similar booking tool). Don't have one? Sign up free at calendly.com, connect your Google/Outlook calendar there, then paste your personal link here. Leave blank if you don't take online bookings."
+                      label="Support phone"
+                      htmlFor="support-phone"
+                      tooltip="Your business phone number."
                       showValidation={showValidation}
-                      error={errors.bookingUrl}
-                      isValid={
-                        showValidation &&
-                        !errors.bookingUrl &&
-                        (!form.bookingUrl.trim() || validateHttpsUrl(form.bookingUrl) === null)
-                      }
-                      hint="Customers will be sent here to book appointments. Leave blank if you don't take online bookings yet."
+                      error={errors.supportPhone}
+                      isValid={fieldValid("supportPhone", (f) => validatePhone(f.supportPhone))}
                     >
                       <input
-                        id="booking-url"
-                        type="url"
-                        value={form.bookingUrl}
-                        onChange={(e) => update({ bookingUrl: e.target.value })}
-                        placeholder="https://calendly.com/yourbusiness"
-                        className={inputClassName(
-                          showValidation,
-                          errors.bookingUrl,
-                          showValidation &&
-                            !errors.bookingUrl &&
-                            form.bookingUrl.trim() &&
-                            validateHttpsUrl(form.bookingUrl) === null
-                        )}
+                        id="support-phone"
+                        type="tel"
+                        value={form.supportPhone}
+                        onChange={(e) => update({ supportPhone: e.target.value })}
+                        placeholder="(555) 123-4567"
+                        className={inputClassName(showValidation, errors.supportPhone, fieldValid("supportPhone", (f) => validatePhone(f.supportPhone)))}
                       />
                     </FormField>
-
                     <FormField
-                      label="Payment link (optional)"
-                      htmlFor="pay-url"
-                      tooltip="A link where customers can pay you online (Stripe, PayPal, Square, Venmo, etc.). When customers ask about payment, the chatbot will show this as a 'Pay Now' button."
+                      label="Support email"
+                      htmlFor="support-email"
+                      tooltip="Your business email address."
                       showValidation={showValidation}
-                      error={errors.payNowUrl}
-                      isValid={
-                        showValidation &&
-                        !errors.payNowUrl &&
-                        (!form.payNowUrl.trim() || validateHttpsUrl(form.payNowUrl) === null)
-                      }
-                      hint="Must start with https:// if provided"
+                      error={errors.supportEmail}
+                      isValid={fieldValid("supportEmail", (f) => validateEmail(f.supportEmail))}
                     >
                       <input
-                        id="pay-url"
-                        type="url"
-                        value={form.payNowUrl}
-                        onChange={(e) => update({ payNowUrl: e.target.value })}
-                        placeholder="https://yourbusiness.com/pay"
-                        className={inputClassName(
-                          showValidation,
-                          errors.payNowUrl,
-                          showValidation &&
-                            !errors.payNowUrl &&
-                            form.payNowUrl.trim() &&
-                            validateHttpsUrl(form.payNowUrl, { label: "Payment link" }) === null
-                        )}
+                        id="support-email"
+                        type="email"
+                        value={form.supportEmail}
+                        onChange={(e) => update({ supportEmail: e.target.value })}
+                        placeholder="support@yourbusiness.com"
+                        className={inputClassName(showValidation, errors.supportEmail, fieldValid("supportEmail", (f) => validateEmail(f.supportEmail)))}
                       />
                     </FormField>
-                  </>
-                )}
+                  </div>
+                  {!isBasic && (
+                    <>
+                      <FormField
+                        label="Appointment booking link (Calendly, Square, etc.)"
+                        htmlFor="booking-url"
+                        tooltip="Your Calendly link or similar booking tool. Leave blank if you don't take online bookings yet."
+                        showValidation={showValidation}
+                        error={errors.bookingUrl}
+                        isValid={showValidation && !errors.bookingUrl && (!form.bookingUrl.trim() || validateHttpsUrl(form.bookingUrl) === null)}
+                        hint="Customers will be sent here to book. Leave blank if not applicable."
+                      >
+                        <input
+                          id="booking-url"
+                          type="url"
+                          value={form.bookingUrl}
+                          onChange={(e) => update({ bookingUrl: e.target.value })}
+                          placeholder="https://calendly.com/yourbusiness"
+                          className={inputClassName(showValidation, errors.bookingUrl, showValidation && !errors.bookingUrl && form.bookingUrl.trim() && validateHttpsUrl(form.bookingUrl) === null)}
+                        />
+                      </FormField>
+                      <FormField
+                        label="Payment link (optional)"
+                        htmlFor="pay-url"
+                        tooltip="A link where customers can pay you online. Shows as a 'Pay Now' button in the chat."
+                        showValidation={showValidation}
+                        error={errors.payNowUrl}
+                        isValid={showValidation && !errors.payNowUrl && (!form.payNowUrl.trim() || validateHttpsUrl(form.payNowUrl) === null)}
+                        hint="Must start with https:// if provided"
+                      >
+                        <input
+                          id="pay-url"
+                          type="url"
+                          value={form.payNowUrl}
+                          onChange={(e) => update({ payNowUrl: e.target.value })}
+                          placeholder="https://yourbusiness.com/pay"
+                          className={inputClassName(showValidation, errors.payNowUrl, showValidation && !errors.payNowUrl && form.payNowUrl.trim() && validateHttpsUrl(form.payNowUrl) === null)}
+                        />
+                      </FormField>
+                    </>
+                  )}
+                </SectionBlock>
 
-                {/* Industry Details — Pro only, shown after industry is selected */}
+                {/* ── Section: Location ── */}
+                <SectionBlock
+                  title="Location"
+                  summary={form.address.city ? [form.address.street, form.address.city, form.address.state].filter(Boolean).join(", ") : "Required"}
+                  expanded={expandedSections.location}
+                  onToggle={() => setExpandedSections((p) => ({ ...p, location: !p.location }))}
+                >
+                  <AddressInput
+                    address={form.address}
+                    onChange={(address) => update({ address })}
+                    showValidation={showValidation}
+                    errors={errors}
+                    tooltip="Your business location. The chatbot will share this when customers ask where you're located."
+                  />
+                </SectionBlock>
+
+                {/* ── Section: Hours ── */}
+                <SectionBlock
+                  title="Business Hours"
+                  summary="Set your opening hours for each day"
+                  expanded={expandedSections.hours}
+                  onToggle={() => setExpandedSections((p) => ({ ...p, hours: !p.hours }))}
+                >
+                  <BusinessHoursEditor
+                    hours={form.businessHours}
+                    onChange={(businessHours) => update({ businessHours })}
+                    tooltip="Set when you're open. The chatbot will tell customers your hours."
+                  />
+                </SectionBlock>
+
+                {/* ── Section: Industry Details (Pro only) ── */}
                 {!isBasic && form.industry && (
-                  <div className="space-y-4 rounded-xl border border-[#0D7377]/20 bg-[#F0FAF9] p-5">
-                    <div>
-                      <h3 className="text-sm font-semibold text-[#1A1A2E]">Industry Details</h3>
-                      <p className="mt-0.5 text-xs text-[#4A5568]">
-                        These details help your chatbot answer industry-specific questions accurately.
-                      </p>
-                    </div>
-
+                  <SectionBlock
+                    title={`${INDUSTRY_LABELS[form.industry] || "Industry"} Details`}
+                    summary="Optional — helps the chatbot answer industry-specific questions"
+                    expanded={expandedSections.industryDetails}
+                    onToggle={() => setExpandedSections((p) => ({ ...p, industryDetails: !p.industryDetails }))}
+                  >
                     {form.industry === "restaurant" && (
                       <div className="space-y-4">
                         <FormField label="Menu URL" htmlFor="menu-url" hint="Link to your online menu" showValidation={false} error={null} isValid={false}>
@@ -894,7 +925,7 @@ export default function BuilderPageClient() {
                         </FormField>
                         <Toggle label="Do you take reservations?" checked={form.hasReservations} onChange={(v) => update({ hasReservations: v })} />
                         {form.hasReservations && (
-                          <FormField label="Reservation link" htmlFor="reservation-link" hint="Link to your reservation system (OpenTable, Resy, etc.)" showValidation={false} error={null} isValid={false}>
+                          <FormField label="Reservation link" htmlFor="reservation-link" hint="Link to your reservation system" showValidation={false} error={null} isValid={false}>
                             <input id="reservation-link" type="url" value={form.reservationLink} onChange={(e) => update({ reservationLink: e.target.value })} placeholder="https://opentable.com/yourbusiness" className={inputClassName(false, null, false)} />
                           </FormField>
                         )}
@@ -907,7 +938,6 @@ export default function BuilderPageClient() {
                         </FormField>
                       </div>
                     )}
-
                     {form.industry === "dental" && (
                       <div className="space-y-4">
                         <Toggle label="Are you accepting new patients?" checked={form.acceptingNewPatients} onChange={(v) => update({ acceptingNewPatients: v })} />
@@ -920,7 +950,6 @@ export default function BuilderPageClient() {
                         )}
                       </div>
                     )}
-
                     {form.industry === "salon" && (
                       <div className="space-y-4">
                         <Toggle label="Do you accept walk-ins?" checked={form.walkInsWelcome} onChange={(v) => update({ walkInsWelcome: v })} />
@@ -930,7 +959,6 @@ export default function BuilderPageClient() {
                         <Toggle label="Do you offer gift cards?" checked={form.hasGiftCards} onChange={(v) => update({ hasGiftCards: v })} />
                       </div>
                     )}
-
                     {form.industry === "barber" && (
                       <div className="space-y-4">
                         <Toggle label="Do you accept walk-ins?" checked={form.walkInsWelcome} onChange={(v) => update({ walkInsWelcome: v })} />
@@ -940,7 +968,6 @@ export default function BuilderPageClient() {
                         <Toggle label="Do you offer beard trims?" checked={form.hasBeardTrim} onChange={(v) => update({ hasBeardTrim: v })} />
                       </div>
                     )}
-
                     {form.industry === "gym" && (
                       <div className="space-y-4">
                         <FormField label="Membership page URL" htmlFor="membership-url" hint="Link to your memberships/pricing page" showValidation={false} error={null} isValid={false}>
@@ -959,7 +986,6 @@ export default function BuilderPageClient() {
                         </FormField>
                       </div>
                     )}
-
                     {form.industry === "law" && (
                       <div className="space-y-4">
                         <FormField label="Practice areas" htmlFor="practice-areas" hint="e.g. Personal injury, Family law, Criminal defense" showValidation={false} error={null} isValid={false}>
@@ -975,7 +1001,6 @@ export default function BuilderPageClient() {
                         </FormField>
                       </div>
                     )}
-
                     {form.industry === "lawn" && (
                       <div className="space-y-4">
                         <FormField label="Service area" htmlFor="service-area" hint="e.g. Pittsburgh and suburbs within 20 miles" showValidation={false} error={null} isValid={false}>
@@ -989,17 +1014,12 @@ export default function BuilderPageClient() {
                         </FormField>
                       </div>
                     )}
-
                     {form.industry === "real_estate" && (
                       <div className="space-y-4">
                         <div>
                           <p className="mb-2 text-sm font-medium text-[#1A1A2E]">Who do you work with?</p>
                           <div className="flex gap-3">
-                            {[
-                              { value: "buyers", label: "Buyers" },
-                              { value: "sellers", label: "Sellers" },
-                              { value: "both", label: "Both" },
-                            ].map(({ value, label }) => (
+                            {[{ value: "buyers", label: "Buyers" }, { value: "sellers", label: "Sellers" }, { value: "both", label: "Both" }].map(({ value, label }) => (
                               <label key={value} className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition ${form.clientType === value ? "border-[#0D7377] bg-[#0D7377]/10 text-[#0D7377]" : "border-[#E2E8F0] bg-white text-[#4A5568]"}`}>
                                 <input type="radio" name="client-type" value={value} checked={form.clientType === value} onChange={() => update({ clientType: value })} className="sr-only" />
                                 {label}
@@ -1019,7 +1039,6 @@ export default function BuilderPageClient() {
                         </FormField>
                       </div>
                     )}
-
                     {form.industry === "other" && (
                       <div className="space-y-4">
                         <FormField label="Services & pricing" htmlFor="other-services-pricing" hint="List your main services and prices" showValidation={false} error={null} isValid={false}>
@@ -1033,38 +1052,79 @@ export default function BuilderPageClient() {
                         </FormField>
                       </div>
                     )}
-                  </div>
+                  </SectionBlock>
                 )}
 
+                {/* AI preview */}
                 {businessInfo && (
                   <div className="rounded-xl border border-[#0D7377]/20 bg-[#E8F4F4] p-4">
-                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#0D7377]">
-                      AI preview
-                    </p>
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#0D7377]">AI preview</p>
                     <p className="text-xs leading-relaxed text-[#4A5568]">{businessInfo}</p>
                   </div>
                 )}
               </div>
             )}
 
+            {/* Step 3 is Pro-only — Basic users jump from step 2 directly to step 4 */}
             {step === 3 && (
               <div className="space-y-8">
-                {!isBasic && (
-                  <>
-                    <BrandColorPicker
-                      value={form.brandColor}
-                      onChange={(brandColor) => update({ brandColor })}
+                {/* Mascot */}
+                <div className="flex flex-col items-center gap-8 sm:flex-row sm:items-start">
+                  <div className="flex flex-col items-center rounded-2xl border border-[#E2E8F0] bg-[#F8F9FA] p-8">
+                    {form.industry ? (
+                      <MascotCharacter industry={form.industry} animation="bounce" size={120} />
+                    ) : (
+                      <div className="flex h-[120px] w-[120px] items-center justify-center rounded-full bg-[#E2E8F0] text-[#4A5568]">?</div>
+                    )}
+                    <p className="mt-4 text-sm font-medium text-[#0D7377]">
+                      {form.industry ? `${INDUSTRY_LABELS[form.industry]} mascot` : "Select an industry in Step 2"}
+                    </p>
+                  </div>
+                  <div className="flex-1 space-y-4">
+                    <p className="text-sm text-[#4A5568]">
+                      Give your mascot a friendly name. It appears in the chat header and helps your brand feel personal.
+                    </p>
+                    <FormField
+                      label="Mascot name"
+                      htmlFor="mascot-name"
                       showValidation={showValidation}
-                      error={errors.brandColor}
-                      isValid={fieldValid("brandColor", (f) => validateBrandColor(f.brandColor))}
-                    />
-                    <ChatThemeSelector
-                      value={form.chatTheme}
-                      brandColor={form.brandColor}
-                      onChange={(chatTheme) => update({ chatTheme })}
-                    />
-                  </>
-                )}
+                      error={errors.mascotName}
+                      isValid={fieldValid("mascotName", (f) => validateMascotName(f.mascotName))}
+                    >
+                      <input
+                        id="mascot-name"
+                        type="text"
+                        value={form.mascotName}
+                        onChange={(e) => update({ mascotName: e.target.value })}
+                        placeholder="e.g. Smiley, Coach Max, Leafy"
+                        maxLength={20}
+                        className={inputClassName(showValidation, errors.mascotName, fieldValid("mascotName", (f) => validateMascotName(f.mascotName)))}
+                      />
+                    </FormField>
+                    <p className="rounded-lg border border-[#E2E8F0] bg-[#F8F9FA] p-4 text-xs text-[#4A5568]">
+                      Letters and spaces only · 2–20 characters
+                    </p>
+                  </div>
+                </div>
+
+                {/* Branding */}
+                <BrandColorPicker
+                  value={form.brandColor}
+                  onChange={(brandColor) => update({ brandColor })}
+                  showValidation={showValidation}
+                  error={errors.brandColor}
+                  isValid={fieldValid("brandColor", (f) => validateBrandColor(f.brandColor))}
+                />
+                <ChatThemeSelector
+                  value={form.chatTheme}
+                  brandColor={form.brandColor}
+                  onChange={(chatTheme) => update({ chatTheme })}
+                />
+              </div>
+            )}
+
+            {step === 4 && (
+              <div className="space-y-6">
                 <QuickRepliesEditor
                   industry={form.industry || "other"}
                   quickReplies={form.quickReplies}
@@ -1075,67 +1135,6 @@ export default function BuilderPageClient() {
                   fieldErrors={errors}
                   formFields={form}
                 />
-              </div>
-            )}
-
-            {/* Step 4 is Pro-only — Basic users jump from step 3 directly to step 5 */}
-            {step === 4 && (
-              <div className="flex flex-col items-center gap-8 sm:flex-row sm:items-start">
-                <div
-                  className={`flex flex-col items-center rounded-2xl border bg-[#F8F9FA] p-8 ${
-                    showValidation && errors.industry
-                      ? "border-red-400"
-                      : "border-[#E2E8F0]"
-                  }`}
-                >
-                  {form.industry ? (
-                    <MascotCharacter industry={form.industry} animation="bounce" size={120} />
-                  ) : (
-                    <div className="flex h-[120px] w-[120px] items-center justify-center rounded-full bg-[#E2E8F0] text-[#4A5568]">
-                      ?
-                    </div>
-                  )}
-                  <p className="mt-4 text-sm font-medium text-[#0D7377]">
-                    {form.industry
-                      ? `${INDUSTRY_LABELS[form.industry]} mascot`
-                      : "Select an industry in Step 1"}
-                  </p>
-                </div>
-                <div className="flex-1 space-y-4">
-                  {showValidation && errors.industry && (
-                    <p className="text-sm text-red-600" role="alert">
-                      {errors.industry}
-                    </p>
-                  )}
-                  <p className="text-sm text-[#4A5568]">
-                    Give your mascot a friendly name. It appears in the chat header and helps your
-                    brand feel personal.
-                  </p>
-                  <FormField
-                    label="Mascot name"
-                    htmlFor="mascot-name"
-                    showValidation={showValidation}
-                    error={errors.mascotName}
-                    isValid={fieldValid("mascotName", (f) => validateMascotName(f.mascotName))}
-                  >
-                    <input
-                      id="mascot-name"
-                      type="text"
-                      value={form.mascotName}
-                      onChange={(e) => update({ mascotName: e.target.value })}
-                      placeholder="e.g. Smiley, Coach Max, Leafy"
-                      maxLength={20}
-                      className={inputClassName(
-                        showValidation,
-                        errors.mascotName,
-                        fieldValid("mascotName", (f) => validateMascotName(f.mascotName))
-                      )}
-                    />
-                  </FormField>
-                  <p className="rounded-lg bg-[#F8F9FA] border border-[#E2E8F0] p-4 text-xs text-[#4A5568]">
-                    Letters and spaces only · 2–20 characters
-                  </p>
-                </div>
               </div>
             )}
 
