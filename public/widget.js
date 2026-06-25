@@ -8,6 +8,8 @@
   var TALK_TO_SOMEONE_PATTERN = /\btalk to someone\b/i;
   var SERVICES_TOPIC_RESP = /\b(service|offer|provide|specialize|treatment|plan|package|include)\b/i;
   var ACCEPTING_PATIENTS_PATTERN = /\b(accepting new patients|currently accepting)\b/i;
+  var AFFIRMATIVE_PATTERN = /^(yes|yeah|yep|sure|ok|okay|please|definitely|absolutely)\.?$/i;
+  var FOLLOW_UP_BOT_PATTERN = /anything else|help you with|else I can/i;
   var MASCOT_SRC = {
     dental: "/mascots/dental.png",
     gym: "/mascots/gym.png",
@@ -138,6 +140,15 @@
 
   function isTalkToSomeoneIntent(text) {
     return TALK_TO_SOMEONE_PATTERN.test(text);
+  }
+
+  function lastBotWasFollowUp(messages) {
+    for (var i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "assistant") {
+        return FOLLOW_UP_BOT_PATTERN.test(String(messages[i].content || ""));
+      }
+    }
+    return false;
   }
 
   function createWidget(config, baseUrl) {
@@ -597,6 +608,13 @@
       var qaAnswer = qaAnswerMap[trimmed.toLowerCase()];
       if (qaAnswer) {
         addMessage(qaAnswer);
+        return;
+      }
+
+      if (AFFIRMATIVE_PATTERN.test(trimmed) && lastBotWasFollowUp(state.messages)) {
+        addMessage("Of course! Here's what I can help you with:");
+        state.showQuickReplies = true;
+        render();
         return;
       }
 

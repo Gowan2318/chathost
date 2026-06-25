@@ -11,6 +11,8 @@ const PAYMENT_PATTERN =
   /\b(pay|payment|pricing|price|prices|cost|costs|how much|how to pay|fee|fees|quote)\b/i;
 const TALK_TO_SOMEONE_PATTERN = /\btalk to someone\b/i;
 const ACCEPTING_PATIENTS_PATTERN = /\b(accepting new patients|currently accepting)\b/i;
+const AFFIRMATIVE_PATTERN = /^(yes|yeah|yep|sure|ok|okay|please|definitely|absolutely)\.?$/i;
+const FOLLOW_UP_BOT_PATTERN = /anything else|help you with|else I can/i;
 
 function buildContextualReplies(botText) {
   if (ACCEPTING_PATIENTS_PATTERN.test(botText)) {
@@ -30,6 +32,14 @@ function isPaymentIntent(text) {
 }
 function isTalkToSomeoneIntent(text) {
   return TALK_TO_SOMEONE_PATTERN.test(text);
+}
+function lastBotWasFollowUp(messages) {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === "assistant") {
+      return FOLLOW_UP_BOT_PATTERN.test(messages[i].content);
+    }
+  }
+  return false;
 }
 
 function TypingIndicator({ brandColor, theme }) {
@@ -283,6 +293,12 @@ We're happy to assist you!`;
     const qaAnswer = qaAnswerMap[trimmed.toLowerCase()];
     if (qaAnswer) {
       addAssistantMessage(qaAnswer);
+      return;
+    }
+
+    if (AFFIRMATIVE_PATTERN.test(trimmed) && lastBotWasFollowUp(messages)) {
+      addAssistantMessage("Of course! Here's what I can help you with:");
+      setShowQuickReplies(true);
       return;
     }
 
