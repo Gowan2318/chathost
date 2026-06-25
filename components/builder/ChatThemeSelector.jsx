@@ -4,13 +4,20 @@ import { CHAT_THEME_IDS, getChatTheme } from "../../lib/chat-themes";
 
 function MiniChatPreview({ themeId, brandColor }) {
   const theme = getChatTheme(themeId);
+  const isDark = themeId === "dark" || themeId === "midnight";
+  const isGlass = theme.glass;
+
   const panelStyle = {
     background: theme.chatBackground,
     borderColor: theme.panelBorder,
-    ...(theme.glass
+    ...(isGlass
       ? { backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }
       : {}),
   };
+
+  const darkShadow = "0 2px 4px rgba(0,0,0,0.9)";
+  const glassShadow = "0 2px 6px rgba(0,0,0,1)";
+  const textShadow = isGlass ? glassShadow : isDark ? darkShadow : undefined;
 
   return (
     <div
@@ -18,18 +25,19 @@ function MiniChatPreview({ themeId, brandColor }) {
       style={panelStyle}
     >
       <div
-        className="mb-2 rounded px-2 py-1 text-[8px] leading-tight"
+        className="relative mb-2 overflow-hidden rounded px-2 py-1 text-[8px] leading-tight"
         style={{
           background: theme.botBubble,
           color: theme.botText,
           maxWidth: "75%",
         }}
       >
-        Hello!
+        {isGlass && <div className="absolute inset-0 bg-black/60" />}
+        <span className="relative" style={{ textShadow }}>Hello!</span>
       </div>
       <div
         className="ml-auto rounded px-2 py-1 text-[8px] leading-tight text-white"
-        style={{ background: brandColor, maxWidth: "70%" }}
+        style={{ background: brandColor, maxWidth: "70%", textShadow }}
       >
         Hi
       </div>
