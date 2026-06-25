@@ -189,6 +189,7 @@ We're happy to assist you!`;
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showQuickReplies, setShowQuickReplies] = useState(true);
+  const [showStartOver, setShowStartOver] = useState(false);
   const [contextualReplies, setContextualReplies] = useState([]);
   const [mascotAnimation, setMascotAnimation] = useState("idle");
   const messagesEndRef = useRef(null);
@@ -255,6 +256,7 @@ We're happy to assist you!`;
     }
     setMessages([initialMessage]);
     setShowQuickReplies(true);
+    setShowStartOver(false);
     setInput("");
     setContextualReplies([]);
   }, [initialMessage]);
@@ -279,6 +281,7 @@ We're happy to assist you!`;
       clearTimeout(reShowTimerRef.current);
       reShowTimerRef.current = null;
     }
+    setShowStartOver(false);
     setContextualReplies([]);
 
     const userMessage = { role: "user", content: trimmed };
@@ -328,6 +331,7 @@ We're happy to assist you!`;
 
       setMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
       setContextualReplies(buildContextualReplies(data.message));
+      if (CONVERSATION_END_PATTERN.test(data.message)) setShowStartOver(true);
       if (CONVERSATION_END_PATTERN.test(data.message) && allButtons.length > 0) {
         reShowTimerRef.current = setTimeout(() => {
           setShowQuickReplies(true);
@@ -452,6 +456,17 @@ We're happy to assist you!`;
                   </div>
                 </div>
               ))}
+              {showStartOver && !isTyping && (
+                <div className="flex justify-start">
+                  <button
+                    type="button"
+                    onClick={resetToStart}
+                    className="rounded-full border border-[#E2E8F0] px-3 py-1 text-xs text-[#4A5568] transition hover:border-[#9CA3AF] hover:text-[#1A1A2E]"
+                  >
+                    🔄 Start Over
+                  </button>
+                </div>
+              )}
               {isTyping && <TypingIndicator brandColor={brandColor} theme={theme} />}
               <div ref={messagesEndRef} />
             </div>

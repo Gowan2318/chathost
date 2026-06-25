@@ -231,6 +231,7 @@
       input: "",
       isTyping: false,
       showQuickReplies: true,
+      showStartOver: false,
       contextualQuickReplies: [],
     };
     var reShowTimer = null;
@@ -311,6 +312,8 @@
       shadeHex(brandColor, -50) +
       ";padding:10px 12px;font-size:12px;font-weight:500;text-align:left;cursor:pointer;line-height:1.3}" +
       ".vch-quick-btn:disabled{opacity:0.5;cursor:not-allowed}" +
+      ".vch-start-over{border-radius:9999px;border:1px solid #E2E8F0;background:transparent;color:#4A5568;padding:4px 12px;font-size:11px;cursor:pointer;transition:border-color 0.15s,color 0.15s;margin-top:4px}" +
+      ".vch-start-over:hover{border-color:#9CA3AF;color:#1F2937}" +
       ".vch-footer{display:flex;gap:8px;padding:12px;border-top:1px solid " +
       theme.footerBorder +
       ";background:" +
@@ -463,6 +466,18 @@
         }
       });
 
+      if (state.showStartOver && !state.isTyping) {
+        var soRow = document.createElement("div");
+        soRow.className = "vch-row bot";
+        var soBtn = document.createElement("button");
+        soBtn.type = "button";
+        soBtn.className = "vch-start-over";
+        soBtn.textContent = "🔄 Start Over";
+        soBtn.addEventListener("click", resetChat);
+        soRow.appendChild(soBtn);
+        messagesEl.appendChild(soRow);
+      }
+
       if (state.isTyping) {
         var typing = document.createElement("div");
         typing.className = "vch-typing";
@@ -536,6 +551,7 @@
       if (reShowTimer) { clearTimeout(reShowTimer); reShowTimer = null; }
       state.messages = [welcomeMessage];
       state.showQuickReplies = true;
+      state.showStartOver = false;
       state.input = "";
       state.contextualQuickReplies = [];
       inputEl.value = "";
@@ -588,6 +604,7 @@
           var botText = data.message;
           state.messages.push({ role: "assistant", content: botText });
           state.contextualQuickReplies = buildContextualReplies(botText);
+          if (CONVERSATION_END_PATTERN.test(botText)) state.showStartOver = true;
           render();
           if (CONVERSATION_END_PATTERN.test(botText) && allButtons.length > 0) {
             reShowTimer = setTimeout(function () {
@@ -617,6 +634,7 @@
       state.input = "";
       inputEl.value = "";
       state.showQuickReplies = false;
+      state.showStartOver = false;
       state.contextualQuickReplies = [];
       render();
 
