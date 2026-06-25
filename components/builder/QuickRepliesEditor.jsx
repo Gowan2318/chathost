@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MAX_KNOWLEDGE_SLOTS, countKnowledgeSlots } from "../../lib/builder-form";
-import { getIndustryQuickReplySuggestions } from "../../lib/builder-quick-replies";
+import { getFilteredSuggestions } from "../../lib/builder-quick-replies";
 import { inputClassName } from "./FormField";
 
 function newPairId() {
@@ -17,12 +17,13 @@ export default function QuickRepliesEditor({
   onCustomQAChange,
   showValidation = false,
   fieldErrors = {},
+  formFields = {},
 }) {
   const [custom, setCustom] = useState("");
   const [draftQuestion, setDraftQuestion] = useState("");
   const [draftAnswer, setDraftAnswer] = useState("");
 
-  const suggestions = getIndustryQuickReplySuggestions(industry);
+  const suggestions = getFilteredSuggestions(industry, formFields);
   const active = quickReplies.filter(Boolean);
   const used = countKnowledgeSlots(active, customQA);
   const atLimit = used >= MAX_KNOWLEDGE_SLOTS;
@@ -70,7 +71,7 @@ export default function QuickRepliesEditor({
     <div className="space-y-8">
       <div className="flex items-center justify-between rounded-xl border border-[#0D7377]/25 bg-[#0D7377]/5 px-4 py-3">
         <p className="text-sm text-[#4A5568]">
-          Quick replies + custom Q&amp;A share one limit
+          Add up to 8 quick reply buttons — use as many or as few as you like
         </p>
         <span
           className={`rounded-full px-3 py-1 text-sm font-bold ${
@@ -79,7 +80,7 @@ export default function QuickRepliesEditor({
               : "bg-[#0D7377]/10 text-[#0D7377] ring-1 ring-[#0D7377]/40"
           }`}
         >
-          {used}/{MAX_KNOWLEDGE_SLOTS} used
+          {used}/{MAX_KNOWLEDGE_SLOTS} max
         </span>
       </div>
 
