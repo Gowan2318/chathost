@@ -206,6 +206,12 @@ export default function BuilderPageClient() {
   const [saveError, setSaveError] = useState("");
   const [selectedPlan, setSelectedPlan] = useState(preselectedPlan ?? "pro");
 
+  // Website import state (Step 1)
+  const [importUrl, setImportUrl] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+  const [importStatus, setImportStatus] = useState(null); // null | "success" | "error"
+  const [hoursNote, setHoursNote] = useState("");
+
   // Inline auth panel state (Step 6 only)
   const [authTab, setAuthTab] = useState("login");
   const [authEmail, setAuthEmail] = useState("");
@@ -324,6 +330,67 @@ export default function BuilderPageClient() {
   const handleChoosePlan = (plan) => {
     setSelectedPlan(plan);
     setStep(1);
+  };
+
+  const INDUSTRY_HINT_MAP = {
+    lawncare: "lawn",
+    realestate: "real_estate",
+  };
+  const VALID_INDUSTRIES = new Set([
+    "dental", "gym", "salon", "restaurant", "real_estate", "law", "barber", "lawn", "other",
+  ]);
+
+  const handleImport = async () => {
+    const trimmed = importUrl.trim();
+    if (!trimmed || isImporting) return;
+    setIsImporting(true);
+    setImportStatus(null);
+    setHoursNote("");
+    try {
+      const res = await fetch("/api/import-website", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: trimmed }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Import failed");
+
+      const { extracted } = data;
+      const patch = {};
+
+      if (extracted.businessName) patch.businessName = extracted.businessName;
+      if (extracted.businessDescription) patch.businessDescription = extracted.businessDescription;
+      if (extracted.servicesDescription) patch.servicesDescription = extracted.servicesDescription;
+      if (extracted.supportPhone) patch.supportPhone = extracted.supportPhone;
+      if (extracted.supportEmail) patch.supportEmail = extracted.supportEmail;
+      if (extracted.websiteUrl) patch.websiteUrl = extracted.websiteUrl;
+
+      if (extracted.address && typeof extracted.address === "object") {
+        patch.address = {
+          street: extracted.address.street ?? form.address.street,
+          city: extracted.address.city ?? form.address.city,
+          state: extracted.address.state ?? form.address.state,
+          zip: extracted.address.zip ?? form.address.zip,
+        };
+      }
+
+      if (!form.industry && extracted.industry_hint) {
+        const mapped = INDUSTRY_HINT_MAP[extracted.industry_hint] ?? extracted.industry_hint;
+        if (VALID_INDUSTRIES.has(mapped)) patch.industry = mapped;
+      }
+
+      update(patch);
+
+      if (extracted.businessHours) {
+        setHoursNote(`Hours found: "${extracted.businessHours}" — please set them manually in the hours section below.`);
+      }
+
+      setImportStatus("success");
+    } catch {
+      setImportStatus("error");
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   const handleInlineAuth = async () => {
@@ -535,6 +602,62 @@ export default function BuilderPageClient() {
 
             {step === 1 && (
               <div className="space-y-6">
+                {/* ── Website import ── */}
+                <div className="rounded-xl border border-[#E2E8F0] bg-[#F8F9FA] p-5">
+                  <p className="text-sm font-semibold text-[#1A1A2E]">
+                    Import from your website{" "}
+                    <span className="ml-1 text-xs font-normal text-[#9CA3AF]">(optional)</span>
+                  </p>
+                  <p className="mt-0.5 text-xs text-[#4A5568]">
+                    Paste your website URL and we&apos;ll automatically fill in your business details
+                  </p>
+                  <div className="mt-3 flex gap-2">
+                    <input
+                      type="url"
+                      value={importUrl}
+                      onChange={(e) => setImportUrl(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleImport(); } }}
+                      placeholder="https://yourbusiness.com"
+                      disabled={isImporting}
+                      className="flex-1 rounded-xl border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm text-[#1A1A2E] placeholder-[#9CA3AF] outline-none transition focus:border-[#0D7377]/50 focus:ring-2 focus:ring-[#0D7377]/20 disabled:opacity-60"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleImport}
+                      disabled={!importUrl.trim() || isImporting}
+                      className="flex shrink-0 items-center gap-2 rounded-xl bg-[#0D7377] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0A5D61] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isImporting ? (
+                        <>
+                          <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden>
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          Importing…
+                        </>
+                      ) : "Import"}
+                    </button>
+                  </div>
+                  <p className="mt-2 text-xs text-[#9CA3AF]">
+                    We&apos;ll extract what we can — you can review and edit everything after
+                  </p>
+                  {importStatus === "success" && (
+                    <div className="mt-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                      ✓ Business info imported! Review the fields below and make any adjustments.
+                    </div>
+                  )}
+                  {hoursNote && (
+                    <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+                      {hoursNote}
+                    </div>
+                  )}
+                  {importStatus === "error" && (
+                    <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                      Couldn&apos;t extract info from that URL. You can fill in the details manually.
+                    </div>
+                  )}
+                </div>
+
                 <FormField
                   label="Business name"
                   htmlFor="business-name"
