@@ -76,11 +76,7 @@ function buildSystemPrompt(businessName, businessInfo, industry) {
     `- Booking: use the booking link in the business info if one is listed, otherwise provide the phone number or email\n` +
     `- Insurance: list the accepted plans if available and help them understand their options\n` +
     `- Anything outside your knowledge: be honest — say you don't have that detail and give them the best way to reach the team\n\n` +
-    `LOOP-BACK RULE: Only add 'Is there anything else I can help you with today?' AFTER you have fully answered a customer's specific question. NEVER show the loop-back when:\n` +
-    `- The customer's message is vague (e.g. 'I need help', 'hi', 'hello', 'I have a question')\n` +
-    `- You asked the customer a clarifying question and are waiting for their answer\n` +
-    `- The conversation just started and no real question has been answered yet\n` +
-    `The loop-back should only appear when a complete answer has been given and the conversation feels naturally resolved.\n\n` +
+    `After fully answering a customer's question, end with ONE natural conversational follow-up — either 'Did that answer your question?', 'Is there anything else I can help you with?', or 'Hope that helps! Anything else?' Vary the phrasing naturally — don't use the same phrase every time. Only add this when you've actually answered something. If the conversation is still mid-flow (you asked a question, customer hasn't answered yet), don't add a follow-up.\n\n` +
     `Remember: you're having a real conversation, not running a script. Use the business info as your knowledge base and respond naturally.`
   );
 }

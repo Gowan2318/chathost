@@ -6,14 +6,8 @@
   var PAYMENT_PATTERN =
     /\b(pay|payment|pricing|price|prices|cost|costs|how much|how to pay|fee|fees|quote)\b/i;
   var TALK_TO_SOMEONE_PATTERN = /\btalk to someone\b/i;
-  var UNHELPFUL_AI_PATTERN =
-    /\b(i(?:'m| am) not sure|i don(?:'t| not) know|cannot help|can't help|can not help|unable to help|please contact us|please call us|reach out to us|contact us directly|call us directly|don't have (?:that |those )?information|do not have (?:that |those )?information|outside (?:of )?my (?:knowledge|ability)|not able to (?:help|answer)|unable to (?:answer|assist))\b/i;
-  var FRUSTRATION_PATTERN =
-    /\b(frustrated|annoyed|angry|useless|doesn't work|not working|terrible|awful|horrible|stupid|ridiculous|worst|pointless|waste of time|forget it|nevermind|give up|no help)\b/i;
   var SERVICES_TOPIC_RESP = /\b(service|offer|provide|specialize|treatment|plan|package|include)\b/i;
   var ACCEPTING_PATIENTS_PATTERN = /\b(accepting new patients|currently accepting)\b/i;
-  var CONTACT_REDIRECT_PATTERN = /\b(call us|email us|contact us|give us a call)\b/i;
-
   var MASCOT_SRC = {
     dental: "/mascots/dental.png",
     gym: "/mascots/gym.png",
@@ -146,10 +140,6 @@
     return TALK_TO_SOMEONE_PATTERN.test(text);
   }
 
-  function needsSupportFallback(text) {
-    return UNHELPFUL_AI_PATTERN.test(text);
-  }
-
   function createWidget(config, baseUrl) {
     var businessName = config.businessName || "Your Business";
     var businessInfo = config.businessInfo || "";
@@ -178,9 +168,6 @@
     var displayMascotName = mascotName || businessName;
     var mascotUrl = baseUrl + (MASCOT_SRC[industry] || MASCOT_SRC.other);
 
-    var FOLLOW_UP =
-      "Is there anything else I can help you with today? \uD83D\uDE0A";
-
     var pricingInfo =
       config.pricingInfo ||
       "Here's how our pricing works:\n\nContact " +
@@ -199,35 +186,21 @@
       );
     }
 
-    function closingMessage() {
-      return (
-        "Thank you for contacting " +
-        businessName +
-        "! We look forward to serving you. Have a wonderful day! \uD83D\uDE0A"
-      );
-    }
-
-    function buildContextualReplies(botText, needsSupportPriority) {
+    function buildContextualReplies(botText) {
       if (ACCEPTING_PATIENTS_PATTERN.test(botText)) {
-        return ["Book an appointment", "I have another question", "No, I'm all set"];
+        return ["Book an appointment"];
       }
       if (/\b(book|appointment)\b/i.test(botText) && /https?:\/\//.test(botText)) {
-        return ["Yes, book now", "I have another question", "No, I'm all set"];
-      }
-      if (CONTACT_REDIRECT_PATTERN.test(botText)) {
-        return ["I have another question", "No, I'm all set"];
+        return ["Yes, book now"];
       }
       var pool = [];
-      if (needsSupportPriority && (supportPhone || supportEmail)) {
-        pool.push("Talk to someone");
-      }
-      if (SERVICES_TOPIC_RESP.test(botText) && pool.indexOf("What are your prices?") === -1) {
+      if (SERVICES_TOPIC_RESP.test(botText)) {
         pool.push("What are your prices?");
       }
-      if (bookingUrl && pool.indexOf("Book an appointment") === -1) {
+      if (bookingUrl) {
         pool.push("Book an appointment");
       }
-      if ((supportPhone || supportEmail) && pool.indexOf("Talk to someone") === -1) {
+      if (supportPhone || supportEmail) {
         pool.push("Talk to someone");
       }
       return pool.slice(0, 3);
@@ -247,11 +220,7 @@
       input: "",
       isTyping: false,
       showQuickReplies: true,
-      awaitingFollowUp: false,
-      chatClosed: false,
       contextualQuickReplies: [],
-      unhelpfulCount: 0,
-      lastMessageWasFrustrated: false,
     };
 
     var host = document.createElement("div");
@@ -302,21 +271,6 @@
       theme.panelBorder +
       ";border-bottom-left-radius:4px}" +
       ".vch-action{display:flex;width:100%;margin-top:10px;align-items:center;justify-content:center;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:600;color:#fff;text-decoration:none}" +
-      ".vch-btn{display:block;width:100%;margin-top:8px;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid}" +
-      ".vch-btn-yes{background:" +
-      brandColor +
-      "12;border-color:" +
-      brandColor +
-      "40;color:" +
-      shadeHex(brandColor, -40) +
-      "}" +
-      ".vch-btn-no{background:" +
-      theme.secondaryButtonBg +
-      ";border-color:" +
-      theme.secondaryButtonBorder +
-      ";color:" +
-      theme.secondaryButtonText +
-      "}" +
       ".vch-btn-solid{display:flex;width:100%;margin-top:10px;align-items:center;justify-content:center;border:none;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:600;color:#fff;cursor:pointer}" +
       ".vch-typing{display:flex;justify-content:flex-start;margin-bottom:12px}" +
       ".vch-typing-bubble{display:flex;gap:4px;padding:12px 16px;border-radius:16px;border-bottom-left-radius:4px;background:" +
@@ -416,18 +370,9 @@
     panel.setAttribute("aria-label", "Chat with " + businessName);
 
     function updateInput() {
-      inputEl.disabled =
-        state.isTyping || state.awaitingFollowUp || state.chatClosed;
-      sendBtn.disabled =
-        !state.input.trim() ||
-        state.isTyping ||
-        state.awaitingFollowUp ||
-        state.chatClosed;
-      inputEl.placeholder = state.chatClosed
-        ? "Chat ended"
-        : state.awaitingFollowUp
-          ? "Choose an option above\u2026"
-          : "Type your message\u2026";
+      inputEl.disabled = state.isTyping;
+      sendBtn.disabled = !state.input.trim() || state.isTyping;
+      inputEl.placeholder = "Type your message\u2026";
     }
 
     function scrollBottom() {
@@ -472,27 +417,6 @@
         addActionButton(bubble, msg.payButtonUrl, "Pay Now");
       }
 
-      if (msg.followUp && state.awaitingFollowUp) {
-        var yes = document.createElement("button");
-        yes.type = "button";
-        yes.className = "vch-btn vch-btn-yes";
-        yes.textContent = "Yes, I have another question";
-        yes.addEventListener("click", resetChat);
-
-        var no = document.createElement("button");
-        no.type = "button";
-        no.className = "vch-btn vch-btn-no";
-        no.textContent = "No, I'm all set";
-        no.addEventListener("click", function () {
-          state.awaitingFollowUp = false;
-          state.chatClosed = true;
-          addMessage(closingMessage(), { startNewChat: true });
-        });
-
-        bubble.appendChild(yes);
-        bubble.appendChild(no);
-      }
-
       if (msg.startNewChat) {
         var restart = document.createElement("button");
         restart.type = "button";
@@ -534,11 +458,9 @@
     }
 
     function renderQuickReplies() {
-      var showInitial = state.showQuickReplies && !state.chatClosed && allButtons.length;
+      var showInitial = state.showQuickReplies && allButtons.length;
       var showContextual =
         !state.showQuickReplies &&
-        !state.chatClosed &&
-        !state.awaitingFollowUp &&
         state.contextualQuickReplies.length;
 
       if (showInitial || showContextual) {
@@ -581,42 +503,23 @@
       render();
     }
 
-    function completeWithFollowUp(content, extra) {
-      var first = { role: "assistant", content: content };
-      if (extra) {
-        for (var key in extra) {
-          if (Object.prototype.hasOwnProperty.call(extra, key)) {
-            first[key] = extra[key];
-          }
-        }
-      }
-      state.messages.push(first);
-      state.messages.push({ role: "assistant", content: FOLLOW_UP, followUp: true });
-      state.awaitingFollowUp = true;
-      render();
-    }
-
     function resetChat() {
       state.messages = [welcomeMessage];
       state.showQuickReplies = true;
-      state.awaitingFollowUp = false;
-      state.chatClosed = false;
       state.input = "";
       state.contextualQuickReplies = [];
-      state.unhelpfulCount = 0;
-      state.lastMessageWasFrustrated = false;
       inputEl.value = "";
       render();
     }
 
     function handleBooking() {
       if (bookingUrl) {
-        completeWithFollowUp(
+        addMessage(
           "I'd love to help you schedule! Click below to see our available times and book instantly \uD83D\uDCC5",
           { bookButtonUrl: bookingUrl }
         );
       } else {
-        completeWithFollowUp(
+        addMessage(
           "To book an appointment please call us at " +
             supportPhone +
             " or email " +
@@ -653,23 +556,8 @@
         .then(function (data) {
           state.isTyping = false;
           var botText = data.message;
-          var needsSupport = needsSupportFallback(botText);
-
           state.messages.push({ role: "assistant", content: botText });
-
-          if (needsSupport) {
-            state.unhelpfulCount = (state.unhelpfulCount || 0) + 1;
-            state.messages.push({ role: "assistant", content: supportMessage() });
-          } else {
-            state.unhelpfulCount = 0;
-          }
-
-          var forceSupport =
-            needsSupport ||
-            state.lastMessageWasFrustrated ||
-            state.unhelpfulCount >= 2;
-          state.contextualQuickReplies = buildContextualReplies(botText, forceSupport);
-          state.lastMessageWasFrustrated = false;
+          state.contextualQuickReplies = buildContextualReplies(botText);
           render();
         })
         .catch(function () {
@@ -682,24 +570,10 @@
 
     function sendMessage(text) {
       var trimmed = String(text || "").trim();
-      if (!trimmed || state.isTyping || state.awaitingFollowUp || state.chatClosed) {
+      if (!trimmed || state.isTyping) {
         return;
       }
 
-      if (trimmed === "I have another question") {
-        state.contextualQuickReplies = [];
-        resetChat();
-        return;
-      }
-      if (trimmed === "No, I'm all set") {
-        state.contextualQuickReplies = [];
-        state.chatClosed = true;
-        addMessage(closingMessage(), { startNewChat: true });
-        render();
-        return;
-      }
-
-      state.lastMessageWasFrustrated = FRUSTRATION_PATTERN.test(trimmed);
       state.messages.push({ role: "user", content: trimmed });
       state.input = "";
       inputEl.value = "";
@@ -712,19 +586,17 @@
         return;
       }
       if (isPaymentIntent(trimmed)) {
-        completeWithFollowUp(pricingInfo, {
-          payButtonUrl: payNowUrl || undefined,
-        });
+        addMessage(pricingInfo, { payButtonUrl: payNowUrl || undefined });
         return;
       }
       if (isTalkToSomeoneIntent(trimmed)) {
-        completeWithFollowUp(supportMessage());
+        addMessage(supportMessage());
         return;
       }
 
       var qaAnswer = qaAnswerMap[trimmed.toLowerCase()];
       if (qaAnswer) {
-        completeWithFollowUp(qaAnswer);
+        addMessage(qaAnswer);
         return;
       }
 
