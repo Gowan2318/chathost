@@ -136,6 +136,18 @@ const DEFAULT_PRICING = `Here's how our pricing works:
 
 You can pay securely online when you're ready.`;
 
+const INDUSTRY_EXAMPLES = {
+  restaurant: "'What's on your menu?' or 'Do you take reservations?'",
+  dental: "'Are you accepting new patients?' or 'What insurance do you accept?'",
+  salon: "'What services do you offer?' or 'Do you accept walk-ins?'",
+  barber: "'What are your prices?' or 'Do you accept walk-ins?'",
+  gym: "'What are your membership options?' or 'Do you offer a free trial?'",
+  lawncare: "'Do you offer free estimates?' or 'What areas do you service?'",
+  realestate: "'What areas do you serve?' or 'Are you accepting new clients?'",
+  real_estate: "'What areas do you serve?' or 'Are you accepting new clients?'",
+  law: "'What areas of law do you practice?' or 'Do you offer free consultations?'",
+};
+
 /**
  * @param {{
  *   config: object,
@@ -179,9 +191,9 @@ We're happy to assist you!`;
   const initialMessage = useMemo(
     () => ({
       role: "assistant",
-      content: `Hi there! 👋 Welcome to ${businessName}. How can I help you today?`,
+      content: `Hi! I'm ${displayMascotName}, and I'm here to answer all your questions about ${businessName}. Feel free to ask me anything — for example, ${INDUSTRY_EXAMPLES[industry] || "'What services do you offer?' or 'How do I get in touch?'"}. What would you like to know? 😊`,
     }),
-    [businessName]
+    [businessName, displayMascotName, industry]
   );
 
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -189,7 +201,6 @@ We're happy to assist you!`;
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showQuickReplies, setShowQuickReplies] = useState(true);
-  const [showStartOver, setShowStartOver] = useState(false);
   const [contextualReplies, setContextualReplies] = useState([]);
   const [mascotAnimation, setMascotAnimation] = useState("idle");
   const messagesEndRef = useRef(null);
@@ -256,7 +267,6 @@ We're happy to assist you!`;
     }
     setMessages([initialMessage]);
     setShowQuickReplies(true);
-    setShowStartOver(false);
     setInput("");
     setContextualReplies([]);
   }, [initialMessage]);
@@ -281,7 +291,6 @@ We're happy to assist you!`;
       clearTimeout(reShowTimerRef.current);
       reShowTimerRef.current = null;
     }
-    setShowStartOver(false);
     setContextualReplies([]);
 
     const userMessage = { role: "user", content: trimmed };
@@ -331,7 +340,6 @@ We're happy to assist you!`;
 
       setMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
       setContextualReplies(buildContextualReplies(data.message));
-      if (CONVERSATION_END_PATTERN.test(data.message)) setShowStartOver(true);
       if (CONVERSATION_END_PATTERN.test(data.message) && allButtons.length > 0) {
         reShowTimerRef.current = setTimeout(() => {
           setShowQuickReplies(true);
@@ -412,14 +420,23 @@ We're happy to assist you!`;
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="rounded-lg p-1.5 text-white/90 transition hover:bg-white/20"
-              aria-label="Close chat"
-            >
-              <CloseIcon />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={resetToStart}
+                className="rounded px-1.5 py-0.5 text-xs text-white/60 transition hover:text-white/90"
+              >
+                ↩ Start Over
+              </button>
+              <button
+                type="button"
+                onClick={() => { resetToStart(); setIsOpen(false); }}
+                className="rounded-lg p-1.5 text-white/90 transition hover:bg-white/20"
+                aria-label="Close chat"
+              >
+                <CloseIcon />
+              </button>
+            </div>
           </header>
 
           <div
@@ -456,17 +473,6 @@ We're happy to assist you!`;
                   </div>
                 </div>
               ))}
-              {showStartOver && !isTyping && (
-                <div className="flex justify-start">
-                  <button
-                    type="button"
-                    onClick={resetToStart}
-                    className="rounded-full border border-[#E2E8F0] px-3 py-1 text-xs text-[#4A5568] transition hover:border-[#9CA3AF] hover:text-[#1A1A2E]"
-                  >
-                    🔄 Start Over
-                  </button>
-                </div>
-              )}
               {isTyping && <TypingIndicator brandColor={brandColor} theme={theme} />}
               <div ref={messagesEndRef} />
             </div>

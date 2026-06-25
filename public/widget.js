@@ -217,12 +217,25 @@
       return pool.slice(0, 3);
     }
 
+    var INDUSTRY_EXAMPLES = {
+      restaurant: "'What\u2019s on your menu?' or 'Do you take reservations?'",
+      dental: "'Are you accepting new patients?' or 'What insurance do you accept?'",
+      salon: "'What services do you offer?' or 'Do you accept walk-ins?'",
+      barber: "'What are your prices?' or 'Do you accept walk-ins?'",
+      gym: "'What are your membership options?' or 'Do you offer a free trial?'",
+      lawncare: "'Do you offer free estimates?' or 'What areas do you service?'",
+      lawn: "'Do you offer free estimates?' or 'What areas do you service?'",
+      realestate: "'What areas do you serve?' or 'Are you accepting new clients?'",
+      real_estate: "'What areas do you serve?' or 'Are you accepting new clients?'",
+      law: "'What areas of law do you practice?' or 'Do you offer free consultations?'",
+    };
+    var industryExamples = INDUSTRY_EXAMPLES[industry] || "'What services do you offer?' or 'How do I get in touch?'";
     var welcomeMessage = {
       role: "assistant",
       content:
-        "Hi there! \uD83D\uDC4B Welcome to " +
-        businessName +
-        ". How can I help you today?",
+        "Hi! I\u2019m " + displayMascotName + ", and I\u2019m here to answer all your questions about " +
+        businessName + ". Feel free to ask me anything \u2014 for example, " +
+        industryExamples + ". What would you like to know? \uD83D\uDE0A",
     };
 
     var state = {
@@ -231,7 +244,6 @@
       input: "",
       isTyping: false,
       showQuickReplies: true,
-      showStartOver: false,
       contextualQuickReplies: [],
     };
     var reShowTimer = null;
@@ -312,8 +324,9 @@
       shadeHex(brandColor, -50) +
       ";padding:10px 12px;font-size:12px;font-weight:500;text-align:left;cursor:pointer;line-height:1.3}" +
       ".vch-quick-btn:disabled{opacity:0.5;cursor:not-allowed}" +
-      ".vch-start-over{border-radius:9999px;border:1px solid #E2E8F0;background:transparent;color:#4A5568;padding:4px 12px;font-size:11px;cursor:pointer;transition:border-color 0.15s,color 0.15s;margin-top:4px}" +
-      ".vch-start-over:hover{border-color:#9CA3AF;color:#1F2937}" +
+      ".vch-header-right{display:flex;align-items:center;gap:8px}" +
+      ".vch-start-link{border:none;background:transparent;color:rgba(255,255,255,0.65);font-size:11px;cursor:pointer;padding:4px 8px;border-radius:6px;transition:color 0.15s}" +
+      ".vch-start-link:hover{color:rgba(255,255,255,1)}" +
       ".vch-footer{display:flex;gap:8px;padding:12px;border-top:1px solid " +
       theme.footerBorder +
       ";background:" +
@@ -353,9 +366,11 @@
       '<div class="vch-header-left">' +
       '<div class="vch-mascot-wrap"><img class="vch-mascot" src="" alt="" /></div>' +
       "<div><h2 class=\"vch-title\"></h2><p class=\"vch-subtitle\"></p></div></div>" +
+      '<div class="vch-header-right">' +
+      '<button type="button" class="vch-start-link">↩ Start Over</button>' +
       '<button type="button" class="vch-close" aria-label="Close chat">' +
       '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>' +
-      "</button></header>" +
+      "</button></div></header>" +
       '<div class="vch-messages"></div>' +
       '<div class="vch-quick" style="display:none"></div>' +
       '<form class="vch-footer">' +
@@ -379,6 +394,7 @@
     var sendBtn = root.querySelector(".vch-send");
     var launcherBtn = root.querySelector(".vch-launcher");
     var closeBtn = root.querySelector(".vch-close");
+    var startLinkBtn = root.querySelector(".vch-start-link");
 
     titleEl.textContent = businessName;
     subtitleEl.textContent =
@@ -466,18 +482,6 @@
         }
       });
 
-      if (state.showStartOver && !state.isTyping) {
-        var soRow = document.createElement("div");
-        soRow.className = "vch-row bot";
-        var soBtn = document.createElement("button");
-        soBtn.type = "button";
-        soBtn.className = "vch-start-over";
-        soBtn.textContent = "🔄 Start Over";
-        soBtn.addEventListener("click", resetChat);
-        soRow.appendChild(soBtn);
-        messagesEl.appendChild(soRow);
-      }
-
       if (state.isTyping) {
         var typing = document.createElement("div");
         typing.className = "vch-typing";
@@ -551,7 +555,6 @@
       if (reShowTimer) { clearTimeout(reShowTimer); reShowTimer = null; }
       state.messages = [welcomeMessage];
       state.showQuickReplies = true;
-      state.showStartOver = false;
       state.input = "";
       state.contextualQuickReplies = [];
       inputEl.value = "";
@@ -604,7 +607,6 @@
           var botText = data.message;
           state.messages.push({ role: "assistant", content: botText });
           state.contextualQuickReplies = buildContextualReplies(botText);
-          if (CONVERSATION_END_PATTERN.test(botText)) state.showStartOver = true;
           render();
           if (CONVERSATION_END_PATTERN.test(botText) && allButtons.length > 0) {
             reShowTimer = setTimeout(function () {
@@ -634,7 +636,6 @@
       state.input = "";
       inputEl.value = "";
       state.showQuickReplies = false;
-      state.showStartOver = false;
       state.contextualQuickReplies = [];
       render();
 
@@ -677,9 +678,12 @@
     });
 
     closeBtn.addEventListener("click", function () {
+      resetChat();
       state.isOpen = false;
       panel.classList.remove("open");
     });
+
+    startLinkBtn.addEventListener("click", resetChat);
 
     formEl.addEventListener("submit", function (e) {
       e.preventDefault();
