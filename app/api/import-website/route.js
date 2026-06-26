@@ -171,6 +171,15 @@ export async function POST(request) {
       return json({ error: "Could not parse extracted data" }, { status: 422 });
     }
 
+    // For gym, the three boolean fields can't be determined from website text alone.
+    // Return null (unknown) rather than letting the form's false defaults tell the
+    // bot to say "No free trial", "No group classes", "No personal trainers".
+    if (extracted.industry_hint === "gym") {
+      extracted.hasFreeTrial = null;
+      extracted.hasClasses = null;
+      extracted.hasTrainers = null;
+    }
+
     return json({ extracted });
   } catch (error) {
     console.error("[api/import-website] error:", error);

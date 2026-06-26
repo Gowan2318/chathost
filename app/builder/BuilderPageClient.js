@@ -423,6 +423,12 @@ export default function BuilderPageClient() {
         if (VALID_INDUSTRIES.has(mapped)) patch.industry = mapped;
       }
 
+      // Apply gym-specific boolean overrides — null means "unknown, don't tell the
+      // bot to say No" (vs. false which would produce negative assertions in the prompt)
+      if (extracted.hasFreeTrial !== undefined) patch.hasFreeTrial = extracted.hasFreeTrial;
+      if (extracted.hasClasses !== undefined) patch.hasClasses = extracted.hasClasses;
+      if (extracted.hasTrainers !== undefined) patch.hasTrainers = extracted.hasTrainers;
+
       update(patch);
 
       if (extracted.businessHours) {
@@ -476,6 +482,12 @@ export default function BuilderPageClient() {
         const mapped = INDUSTRY_HINT_MAP[extracted.industry_hint] ?? extracted.industry_hint;
         if (VALID_INDUSTRIES.has(mapped)) patch.industry = mapped;
       }
+
+      // Apply gym-specific boolean overrides — null means "unknown, don't tell the
+      // bot to say No" (vs. false which would produce negative assertions in the prompt)
+      if (extracted.hasFreeTrial !== undefined) patch.hasFreeTrial = extracted.hasFreeTrial;
+      if (extracted.hasClasses !== undefined) patch.hasClasses = extracted.hasClasses;
+      if (extracted.hasTrainers !== undefined) patch.hasTrainers = extracted.hasTrainers;
 
       update(patch);
 
