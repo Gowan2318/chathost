@@ -425,11 +425,13 @@ export default function BuilderPageClient() {
         if (VALID_INDUSTRIES.has(mapped)) patch.industry = mapped;
       }
 
-      // Apply gym-specific boolean overrides — null means "unknown, don't tell the
-      // bot to say No" (vs. false which would produce negative assertions in the prompt)
+      // Industry-specific field overrides
       if (extracted.hasFreeTrial !== undefined) patch.hasFreeTrial = extracted.hasFreeTrial;
       if (extracted.hasClasses !== undefined) patch.hasClasses = extracted.hasClasses;
       if (extracted.hasTrainers !== undefined) patch.hasTrainers = extracted.hasTrainers;
+      if (extracted.hasReservations !== undefined) patch.hasReservations = extracted.hasReservations;
+      if (extracted.hasDelivery !== undefined) patch.hasDelivery = extracted.hasDelivery;
+      if (extracted.menuUrl) patch.menuUrl = extracted.menuUrl;
 
       update(patch);
 
@@ -441,7 +443,7 @@ export default function BuilderPageClient() {
       setImportDone(true);
     } catch (err) {
       setImportStatus("error");
-      setImportError("");
+      setImportError(err.message || "Import failed. Please try again.");
     } finally {
       setIsImporting(false);
     }
@@ -486,11 +488,13 @@ export default function BuilderPageClient() {
         if (VALID_INDUSTRIES.has(mapped)) patch.industry = mapped;
       }
 
-      // Apply gym-specific boolean overrides — null means "unknown, don't tell the
-      // bot to say No" (vs. false which would produce negative assertions in the prompt)
+      // Industry-specific field overrides
       if (extracted.hasFreeTrial !== undefined) patch.hasFreeTrial = extracted.hasFreeTrial;
       if (extracted.hasClasses !== undefined) patch.hasClasses = extracted.hasClasses;
       if (extracted.hasTrainers !== undefined) patch.hasTrainers = extracted.hasTrainers;
+      if (extracted.hasReservations !== undefined) patch.hasReservations = extracted.hasReservations;
+      if (extracted.hasDelivery !== undefined) patch.hasDelivery = extracted.hasDelivery;
+      if (extracted.menuUrl) patch.menuUrl = extracted.menuUrl;
 
       update(patch);
 
