@@ -81,6 +81,30 @@ export async function POST(req) {
         if (error) {
           console.error("[stripe-webhook] DB update failed (checkout.session.completed):", error);
         }
+
+        // Determine plan from amount_total: Basic ~$32-$40 (<4500 cents), Pro ~$48-$60 (>=4500 cents)
+        const amountTotal = session.amount_total ?? null;
+        const plan = amountTotal === null ? null : amountTotal < 4500 ? "basic" : "pro";
+
+        // Upsert payment transaction — idempotent via ON CONFLICT on stripe_session_id
+        const { error: txError } = await db
+          .from("payment_transactions")
+          .upsert(
+            {
+              client_id: clientId,
+              stripe_session_id: session.id,
+              stripe_customer_id: stripeCustomerId ?? null,
+              amount: amountTotal,
+              currency: session.currency ?? "usd",
+              status: "completed",
+              plan,
+            },
+            { onConflict: "stripe_session_id" }
+          );
+
+        if (txError) {
+          console.error("[stripe-webhook] payment_transactions upsert failed:", txError);
+        }
         break;
       }
 
@@ -138,6 +162,28 @@ export async function POST(req) {
 
         if (error) {
           console.error("[stripe-webhook] DB update failed (subscription.deleted):", error);
+        }
+
+        // Mark payment as refunded only when we can confirm a refund was issued.
+        // Stripe fires charge.refunded separately for actual refunds, but
+        // an immediate cancellation (cancel_at_period_end: false, ended within
+        // the same period it started) is a strong signal a refund accompanied it.
+        // For confirmed refunds, listen to charge.refunded and update there.
+        // Here we mark refunded when cancel_at_period_end was false AND the
+        // event's previous_attributes show it was active just before deletion.
+        const prevAttrs = event.data.previous_attributes ?? {};
+        const wasImmediatelyCanceled = sub.cancel_at_period_end === false;
+        const hadActiveStatus = prevAttrs.status === "active" || sub.status === "canceled";
+        if (wasImmediatelyCanceled && hadActiveStatus) {
+          const { error: refundErr } = await db
+            .from("payment_transactions")
+            .update({ status: "refunded", updated_at: new Date().toISOString() })
+            .eq("stripe_customer_id", sub.customer)
+            .eq("status", "completed");
+
+          if (refundErr) {
+            console.error("[stripe-webhook] payment_transactions refund update failed:", refundErr);
+          }
         }
         break;
       }

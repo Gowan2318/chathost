@@ -65,3 +65,21 @@ ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
 
 -- All tables: service role only (no direct client access)
 -- Data is written server-side only via API routes
+
+CREATE TABLE public.payment_transactions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id uuid REFERENCES public.chatbots(client_id) ON DELETE SET NULL,
+  stripe_session_id text UNIQUE NOT NULL,
+  stripe_customer_id text,
+  amount integer,
+  currency text DEFAULT 'usd',
+  status text NOT NULL CHECK (status IN ('pending', 'completed', 'failed', 'refunded')),
+  plan text CHECK (plan IN ('basic', 'pro')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_payment_transactions_client_id ON public.payment_transactions(client_id, created_at DESC);
+CREATE INDEX idx_payment_transactions_stripe_session ON public.payment_transactions(stripe_session_id);
+
+ALTER TABLE public.payment_transactions ENABLE ROW LEVEL SECURITY;
