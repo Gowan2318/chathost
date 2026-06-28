@@ -237,6 +237,7 @@ export default function BuilderPageClient() {
   const [importUrl, setImportUrl] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const [importStatus, setImportStatus] = useState(null); // null | "success" | "error"
+  const [importError, setImportError] = useState("");
   const [importDone, setImportDone] = useState(false);
   useEffect(() => { console.log("[builder] importStatus:", importStatus); }, [importStatus]);
   const [hoursNote, setHoursNote] = useState("");
@@ -390,6 +391,7 @@ export default function BuilderPageClient() {
     if (!trimmed || isImporting) return;
     setIsImporting(true);
     setImportStatus(null);
+    setImportError("");
     setHoursNote("");
     try {
       const res = await fetch("/api/import-website", {
@@ -438,18 +440,22 @@ export default function BuilderPageClient() {
 
       setImportStatus("success");
       setImportDone(true);
-    } catch {
+    } catch (err) {
       setImportStatus("error");
+      setImportError("");
     } finally {
       setIsImporting(false);
     }
   };
 
   const handlePasteImport = async () => {
+    console.log("[builder] paste text length:", pasteText.length);
+    console.log("[builder] calling import with text");
     const trimmed = pasteText.trim();
     if (!trimmed || isImporting) return;
     setIsImporting(true);
     setImportStatus(null);
+    setImportError("");
     setHoursNote("");
     try {
       const res = await fetch("/api/import-website", {
@@ -498,8 +504,9 @@ export default function BuilderPageClient() {
 
       setImportStatus("success");
       setImportDone(true);
-    } catch {
+    } catch (err) {
       setImportStatus("error");
+      setImportError(err.message || "Extraction failed. Please try again.");
     } finally {
       setIsImporting(false);
     }
@@ -773,7 +780,7 @@ export default function BuilderPageClient() {
                 {importStatus === "error" && (
                   <div className="space-y-4">
                     <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-                      Couldn&apos;t fetch that website — it may be blocking automated requests.
+                      {importError || "Couldn’t fetch that website — it may be blocking automated requests."}
                     </div>
                     <div className="rounded-xl border border-[#E2E8F0] bg-[#F8F9FA] p-5">
                       <p className="text-sm font-semibold text-[#1A1A2E]">No problem! Here&apos;s how to import manually:</p>
@@ -784,7 +791,7 @@ export default function BuilderPageClient() {
                       </ol>
                       <textarea
                         value={pasteText}
-                        onChange={(e) => setPasteText(e.target.value)}
+                        onChange={(e) => { console.log("[builder] pasteText changed:", e.target.value.length); setPasteText(e.target.value); }}
                         placeholder="Paste your website text here..."
                         rows={6}
                         className="mt-4 w-full border border-[#E2E8F0] rounded-lg p-3 text-[#1A1A2E] text-sm focus:outline-none focus:ring-2 focus:ring-[#0D7377] resize-none"

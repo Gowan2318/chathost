@@ -104,23 +104,30 @@ Return ONLY valid JSON, no explanation, no markdown.`;
 export async function POST(request) {
   try {
     const clientIp = getClientIp(request);
+    console.log("[import-website] POST received, ip:", clientIp);
 
     if (await isIpBlocked(clientIp)) {
       return json({ error: "Access denied" }, { status: 403 });
     }
 
-    // 3 imports per 10 minutes — this hits the Claude API
-    const { allowed } = await checkRateLimit(clientIp, "/api/import-website", 3, 600);
-    if (!allowed) {
-      await autoBlockIfAbusive(clientIp);
-      return json(
-        { error: "Too many import requests. Please wait 10 minutes and try again." },
-        { status: 429 }
-      );
-    }
-
+    // Read body first so we can apply different rate limits for paste vs URL fetch
     const body = await request.json();
     const { url, text: pastedText } = body;
+    console.log("[import-website] received:", { hasUrl: !!url, hasText: !!pastedText, textLength: pastedText?.length });
+
+    // Paste path: higher limit (10/10min) — no external fetch, cheaper
+    // URL path: lower limit (3/10min) — external fetch + Claude
+    const isPaste = pastedText != null;
+    const rateLimitRoute = isPaste ? "/api/import-website/paste" : "/api/import-website/url";
+    const rateLimitMax = isPaste ? 10 : 3;
+    const { allowed } = await checkRateLimit(clientIp, rateLimitRoute, rateLimitMax, 600);
+    if (!allowed) {
+      await autoBlockIfAbusive(clientIp);
+      const waitMsg = isPaste
+        ? "Too many paste imports. Please wait 10 minutes and try again."
+        : "Too many import requests. Please wait 10 minutes and try again.";
+      return json({ error: waitMsg }, { status: 429 });
+    }
 
     let content; // plain text to send to Claude
 
