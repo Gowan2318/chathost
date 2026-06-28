@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AddressInput from "../../components/builder/AddressInput";
 import BrandColorPicker from "../../components/builder/BrandColorPicker";
 import ChatThemeSelector from "../../components/builder/ChatThemeSelector";
@@ -238,6 +238,7 @@ export default function BuilderPageClient() {
   const [isImporting, setIsImporting] = useState(false);
   const [importStatus, setImportStatus] = useState(null); // null | "success" | "error"
   const [importDone, setImportDone] = useState(false);
+  useEffect(() => { console.log("[builder] importStatus:", importStatus); }, [importStatus]);
   const [hoursNote, setHoursNote] = useState("");
   const [pasteText, setPasteText] = useState("");
 
