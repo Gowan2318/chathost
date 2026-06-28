@@ -786,7 +786,7 @@ export default function BuilderPageClient() {
                         onChange={(e) => setPasteText(e.target.value)}
                         placeholder="Paste your website text here..."
                         rows={6}
-                        className="mt-4 w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#1A1A2E] placeholder-[#9CA3AF] outline-none transition focus:border-[#0D7377]/50 focus:ring-2 focus:ring-[#0D7377]/20"
+                        className="mt-4 w-full border border-[#E2E8F0] rounded-lg p-3 text-[#1A1A2E] text-sm focus:outline-none focus:ring-2 focus:ring-[#0D7377] resize-none"
                       />
                       <button
                         type="button"
