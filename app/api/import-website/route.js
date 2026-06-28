@@ -177,6 +177,7 @@ export async function POST(request) {
       let firecrawlUsed = false;
       if (process.env.FIRECRAWL_API_KEY) {
         try {
+          console.log("[firecrawl] attempting scrape of:", url);
           const fcRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
             method: "POST",
             headers: {
@@ -186,13 +187,14 @@ export async function POST(request) {
             body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
             signal: AbortSignal.timeout(15000),
           });
+          console.log("[firecrawl] response status:", fcRes.status);
           if (fcRes.ok) {
             const fcData = await fcRes.json();
             const md = fcData.data?.markdown || "";
             if (md.length > 100) {
               content = md.slice(0, 9000);
               firecrawlUsed = true;
-              console.log("[import-website] firecrawl succeeded, chars:", content.length);
+              console.log("[firecrawl] content length:", content.length);
             }
           }
         } catch (e) {
@@ -201,6 +203,7 @@ export async function POST(request) {
       }
 
       if (!firecrawlUsed) {
+        console.log("[firecrawl] falling back to basic fetch");
         // Fall back to basic fetch + HTML strip
         const baseOrigin = `${parsed.protocol}//${parsed.host}`;
         const currentPath = parsed.pathname.replace(/\/$/, "");

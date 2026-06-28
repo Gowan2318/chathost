@@ -402,6 +402,7 @@ export default function BuilderPageClient() {
       if (!res.ok) throw new Error(data.error || "Import failed");
 
       const { extracted } = data;
+      console.log("[handleImport] extracted:", JSON.stringify(extracted, null, 2));
       const patch = {};
 
       if (extracted.businessName) patch.businessName = extracted.businessName;
@@ -433,6 +434,7 @@ export default function BuilderPageClient() {
       if (extracted.hasDelivery !== undefined) patch.hasDelivery = extracted.hasDelivery;
       if (extracted.menuUrl) patch.menuUrl = extracted.menuUrl;
 
+      console.log("[handleImport] patch:", JSON.stringify(patch, null, 2));
       update(patch);
 
       if (extracted.businessHours) {
