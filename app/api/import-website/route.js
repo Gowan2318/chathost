@@ -186,6 +186,7 @@ export async function POST(request) {
       const html = await mainResult.value.text();
 
       const navLinks = extractNavLinks(html, url);
+      console.log("[import-website] nav links found:", navLinks.slice(0, 20));
       content = stripHtml(html).slice(0, 7000);
 
       if (content.length < 50) {
@@ -237,6 +238,13 @@ export async function POST(request) {
       return json({ error: "Could not parse extracted data" }, { status: 422 });
     }
 
+    // Claude occasionally wraps string values in extra quotes — strip them
+    for (const key of ["supportPhone", "supportEmail", "businessName", "websiteUrl", "menuUrl", "businessHours"]) {
+      if (typeof extracted[key] === "string") {
+        extracted[key] = extracted[key].replace(/^["']+|["']+$/g, "").trim() || null;
+      }
+    }
+
     // Gym boolean fields can't be inferred from page text or nav links — force null
     // so the bot never falsely claims "no free trial", "no group classes", etc.
     if (extracted.industry_hint === "gym") {
@@ -245,8 +253,7 @@ export async function POST(request) {
       extracted.hasTrainers = null;
     }
 
-    console.log("[import-website] extracted phone:", JSON.stringify(extracted.supportPhone));
-    console.log("[import-website] extracted address:", JSON.stringify(extracted.address));
+    console.log("[import-website] extracted:", JSON.stringify(extracted, null, 2));
 
     return json({ extracted });
   } catch (error) {
