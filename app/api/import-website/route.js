@@ -25,6 +25,29 @@ function isInternalHost(hostname) {
   return false;
 }
 
+function extractNavLinks(html, baseUrl) {
+  const links = [];
+  const seen = new Set();
+  const re = /<a\s[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let match;
+  while ((match = re.exec(html)) !== null) {
+    let href = match[1].trim();
+    const text = match[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    if (!href || !text) continue;
+    if (/^(javascript:|mailto:|tel:|#)/i.test(href)) continue;
+    try {
+      href = new URL(href, baseUrl).href;
+    } catch {
+      continue;
+    }
+    if (seen.has(href)) continue;
+    seen.add(href);
+    links.push(`${text}: ${href}`);
+    if (links.length >= 60) break;
+  }
+  return links;
+}
+
 function stripHtml(html) {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
@@ -40,7 +63,7 @@ function stripHtml(html) {
     .trim();
 }
 
-const EXTRACTION_PROMPT = `You are extracting business information from a website. Extract ONLY information that is explicitly present in the text — do not make anything up or infer details not clearly stated.
+const EXTRACTION_PROMPT = `You are extracting business information from a website. Extract ONLY information that is explicitly present in the text or navigation links — do not make anything up or infer details not clearly stated.
 
 Return a JSON object with these fields (use null for any field not found):
 {
@@ -57,8 +80,18 @@ Return a JSON object with these fields (use null for any field not found):
     "zip": "string or null"
   },
   "businessHours": "string (hours of operation if found, as plain text) or null",
-  "industry_hint": "string (one of: restaurant, dental, salon, barber, gym, lawncare, realestate, law, other — your best guess based on the content) or null"
+  "industry_hint": "string (one of: restaurant, dental, salon, barber, gym, lawncare, realestate, law, other — your best guess based on the content) or null",
+  "hasReservations": "true if reservations are offered, false if explicitly not offered, null if unknown",
+  "hasDelivery": "true if delivery or takeout is offered, false if explicitly not offered, null if unknown",
+  "menuUrl": "string (URL of the online menu page if found) or null"
 }
+
+Also analyze the navigation links provided. Use them to detect features:
+- If any link text or URL contains words like 'reservation', 'reserve', 'book a table', 'book now' → set hasReservations: true and use that URL as reservationLink if relevant
+- If any link text or URL contains words like 'order online', 'delivery', 'takeout', 'doordash', 'ubereats', 'grubhub', 'order now' → set hasDelivery: true
+- If any link text or URL contains 'menu' → set menuUrl to that URL
+- Only set hasReservations or hasDelivery to false if the page explicitly states they are NOT offered
+- Default to null for these fields when there is no clear evidence either way
 
 Return ONLY valid JSON, no explanation, no markdown.`;
 
@@ -140,10 +173,15 @@ export async function POST(request) {
         return json({ error: "Could not reach that website" }, { status: 422 });
       }
 
+      const navLinks = extractNavLinks(html, url);
       content = stripHtml(html).slice(0, 8000);
 
       if (content.length < 50) {
         return json({ error: "Could not extract readable content from that page" }, { status: 422 });
+      }
+
+      if (navLinks.length > 0) {
+        content += `\n\nNavigation links found:\n${navLinks.join("\n")}`;
       }
     }
 
@@ -171,16 +209,12 @@ export async function POST(request) {
       return json({ error: "Could not parse extracted data" }, { status: 422 });
     }
 
-    // Boolean fields can't be determined from website text alone — return null (unknown)
-    // so the bot never falsely claims "no delivery" or "no free trial" etc.
+    // Gym boolean fields can't be inferred from page text or nav links — force null
+    // so the bot never falsely claims "no free trial", "no group classes", etc.
     if (extracted.industry_hint === "gym") {
       extracted.hasFreeTrial = null;
       extracted.hasClasses = null;
       extracted.hasTrainers = null;
-    }
-    if (extracted.industry_hint === "restaurant") {
-      extracted.hasReservations = null;
-      extracted.hasDelivery = null;
     }
 
     return json({ extracted });
