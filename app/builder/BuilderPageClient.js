@@ -264,7 +264,11 @@ export default function BuilderPageClient() {
   // Map internal step → visual step number shown in the indicator and "Step X of Y"
   const visualStep = isBasic && step >= 4 ? step - 1 : step;
 
-  const update = (patch) => setForm((f) => ({ ...f, ...patch }));
+  const update = (patch) => setForm((f) => ({
+    ...f,
+    ...patch,
+    ...(patch.address ? { address: { ...f.address, ...patch.address } } : {}),
+  }));
 
   const businessInfo = useMemo(() => composeBusinessInfo(form), [form]);
 
@@ -413,12 +417,12 @@ export default function BuilderPageClient() {
       if (extracted.websiteUrl) patch.websiteUrl = extracted.websiteUrl;
 
       if (extracted.address && typeof extracted.address === "object") {
-        patch.address = {
-          street: extracted.address.street ?? form.address.street,
-          city: extracted.address.city ?? form.address.city,
-          state: extracted.address.state ?? form.address.state,
-          zip: extracted.address.zip ?? form.address.zip,
-        };
+        const addr = {};
+        if (extracted.address.street) addr.street = extracted.address.street;
+        if (extracted.address.city) addr.city = extracted.address.city;
+        if (extracted.address.state) addr.state = extracted.address.state;
+        if (extracted.address.zip) addr.zip = extracted.address.zip;
+        if (Object.keys(addr).length > 0) patch.address = addr;
       }
 
       if (!form.industry && extracted.industry_hint) {
@@ -443,6 +447,19 @@ export default function BuilderPageClient() {
 
       setImportStatus("success");
       setImportDone(true);
+
+      // Auto-expand step 2 sections that are still missing data; collapse filled ones
+      setExpandedSections({
+        businessInfo: !patch.businessName || !patch.businessDescription || !patch.servicesDescription || (!isBasic && !patch.industry),
+        contact: !patch.supportPhone || !patch.supportEmail,
+        location: !patch.address?.street || !patch.address?.city || !patch.address?.state || !patch.address?.zip,
+        hours: false,
+        industryDetails: false,
+      });
+
+      // Advance to step 2 so the user can see all pre-filled fields immediately
+      setStep(2);
+      window.scrollTo({ top: 0, behavior: "instant" });
     } catch (err) {
       setImportStatus("error");
       setImportError(err.message || "Import failed. Please try again.");
@@ -477,12 +494,12 @@ export default function BuilderPageClient() {
       if (extracted.websiteUrl) patch.websiteUrl = extracted.websiteUrl;
 
       if (extracted.address && typeof extracted.address === "object") {
-        patch.address = {
-          street: extracted.address.street ?? form.address.street,
-          city: extracted.address.city ?? form.address.city,
-          state: extracted.address.state ?? form.address.state,
-          zip: extracted.address.zip ?? form.address.zip,
-        };
+        const addr = {};
+        if (extracted.address.street) addr.street = extracted.address.street;
+        if (extracted.address.city) addr.city = extracted.address.city;
+        if (extracted.address.state) addr.state = extracted.address.state;
+        if (extracted.address.zip) addr.zip = extracted.address.zip;
+        if (Object.keys(addr).length > 0) patch.address = addr;
       }
 
       if (!form.industry && extracted.industry_hint) {
@@ -506,6 +523,19 @@ export default function BuilderPageClient() {
 
       setImportStatus("success");
       setImportDone(true);
+
+      // Auto-expand step 2 sections that are still missing data; collapse filled ones
+      setExpandedSections({
+        businessInfo: !patch.businessName || !patch.businessDescription || !patch.servicesDescription || (!isBasic && !patch.industry),
+        contact: !patch.supportPhone || !patch.supportEmail,
+        location: !patch.address?.street || !patch.address?.city || !patch.address?.state || !patch.address?.zip,
+        hours: false,
+        industryDetails: false,
+      });
+
+      // Advance to step 2 so the user can see all pre-filled fields immediately
+      setStep(2);
+      window.scrollTo({ top: 0, behavior: "instant" });
     } catch (err) {
       setImportStatus("error");
       setImportError(err.message || "Extraction failed. Please try again.");
@@ -835,6 +865,26 @@ export default function BuilderPageClient() {
 
             {step === 2 && (
               <div className="space-y-3">
+                {/* Import success banner — shown when user was auto-advanced from the import step */}
+                {importDone && (
+                  <div className="rounded-xl border border-green-200 bg-green-50 p-5">
+                    <p className="text-sm font-semibold text-green-800">We found your business info!</p>
+                    <ul className="mt-3 space-y-1.5 text-sm text-green-700">
+                      {form.businessName && <li>Business name: <strong>{form.businessName}</strong></li>}
+                      {form.industry && <li>Industry: <strong>{INDUSTRY_LABELS[form.industry] || form.industry}</strong></li>}
+                      {form.supportPhone && <li>Phone: <strong>{form.supportPhone}</strong></li>}
+                      {form.supportEmail && <li>Email: <strong>{form.supportEmail}</strong></li>}
+                      {form.address?.city && <li>Location: <strong>{[form.address.city, form.address.state].filter(Boolean).join(", ")}</strong></li>}
+                    </ul>
+                    {hoursNote && (
+                      <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                        {hoursNote}
+                      </p>
+                    )}
+                    <p className="mt-3 text-xs text-green-600">Review and complete anything missing below.</p>
+                  </div>
+                )}
+
                 {/* ── Section: Business Info ── */}
                 <SectionBlock
                   title="Business Info"
