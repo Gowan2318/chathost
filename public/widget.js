@@ -151,13 +151,24 @@
     return false;
   }
 
-  function createWidget(config, baseUrl) {
+  function createWidget(config, baseUrl, clientId) {
     var businessName = config.businessName || "Your Business";
     var businessInfo = config.businessInfo || "";
     var supportPhone = config.supportPhone || "";
     var supportEmail = config.supportEmail || "";
     var payNowUrl = config.payNowUrl || "";
     var bookingUrl = config.booking_url || config.bookingUrl || "";
+    var sessionId = config._sessionId || (clientId + "-" + Date.now());
+
+    function trackEvent(eventType) {
+      if (!clientId) return;
+      fetch(baseUrl + "/api/track-event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ client_id: clientId, session_id: sessionId, event_type: eventType }),
+      }).catch(function () {});
+    }
+
     var quickReplies = (config.quickReplies || []).filter(Boolean);
     var customQA = Array.isArray(config.customQA) ? config.customQA : [];
     var qaAnswerMap = {};
@@ -423,7 +434,7 @@
       }
     }
 
-    function addActionButton(parent, url, label) {
+    function addActionButton(parent, url, label, eventType) {
       if (!isSafeUrl(url)) return;
       var link = document.createElement("a");
       link.className = "vch-action";
@@ -432,6 +443,9 @@
       link.rel = "noopener noreferrer";
       link.textContent = label;
       link.style.backgroundColor = brandColor;
+      if (eventType) {
+        link.addEventListener("click", function () { trackEvent(eventType); });
+      }
       parent.appendChild(link);
     }
 
@@ -446,10 +460,10 @@
       bubble.appendChild(text);
 
       if (msg.bookButtonUrl) {
-        addActionButton(bubble, msg.bookButtonUrl, "\uD83D\uDCC5 Book Now");
+        addActionButton(bubble, msg.bookButtonUrl, "\uD83D\uDCC5 Book Now", "booking_clicked");
       }
       if (msg.payButtonUrl) {
-        addActionButton(bubble, msg.payButtonUrl, "Pay Now");
+        addActionButton(bubble, msg.payButtonUrl, "Pay Now", "payment_clicked");
       }
 
       if (msg.startNewChat) {
@@ -594,6 +608,8 @@
           businessName: businessName,
           businessInfo: effectiveBusinessInfo,
           industry: industry,
+          clientId: clientId,
+          sessionId: sessionId,
         }),
       })
         .then(function (res) {
@@ -711,7 +727,7 @@
         return res.json();
       })
       .then(function (config) {
-        createWidget(config, info.baseUrl);
+        createWidget(config, info.baseUrl, info.id);
       })
       .catch(function (err) {
         console.error("[VestaChatHost] Widget failed to load:", err);

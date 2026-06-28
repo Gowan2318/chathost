@@ -1,11 +1,47 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import {
   getClientIp,
   isIpBlocked,
   checkRateLimit,
   autoBlockIfAbusive,
 } from "../../../lib/rateLimit";
+
+function adminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { persistSession: false } }
+  );
+}
+
+async function logConversation(clientId, sessionId, userContent, assistantContent) {
+  if (!clientId || !sessionId) return;
+  try {
+    const db = adminClient();
+    // Upsert conversation row keyed on (client_id, session_id)
+    const { data: convo } = await db
+      .from("conversations")
+      .upsert(
+        { client_id: clientId, session_id: sessionId, message_count: 0 },
+        { onConflict: "client_id,session_id", ignoreDuplicates: false }
+      )
+      .select("id, message_count")
+      .maybeSingle();
+
+    const convoId = convo?.id;
+    if (!convoId) return;
+
+    await Promise.all([
+      db.from("messages").insert({ conversation_id: convoId, client_id: clientId, role: "user", content: userContent }),
+      db.from("messages").insert({ conversation_id: convoId, client_id: clientId, role: "assistant", content: assistantContent }),
+      db.from("conversations").update({ message_count: (convo.message_count ?? 0) + 2 }).eq("id", convoId),
+    ]);
+  } catch {
+    // Non-fatal — never block the chat response
+  }
+}
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -135,7 +171,7 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { messages, businessInfo, businessName, industry } = body;
+    const { messages, businessInfo, businessName, industry, clientId, sessionId } = body;
     console.log("[chat API] received businessInfo:", businessInfo?.substring(0, 500));
 
     if (!Array.isArray(messages) || messages.length > 50) {
@@ -167,6 +203,10 @@ export async function POST(request) {
     if (!message) {
       return corsJson({ error: "No response from the model" }, { status: 500 });
     }
+
+    // Fire-and-forget — don't await, never slows down response
+    const lastUserMsg = apiMessages[apiMessages.length - 1]?.content ?? "";
+    logConversation(clientId, sessionId, lastUserMsg, message);
 
     return corsJson({ message });
   } catch (error) {

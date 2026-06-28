@@ -33,12 +33,30 @@ export async function POST(req) {
 
   const db = adminClient();
 
+  // Idempotency guard: skip if we've already processed this Stripe event
+  const { data: existing } = await db
+    .from("subscription_events")
+    .select("id")
+    .eq("stripe_event_id", event.id)
+    .maybeSingle();
+  if (existing) {
+    console.log("[stripe-webhook] duplicate event, skipping:", event.id);
+    return NextResponse.json({ received: true });
+  }
+
+  let resolvedClientId = null;
+  let resolvedCustomerId = null;
+  let newStatus = null;
+
   try {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object;
         const clientId = session.client_reference_id;
         const stripeCustomerId = session.customer;
+        resolvedClientId = clientId;
+        resolvedCustomerId = stripeCustomerId;
+        newStatus = "active";
 
         if (!clientId) {
           console.warn("[stripe-webhook] checkout.session.completed missing client_reference_id");
@@ -76,7 +94,16 @@ export async function POST(req) {
           console.warn("[stripe-webhook] missing sub.status on", event.id);
           break;
         }
-        // sub.status: 'active' | 'past_due' | 'canceled' | 'trialing' | 'unpaid' | 'paused' | ...
+        resolvedCustomerId = sub.customer;
+        newStatus = sub.status;
+
+        const { data: bot } = await db
+          .from("chatbots")
+          .select("client_id")
+          .eq("stripe_customer_id", sub.customer)
+          .maybeSingle();
+        resolvedClientId = bot?.client_id ?? null;
+
         const { error } = await db
           .from("chatbots")
           .update({ subscription_status: sub.status })
@@ -94,6 +121,16 @@ export async function POST(req) {
           console.warn("[stripe-webhook] missing sub.customer on", event.type, event.id);
           break;
         }
+        resolvedCustomerId = sub.customer;
+        newStatus = "canceled";
+
+        const { data: bot } = await db
+          .from("chatbots")
+          .select("client_id")
+          .eq("stripe_customer_id", sub.customer)
+          .maybeSingle();
+        resolvedClientId = bot?.client_id ?? null;
+
         const { error } = await db
           .from("chatbots")
           .update({ subscription_status: "canceled" })
@@ -112,6 +149,16 @@ export async function POST(req) {
     // Log but don't re-throw — always return 200 so Stripe doesn't retry unnecessarily.
     console.error("[stripe-webhook] handler error:", err);
   }
+
+  // Audit trail — fire-and-forget, never block the webhook response
+  db.from("subscription_events").insert({
+    client_id: resolvedClientId,
+    stripe_customer_id: resolvedCustomerId,
+    stripe_event_id: event.id,
+    event_type: event.type,
+    new_status: newStatus,
+    stripe_data: event.data.object,
+  }).then(() => {}).catch(() => {});
 
   return NextResponse.json({ received: true });
 }
