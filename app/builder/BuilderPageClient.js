@@ -239,7 +239,6 @@ export default function BuilderPageClient() {
   const [importStatus, setImportStatus] = useState(null); // null | "success" | "error"
   const [importError, setImportError] = useState("");
   const [importDone, setImportDone] = useState(false);
-  useEffect(() => { console.log("[builder] importStatus:", importStatus); }, [importStatus]);
   const [hoursNote, setHoursNote] = useState("");
   const [pasteText, setPasteText] = useState("");
 
@@ -449,8 +448,6 @@ export default function BuilderPageClient() {
   };
 
   const handlePasteImport = async () => {
-    console.log("[builder] paste text length:", pasteText.length);
-    console.log("[builder] calling import with text");
     const trimmed = pasteText.trim();
     if (!trimmed || isImporting) return;
     setIsImporting(true);
@@ -790,7 +787,7 @@ export default function BuilderPageClient() {
                       </ol>
                       <textarea
                         value={pasteText}
-                        onChange={(e) => { console.log("[builder] pasteText changed:", e.target.value.length); setPasteText(e.target.value); }}
+                        onChange={(e) => setPasteText(e.target.value)}
                         placeholder="Paste your website text here..."
                         rows={6}
                         className="mt-4 w-full border border-[#E2E8F0] rounded-lg p-3 text-[#1A1A2E] text-sm focus:outline-none focus:ring-2 focus:ring-[#0D7377] resize-none"

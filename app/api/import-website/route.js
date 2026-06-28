@@ -173,50 +173,79 @@ export async function POST(request) {
         Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       };
 
-      // Fetch main page and contact page candidates in parallel
-      const baseOrigin = `${parsed.protocol}//${parsed.host}`;
-      const currentPath = parsed.pathname.replace(/\/$/, "");
-      const contactUrls = ["/contact", "/contact-us"]
-        .filter((p) => p !== currentPath)
-        .map((p) => `${baseOrigin}${p}`);
-
-      const [mainResult, ...contactResults] = await Promise.allSettled([
-        fetch(url, { headers: fetchHeaders, signal: AbortSignal.timeout(10000), redirect: "follow" }),
-        ...contactUrls.map((cu) =>
-          fetch(cu, { headers: fetchHeaders, signal: AbortSignal.timeout(7000), redirect: "follow" })
-        ),
-      ]);
-
-      if (mainResult.status === "rejected" || !mainResult.value.ok) {
-        return json({ error: "Could not reach that website" }, { status: 422 });
-      }
-      const html = await mainResult.value.text();
-
-      const navLinks = extractNavLinks(html, url);
-      console.log("[import-website] nav links found:", navLinks.slice(0, 20));
-      content = stripHtml(html).slice(0, 7000);
-
-      if (content.length < 50) {
-        return json({ error: "Could not extract readable content from that page" }, { status: 422 });
-      }
-
-      if (navLinks.length > 0) {
-        content += `\n\nNavigation links found:\n${navLinks.join("\n")}`;
-      }
-
-      // Append the first usable contact page as an extra address/phone source
-      for (const result of contactResults) {
-        if (result.status === "fulfilled" && result.value.ok) {
-          try {
-            const contactHtml = await result.value.text();
-            const contactText = stripHtml(contactHtml).slice(0, 2000);
-            if (contactText.length > 50) {
-              content += `\n\nContact page content:\n${contactText}`;
+      // Try Firecrawl first — returns clean markdown, handles JS-heavy sites
+      let firecrawlUsed = false;
+      if (process.env.FIRECRAWL_API_KEY) {
+        try {
+          const fcRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${process.env.FIRECRAWL_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
+            signal: AbortSignal.timeout(15000),
+          });
+          if (fcRes.ok) {
+            const fcData = await fcRes.json();
+            const md = fcData.data?.markdown || "";
+            if (md.length > 100) {
+              content = md.slice(0, 9000);
+              firecrawlUsed = true;
+              console.log("[import-website] firecrawl succeeded, chars:", content.length);
             }
-          } catch {
-            // ignore
           }
-          break;
+        } catch (e) {
+          console.log("[import-website] firecrawl failed, falling back:", e.message);
+        }
+      }
+
+      if (!firecrawlUsed) {
+        // Fall back to basic fetch + HTML strip
+        const baseOrigin = `${parsed.protocol}//${parsed.host}`;
+        const currentPath = parsed.pathname.replace(/\/$/, "");
+        const contactUrls = ["/contact", "/contact-us"]
+          .filter((p) => p !== currentPath)
+          .map((p) => `${baseOrigin}${p}`);
+
+        const [mainResult, ...contactResults] = await Promise.allSettled([
+          fetch(url, { headers: fetchHeaders, signal: AbortSignal.timeout(10000), redirect: "follow" }),
+          ...contactUrls.map((cu) =>
+            fetch(cu, { headers: fetchHeaders, signal: AbortSignal.timeout(7000), redirect: "follow" })
+          ),
+        ]);
+
+        if (mainResult.status === "rejected" || !mainResult.value.ok) {
+          return json({ error: "Could not reach that website" }, { status: 422 });
+        }
+        const html = await mainResult.value.text();
+
+        const navLinks = extractNavLinks(html, url);
+        console.log("[import-website] nav links found:", navLinks.slice(0, 20));
+        content = stripHtml(html).slice(0, 7000);
+
+        if (content.length < 50) {
+          return json({ error: "Could not extract readable content from that page" }, { status: 422 });
+        }
+
+        if (navLinks.length > 0) {
+          content += `\n\nNavigation links found:\n${navLinks.join("\n")}`;
+        }
+
+        // Append the first usable contact page as an extra address/phone source
+        for (const result of contactResults) {
+          if (result.status === "fulfilled" && result.value.ok) {
+            try {
+              const contactHtml = await result.value.text();
+              const contactText = stripHtml(contactHtml).slice(0, 2000);
+              if (contactText.length > 50) {
+                content += `\n\nContact page content:\n${contactText}`;
+              }
+            } catch {
+              // ignore
+            }
+            break;
+          }
         }
       }
     }
