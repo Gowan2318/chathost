@@ -171,13 +171,16 @@ export async function POST(request) {
       return json({ error: "Could not parse extracted data" }, { status: 422 });
     }
 
-    // For gym, the three boolean fields can't be determined from website text alone.
-    // Return null (unknown) rather than letting the form's false defaults tell the
-    // bot to say "No free trial", "No group classes", "No personal trainers".
+    // Boolean fields can't be determined from website text alone — return null (unknown)
+    // so the bot never falsely claims "no delivery" or "no free trial" etc.
     if (extracted.industry_hint === "gym") {
       extracted.hasFreeTrial = null;
       extracted.hasClasses = null;
       extracted.hasTrainers = null;
+    }
+    if (extracted.industry_hint === "restaurant") {
+      extracted.hasReservations = null;
+      extracted.hasDelivery = null;
     }
 
     return json({ extracted });
