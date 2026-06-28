@@ -70,14 +70,14 @@ Return a JSON object with these fields (use null for any field not found):
   "businessName": "string or null",
   "businessDescription": "string (brief description of what the business does, max 500 chars) or null",
   "servicesDescription": "string (list of main services offered, max 300 chars) or null",
-  "supportPhone": "string (phone number) or null",
+  "supportPhone": "string (phone number as it appears on the page, e.g. '(412) 968-0848') or null",
   "supportEmail": "string (email address) or null",
   "websiteUrl": "string (the URL itself) or null",
   "address": {
     "street": "string or null",
     "city": "string or null",
-    "state": "string or null",
-    "zip": "string or null"
+    "state": "string 2-letter abbreviation or null",
+    "zip": "string 5-digit zip or null"
   },
   "businessHours": "string (hours of operation if found, as plain text) or null",
   "industry_hint": "string (one of: restaurant, dental, salon, barber, gym, lawncare, realestate, law, other — your best guess based on the content) or null",
@@ -86,8 +86,14 @@ Return a JSON object with these fields (use null for any field not found):
   "menuUrl": "string (URL of the online menu page if found) or null"
 }
 
-Also analyze the navigation links provided. Use them to detect features:
-- If any link text or URL contains words like 'reservation', 'reserve', 'book a table', 'book now' → set hasReservations: true and use that URL as reservationLink if relevant
+Address extraction rules:
+- Look for the address in the footer, contact sections, schema markup, and anywhere on the page
+- Common formats: '1337 Old Freeport Road, Pittsburgh, PA 15238' or '1337 Old Freeport Rd, Pittsburgh PA 15238'
+- Extract street, city, state abbreviation, and 5-digit zip separately
+- If contact page content is provided below, prioritize it for address and phone
+
+Navigation link rules:
+- If any link text or URL contains words like 'reservation', 'reserve', 'book a table', 'book now' → set hasReservations: true
 - If any link text or URL contains words like 'order online', 'delivery', 'takeout', 'doordash', 'ubereats', 'grubhub', 'order now' → set hasDelivery: true
 - If any link text or URL contains 'menu' → set menuUrl to that URL
 - Only set hasReservations or hasDelivery to false if the page explicitly states they are NOT offered
@@ -154,27 +160,33 @@ export async function POST(request) {
         return json({ error: "URL must be a publicly accessible website" }, { status: 400 });
       }
 
-      let html;
-      try {
-        const fetchRes = await fetch(url, {
-          headers: {
-            "User-Agent":
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          },
-          signal: AbortSignal.timeout(10000),
-          redirect: "follow",
-        });
-        if (!fetchRes.ok) {
-          return json({ error: "Could not fetch that website (it may be blocking bots)" }, { status: 422 });
-        }
-        html = await fetchRes.text();
-      } catch {
+      const fetchHeaders = {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      };
+
+      // Fetch main page and contact page candidates in parallel
+      const baseOrigin = `${parsed.protocol}//${parsed.host}`;
+      const currentPath = parsed.pathname.replace(/\/$/, "");
+      const contactUrls = ["/contact", "/contact-us"]
+        .filter((p) => p !== currentPath)
+        .map((p) => `${baseOrigin}${p}`);
+
+      const [mainResult, ...contactResults] = await Promise.allSettled([
+        fetch(url, { headers: fetchHeaders, signal: AbortSignal.timeout(10000), redirect: "follow" }),
+        ...contactUrls.map((cu) =>
+          fetch(cu, { headers: fetchHeaders, signal: AbortSignal.timeout(7000), redirect: "follow" })
+        ),
+      ]);
+
+      if (mainResult.status === "rejected" || !mainResult.value.ok) {
         return json({ error: "Could not reach that website" }, { status: 422 });
       }
+      const html = await mainResult.value.text();
 
       const navLinks = extractNavLinks(html, url);
-      content = stripHtml(html).slice(0, 8000);
+      content = stripHtml(html).slice(0, 7000);
 
       if (content.length < 50) {
         return json({ error: "Could not extract readable content from that page" }, { status: 422 });
@@ -182,6 +194,22 @@ export async function POST(request) {
 
       if (navLinks.length > 0) {
         content += `\n\nNavigation links found:\n${navLinks.join("\n")}`;
+      }
+
+      // Append the first usable contact page as an extra address/phone source
+      for (const result of contactResults) {
+        if (result.status === "fulfilled" && result.value.ok) {
+          try {
+            const contactHtml = await result.value.text();
+            const contactText = stripHtml(contactHtml).slice(0, 2000);
+            if (contactText.length > 50) {
+              content += `\n\nContact page content:\n${contactText}`;
+            }
+          } catch {
+            // ignore
+          }
+          break;
+        }
       }
     }
 
@@ -216,6 +244,9 @@ export async function POST(request) {
       extracted.hasClasses = null;
       extracted.hasTrainers = null;
     }
+
+    console.log("[import-website] extracted phone:", JSON.stringify(extracted.supportPhone));
+    console.log("[import-website] extracted address:", JSON.stringify(extracted.address));
 
     return json({ extracted });
   } catch (error) {
