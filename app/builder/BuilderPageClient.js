@@ -454,7 +454,6 @@ export default function BuilderPageClient() {
     const trimmed = pasteText.trim();
     if (!trimmed || isImporting) return;
     setIsImporting(true);
-    setImportStatus(null);
     setImportError("");
     setHoursNote("");
     try {
