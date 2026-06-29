@@ -1056,7 +1056,7 @@ export default function BuilderPageClient() {
                         type="email"
                         value={form.supportEmail}
                         onChange={(e) => update({ supportEmail: e.target.value })}
-                        placeholder="support@yourbusiness.com"
+                        placeholder="hello@yourbusiness.com"
                         className={inputClassName(showValidation, errors.supportEmail, fieldValid("supportEmail", (f) => validateEmail(f.supportEmail)))}
                       />
                     </FormField>
