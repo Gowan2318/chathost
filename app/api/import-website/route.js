@@ -202,6 +202,33 @@ export async function POST(request) {
         }
       }
 
+      // Firecrawl path: if contact info may be on a separate page, fetch it via basic fetch
+      if (firecrawlUsed) {
+        const baseOrigin = `${parsed.protocol}//${parsed.host}`;
+        const currentPath = parsed.pathname.replace(/\/$/, "");
+        const contactPaths = ["/contact", "/contact-us", "/about"].filter((p) => p !== currentPath);
+        for (const contactPath of contactPaths) {
+          try {
+            const contactRes = await fetch(`${baseOrigin}${contactPath}`, {
+              headers: fetchHeaders,
+              signal: AbortSignal.timeout(5000),
+              redirect: "follow",
+            });
+            if (contactRes.ok) {
+              const contactHtml = await contactRes.text();
+              const contactText = stripHtml(contactHtml).slice(0, 2000);
+              if (contactText.length > 50) {
+                content += `\n\nContact page content:\n${contactText}`;
+                console.log("[firecrawl] appended contact page:", contactPath);
+                break;
+              }
+            }
+          } catch {
+            // ignore — contact page missing or timed out
+          }
+        }
+      }
+
       if (!firecrawlUsed) {
         console.log("[firecrawl] falling back to basic fetch");
         // Fall back to basic fetch + HTML strip
@@ -284,6 +311,17 @@ export async function POST(request) {
       }
     }
 
+    // Enforce field length limits
+    if (typeof extracted.businessName === "string" && extracted.businessName.length > 100) {
+      extracted.businessName = extracted.businessName.slice(0, 100);
+    }
+    if (typeof extracted.businessDescription === "string" && extracted.businessDescription.length > 500) {
+      extracted.businessDescription = extracted.businessDescription.slice(0, 497) + "...";
+    }
+    if (typeof extracted.servicesDescription === "string" && extracted.servicesDescription.length > 300) {
+      extracted.servicesDescription = extracted.servicesDescription.slice(0, 297) + "...";
+    }
+
     // Gym boolean fields can't be inferred from page text or nav links — force null
     // so the bot never falsely claims "no free trial", "no group classes", etc.
     if (extracted.industry_hint === "gym") {
@@ -292,7 +330,7 @@ export async function POST(request) {
       extracted.hasTrainers = null;
     }
 
-    console.log("[import-website] extracted:", JSON.stringify(extracted, null, 2));
+    console.log("[import-website] Claude extracted:", JSON.stringify(extracted, null, 2));
 
     return json({ extracted });
   } catch (error) {
