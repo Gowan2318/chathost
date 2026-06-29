@@ -42,6 +42,8 @@ const ALLOWED_CONFIG_KEYS = new Set([
   "clientType", "areasServed", "listingsUrl", "acceptingClients",
   // Other
   "extraInfo", "paymentInfo",
+  // Website knowledge
+  "socialLinks", "promotions", "upcomingEvents", "websiteKnowledge",
 ]);
 
 function applyPlanEnforcement(config, plan) {
@@ -119,6 +121,31 @@ function validateConfig(config) {
   strMax("Listings URL", "listingsUrl", 500);
   strMax("Extra info", "extraInfo", 1000);
   strMax("Payment info", "paymentInfo", 1000);
+  strMax("Promotions", "promotions", 1000);
+  strMax("Upcoming events", "upcomingEvents", 1000);
+  strMax("Website knowledge", "websiteKnowledge", 2000);
+
+  if (config.socialLinks != null) {
+    if (typeof config.socialLinks !== "object" || Array.isArray(config.socialLinks)) {
+      errors.push("socialLinks must be an object");
+    } else {
+      for (const key of ["instagram", "facebook", "tiktok"]) {
+        if (config.socialLinks[key] != null && typeof config.socialLinks[key] !== "string") {
+          errors.push(`socialLinks.${key} must be a string`);
+        }
+        if (typeof config.socialLinks[key] === "string" && config.socialLinks[key].length > 500) {
+          errors.push(`socialLinks.${key} URL too long (max 500 characters)`);
+        }
+      }
+      if (config.socialLinks.other != null) {
+        if (!Array.isArray(config.socialLinks.other)) {
+          errors.push("socialLinks.other must be an array");
+        } else if (config.socialLinks.other.length > 10) {
+          errors.push("socialLinks.other too many entries (max 10)");
+        }
+      }
+    }
+  }
 
   const BOOL_FIELDS = [
     "hasReservations", "hasDelivery", "acceptingNewPatients", "hasPaymentPlans",

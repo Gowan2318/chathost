@@ -93,6 +93,11 @@ function configToForm(config) {
     // Other
     extraInfo: config.extraInfo || "",
     paymentInfo: config.paymentInfo || "",
+    // Website knowledge
+    socialLinks: config.socialLinks || null,
+    promotions: config.promotions || "",
+    upcomingEvents: config.upcomingEvents || "",
+    websiteKnowledge: config.websiteKnowledge || "",
   };
 }
 
@@ -648,6 +653,67 @@ export default function EditBotPage() {
               </div>
             </section>
           )}
+
+          {/* Knowledge & Content */}
+          <section className="rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm sm:p-8">
+            <h2 className="mb-1 text-base font-semibold text-[#1A1A2E]">Knowledge &amp; Content</h2>
+            <p className="mb-5 text-sm text-[#4A5568]">Help your bot answer questions about promotions, events, and broader business knowledge.</p>
+            <div className="space-y-5">
+              <FormField
+                label="Current promotions / specials"
+                htmlFor="edit-promotions"
+                hint="Any active deals, discounts, or offers your bot should mention"
+                showValidation={false}
+                error={null}
+                isValid={false}
+              >
+                <textarea
+                  id="edit-promotions"
+                  rows={3}
+                  value={form.promotions}
+                  onChange={(e) => update({ promotions: e.target.value })}
+                  placeholder="e.g. 20% off whitening in July · Free consultation this month"
+                  className={inputClassName(false, null, false)}
+                />
+              </FormField>
+
+              <FormField
+                label="Upcoming events"
+                htmlFor="edit-events"
+                hint="Classes, workshops, open houses, or special dates"
+                showValidation={false}
+                error={null}
+                isValid={false}
+              >
+                <textarea
+                  id="edit-events"
+                  rows={3}
+                  value={form.upcomingEvents}
+                  onChange={(e) => update({ upcomingEvents: e.target.value })}
+                  placeholder="e.g. Free teeth-cleaning event Aug 10 · Patient appreciation day Sept 5"
+                  className={inputClassName(false, null, false)}
+                />
+              </FormField>
+
+              <FormField
+                label="Additional business knowledge"
+                htmlFor="edit-website-knowledge"
+                hint="Auto-populated from your website import — edit to add anything we missed"
+                showValidation={false}
+                error={null}
+                isValid={false}
+              >
+                <textarea
+                  id="edit-website-knowledge"
+                  rows={6}
+                  value={form.websiteKnowledge}
+                  onChange={(e) => update({ websiteKnowledge: e.target.value })}
+                  placeholder="Detailed knowledge your bot should have — services, pricing, policies, FAQs, specialties…"
+                  className={inputClassName(false, null, false)}
+                />
+              </FormField>
+            </div>
+          </section>
 
           {/* Branding */}
           <section className="rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm sm:p-8">

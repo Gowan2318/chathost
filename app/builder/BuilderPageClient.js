@@ -116,6 +116,11 @@ const INITIAL = {
   // Other
   extraInfo: "",
   paymentInfo: "",
+  // Website knowledge (auto-populated from import)
+  socialLinks: null,
+  promotions: "",
+  upcomingEvents: "",
+  websiteKnowledge: "",
 };
 
 function Toggle({ label, hint, checked, onChange }) {
@@ -437,6 +442,14 @@ export default function BuilderPageClient() {
       if (extracted.hasDelivery !== undefined) patch.hasDelivery = extracted.hasDelivery;
       if (extracted.menuUrl) patch.menuUrl = extracted.menuUrl;
 
+      // New fields from multi-page scrape
+      if (extracted.bookingUrl && !form.bookingUrl) patch.bookingUrl = extracted.bookingUrl;
+      if (extracted.payNowUrl && !form.payNowUrl) patch.payNowUrl = extracted.payNowUrl;
+      if (extracted.socialLinks) patch.socialLinks = extracted.socialLinks;
+      if (extracted.promotions) patch.promotions = extracted.promotions;
+      if (extracted.upcomingEvents) patch.upcomingEvents = extracted.upcomingEvents;
+      if (extracted.websiteKnowledge) patch.websiteKnowledge = extracted.websiteKnowledge;
+
       console.log("[handleImport] patch:", JSON.stringify(patch, null, 2));
       update(patch);
 
@@ -512,6 +525,14 @@ export default function BuilderPageClient() {
       if (extracted.hasReservations !== undefined) patch.hasReservations = extracted.hasReservations;
       if (extracted.hasDelivery !== undefined) patch.hasDelivery = extracted.hasDelivery;
       if (extracted.menuUrl) patch.menuUrl = extracted.menuUrl;
+
+      // New fields from multi-page scrape
+      if (extracted.bookingUrl && !form.bookingUrl) patch.bookingUrl = extracted.bookingUrl;
+      if (extracted.payNowUrl && !form.payNowUrl) patch.payNowUrl = extracted.payNowUrl;
+      if (extracted.socialLinks) patch.socialLinks = extracted.socialLinks;
+      if (extracted.promotions) patch.promotions = extracted.promotions;
+      if (extracted.upcomingEvents) patch.upcomingEvents = extracted.upcomingEvents;
+      if (extracted.websiteKnowledge) patch.websiteKnowledge = extracted.websiteKnowledge;
 
       update(patch);
 

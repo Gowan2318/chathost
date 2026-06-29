@@ -111,6 +111,9 @@ function buildSystemPrompt(businessName, businessInfo, industry) {
     `- Services or pricing: share what you know; offer to connect them with the team for anything you don't have\n` +
     `- Booking: use the booking link in the business info if one is listed, otherwise provide the phone number or email\n` +
     `- Insurance: list the accepted plans if available and help them understand their options\n` +
+    `- Promotions or current deals: share exactly what's listed under "Current promotions/specials" in the business info — don't make up discounts\n` +
+    `- Upcoming events or classes: share what's listed under "Upcoming events" — if nothing is listed, say you don't have that info and suggest they call or check the website\n` +
+    `- Social media: share the specific platform URL from the "Social media" section of the business info\n` +
     `- Anything outside your knowledge: be honest — say you don't have that detail and give them the best way to reach the team\n\n` +
     `PROACTIVE GUIDANCE — after answering, always guide the customer to their natural next step:\n` +
     `- After answering hours or location: naturally suggest the next logical step — for example: 'Would you like to book an appointment while you're here?' or 'Is there anything else I can help you with, like booking or our services?'\n` +

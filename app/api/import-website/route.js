@@ -13,7 +13,6 @@ function json(body, init = {}) {
   return NextResponse.json(body, init);
 }
 
-// Block loopback, private, and link-local ranges
 function isInternalHost(hostname) {
   if (/^(localhost|::1|\[::1\])$/i.test(hostname)) return true;
   if (/^127\./.test(hostname)) return true;
@@ -23,6 +22,99 @@ function isInternalHost(hostname) {
   if (/^169\.254\./.test(hostname)) return true;
   if (/^0\./.test(hostname)) return true;
   return false;
+}
+
+const BOOKING_DOMAINS = [
+  "calendly.com", "square.com", "squareup.com", "booksy.com", "vagaro.com",
+  "mindbodyonline.com", "acuityscheduling.com", "appointmentplus.com",
+  "setmore.com", "fresha.com", "boulevard.io", "gloss.app", "styleseat.com",
+];
+const PAYMENT_DOMAINS = [
+  "paypal.com", "paypal.me", "venmo.com", "cash.app", "cashapp.com",
+  "stripe.com", "buy.stripe.com", "zelle.com",
+];
+const SOCIAL_DOMAINS = [
+  "instagram.com", "facebook.com", "tiktok.com", "twitter.com", "x.com",
+  "youtube.com", "linkedin.com", "pinterest.com",
+];
+const SOCIAL_KEY_MAP = {
+  "instagram.com": "instagram",
+  "facebook.com": "facebook",
+  "tiktok.com": "tiktok",
+};
+const MENU_PATTERNS = ["/menu", "/our-menu", "/food", "/drinks"];
+const SERVICE_PATTERNS = ["/services", "/treatments", "/what-we-do", "/offerings", "/work", "/portfolio"];
+const PROMO_PATTERNS = ["/specials", "/promotions", "/deals", "/offers", "/events", "/whats-on"];
+
+function domainMatches(hostname, domain) {
+  const bare = hostname.replace(/^www\./, "");
+  return bare === domain || bare.endsWith("." + domain);
+}
+
+function extractUrlObjects(text, baseUrl) {
+  const seen = new Set();
+  const result = [];
+  const mdRe = /\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/g;
+  const bareRe = /\bhttps?:\/\/[^\s<>"')\]]+/g;
+  for (const re of [mdRe, bareRe]) {
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      const raw = (m[1] || m[0]).split(" ")[0];
+      if (seen.has(raw)) continue;
+      seen.add(raw);
+      try { result.push(new URL(raw)); } catch {}
+    }
+  }
+  return result;
+}
+
+function categorizeLinks(urlObjects, baseHostname) {
+  let bookingUrl = null;
+  let payNowUrl = null;
+  const socialLinks = { instagram: null, facebook: null, tiktok: null, other: [] };
+  const pagesToScrape = new Set();
+  let linktreeUrl = null;
+  const bareBase = baseHostname.replace(/^www\./, "");
+
+  for (const url of urlObjects) {
+    const bare = url.hostname.replace(/^www\./, "");
+    const path = url.pathname.toLowerCase();
+
+    if (bare === "linktr.ee") {
+      if (!linktreeUrl) linktreeUrl = url.href;
+      continue;
+    }
+
+    if (!bookingUrl && BOOKING_DOMAINS.some(d => domainMatches(url.hostname, d))) {
+      bookingUrl = url.href;
+      continue;
+    }
+    if (!payNowUrl && PAYMENT_DOMAINS.some(d => domainMatches(url.hostname, d))) {
+      payNowUrl = url.href;
+      continue;
+    }
+
+    const socialDomain = SOCIAL_DOMAINS.find(d => domainMatches(url.hostname, d));
+    if (socialDomain) {
+      const key = SOCIAL_KEY_MAP[socialDomain] || null;
+      if (key && !socialLinks[key]) {
+        socialLinks[key] = url.href;
+      } else if (!key && !socialLinks.other.includes(url.href)) {
+        socialLinks.other.push(url.href);
+      }
+      continue;
+    }
+
+    if (bare === bareBase) {
+      const match =
+        SERVICE_PATTERNS.some(p => path === p || path.startsWith(p + "/")) ||
+        PROMO_PATTERNS.some(p => path === p || path.startsWith(p + "/")) ||
+        MENU_PATTERNS.some(p => path === p || path.startsWith(p + "/"));
+      if (match) pagesToScrape.add(url.href);
+    }
+  }
+
+  return { bookingUrl, payNowUrl, socialLinks, pagesToScrape: [...pagesToScrape], linktreeUrl };
 }
 
 function extractNavLinks(html, baseUrl) {
@@ -35,11 +127,7 @@ function extractNavLinks(html, baseUrl) {
     const text = match[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
     if (!href || !text) continue;
     if (/^(javascript:|mailto:|tel:|#)/i.test(href)) continue;
-    try {
-      href = new URL(href, baseUrl).href;
-    } catch {
-      continue;
-    }
+    try { href = new URL(href, baseUrl).href; } catch { continue; }
     if (seen.has(href)) continue;
     seen.add(href);
     links.push(`${text}: ${href}`);
@@ -63,7 +151,26 @@ function stripHtml(html) {
     .trim();
 }
 
-const EXTRACTION_PROMPT = `You are extracting business information from a website. Extract ONLY information that is explicitly present in the text or navigation links — do not make anything up or infer details not clearly stated.
+async function firecrawlScrape(url, apiKey, timeoutMs = 12000) {
+  try {
+    const res = await fetch("https://api.firecrawl.dev/v1/scrape", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!res.ok) return "";
+    const data = await res.json();
+    return data.data?.markdown || "";
+  } catch {
+    return "";
+  }
+}
+
+const EXTRACTION_PROMPT = `You are extracting business information from website content. Extract ONLY information explicitly present — do not invent or infer details.
 
 Return a JSON object with these fields (use null for any field not found):
 {
@@ -80,24 +187,20 @@ Return a JSON object with these fields (use null for any field not found):
     "zip": "string 5-digit zip or null"
   },
   "businessHours": "string (hours of operation if found, as plain text) or null",
-  "industry_hint": "string (one of: restaurant, dental, salon, barber, gym, lawncare, realestate, law, other — your best guess based on the content) or null",
-  "hasReservations": "true if reservations are offered, false if explicitly not offered, null if unknown",
-  "hasDelivery": "true if delivery or takeout is offered, false if explicitly not offered, null if unknown",
-  "menuUrl": "string (URL of the online menu page if found) or null"
+  "industry_hint": "string (one of: restaurant, dental, salon, barber, gym, lawncare, realestate, law, other) or null",
+  "hasReservations": true/false/null,
+  "hasDelivery": true/false/null,
+  "menuUrl": "string (URL of online menu if found) or null",
+  "bookingUrl": "string (URL of a booking or scheduling page visible in content, e.g. a calendly or square link) or null",
+  "payNowUrl": "string (URL of a payment page visible in content) or null",
+  "promotions": "string (any current deals, specials, discounts, or promotions mentioned, max 500 chars) or null",
+  "upcomingEvents": "string (any upcoming events, classes, or special dates mentioned, max 500 chars) or null",
+  "websiteKnowledge": "string (comprehensive knowledge base summary — services, pricing, policies, specialties, unique offerings, team, FAQ-style info; max 2000 chars) or null"
 }
 
-Address extraction rules:
-- Look for the address in the footer, contact sections, schema markup, and anywhere on the page
-- Common formats: '1337 Old Freeport Road, Pittsburgh, PA 15238' or '1337 Old Freeport Rd, Pittsburgh PA 15238'
-- Extract street, city, state abbreviation, and 5-digit zip separately
-- If contact page content is provided below, prioritize it for address and phone
-
-Navigation link rules:
-- If any link text or URL contains words like 'reservation', 'reserve', 'book a table', 'book now' → set hasReservations: true
-- If any link text or URL contains words like 'order online', 'delivery', 'takeout', 'doordash', 'ubereats', 'grubhub', 'order now' → set hasDelivery: true
-- If any link text or URL contains 'menu' → set menuUrl to that URL
-- Only set hasReservations or hasDelivery to false if the page explicitly states they are NOT offered
-- Default to null for these fields when there is no clear evidence either way
+Address rules: look in footer, contact sections, schema markup. Extract street/city/state/zip separately.
+hasReservations/hasDelivery: true only if explicitly offered, false only if explicitly NOT offered, null otherwise.
+websiteKnowledge: write as a rich paragraph the bot can draw on to answer any customer question. Include all useful details from all pages provided.
 
 Return ONLY valid JSON, no explanation, no markdown.`;
 
@@ -110,29 +213,27 @@ export async function POST(request) {
       return json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Read body first so we can apply different rate limits for paste vs URL fetch
     const body = await request.json();
     const { url, text: pastedText } = body;
     console.log("[import-website] received:", { hasUrl: !!url, hasText: !!pastedText, textLength: pastedText?.length });
 
-    // Paste path: higher limit (10/10min) — no external fetch, cheaper
-    // URL path: lower limit (3/10min) — external fetch + Claude
     const isPaste = pastedText != null;
     const rateLimitRoute = isPaste ? "/api/import-website/paste" : "/api/import-website/url";
     const rateLimitMax = isPaste ? 10 : 3;
     const { allowed } = await checkRateLimit(clientIp, rateLimitRoute, rateLimitMax, 600);
     if (!allowed) {
       await autoBlockIfAbusive(clientIp);
-      const waitMsg = isPaste
-        ? "Too many paste imports. Please wait 10 minutes and try again."
-        : "Too many import requests. Please wait 10 minutes and try again.";
-      return json({ error: waitMsg }, { status: 429 });
+      return json({
+        error: isPaste
+          ? "Too many paste imports. Please wait 10 minutes and try again."
+          : "Too many import requests. Please wait 10 minutes and try again.",
+      }, { status: 429 });
     }
 
-    let content; // plain text to send to Claude
+    let content;
+    let cat = null; // link categorization result
 
-    if (pastedText != null) {
-      // Manual paste path — skip fetching entirely
+    if (isPaste) {
       if (typeof pastedText !== "string") {
         return json({ error: "Invalid text" }, { status: 400 });
       }
@@ -144,7 +245,7 @@ export async function POST(request) {
         return json({ error: "Please paste more text from your website (at least a few sentences)" }, { status: 400 });
       }
     } else {
-      // URL fetch path
+      // ── URL path ──────────────────────────────────────────────────────
       if (!url || typeof url !== "string") {
         return json({ error: "URL is required" }, { status: 400 });
       }
@@ -153,96 +254,119 @@ export async function POST(request) {
       }
 
       let parsed;
-      try {
-        parsed = new URL(url);
-      } catch {
+      try { parsed = new URL(url); } catch {
         return json({ error: "Invalid URL format" }, { status: 400 });
       }
-
       if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
         return json({ error: "URL must use http:// or https://" }, { status: 400 });
       }
-
       if (isInternalHost(parsed.hostname)) {
         return json({ error: "URL must be a publicly accessible website" }, { status: 400 });
       }
 
       const fetchHeaders = {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       };
 
-      // Try Firecrawl first — returns clean markdown, handles JS-heavy sites
-      let firecrawlUsed = false;
       if (process.env.FIRECRAWL_API_KEY) {
-        try {
-          console.log("[firecrawl] attempting scrape of:", url);
-          const fcRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${process.env.FIRECRAWL_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
-            signal: AbortSignal.timeout(15000),
-          });
-          console.log("[firecrawl] response status:", fcRes.status);
-          if (fcRes.ok) {
-            const fcData = await fcRes.json();
-            const md = fcData.data?.markdown || "";
-            if (md.length > 100) {
-              content = md.slice(0, 9000);
-              firecrawlUsed = true;
-              console.log("[firecrawl] content length:", content.length);
-            }
-          }
-        } catch (e) {
-          console.log("[import-website] firecrawl failed, falling back:", e.message);
-        }
-      }
+        // ── Firecrawl path ───────────────────────────────────────────────
+        console.log("[firecrawl] scraping main page:", url);
+        const mainMd = await firecrawlScrape(url, process.env.FIRECRAWL_API_KEY, 15000);
+        console.log("[firecrawl] main page content length:", mainMd.length);
 
-      // Firecrawl path: if contact info may be on a separate page, fetch it via basic fetch
-      if (firecrawlUsed) {
+        if (mainMd.length < 100) {
+          return json({ error: "Could not extract readable content from that page" }, { status: 422 });
+        }
+
+        // Categorize all links found on the main page
+        const urlObjects = extractUrlObjects(mainMd, url);
+        cat = categorizeLinks(urlObjects, parsed.hostname);
+        console.log("[import] link categorization:", {
+          bookingUrl: cat.bookingUrl,
+          payNowUrl: cat.payNowUrl,
+          socialLinks: cat.socialLinks,
+          pagesToScrape: cat.pagesToScrape,
+          linktreeUrl: cat.linktreeUrl,
+        });
+
+        // Build scrape queue: priority pages + /about + /contact (max 4 total)
         const baseOrigin = `${parsed.protocol}//${parsed.host}`;
         const currentPath = parsed.pathname.replace(/\/$/, "");
-        const contactPaths = ["/contact", "/contact-us", "/about"].filter((p) => p !== currentPath);
-        for (const contactPath of contactPaths) {
-          try {
-            const contactRes = await fetch(`${baseOrigin}${contactPath}`, {
-              headers: fetchHeaders,
-              signal: AbortSignal.timeout(5000),
-              redirect: "follow",
-            });
-            if (contactRes.ok) {
-              const contactHtml = await contactRes.text();
-              const contactText = stripHtml(contactHtml).slice(0, 2000);
-              if (contactText.length > 50) {
-                content += `\n\nContact page content:\n${contactText}`;
-                console.log("[firecrawl] appended contact page:", contactPath);
-                break;
-              }
-            }
-          } catch {
-            // ignore — contact page missing or timed out
+        const scrapeQueue = [];
+
+        // 1. Service/promo/menu pages (up to 2)
+        for (const p of cat.pagesToScrape.slice(0, 2)) {
+          scrapeQueue.push(p);
+        }
+        // 2. Linktree (if found)
+        if (cat.linktreeUrl && scrapeQueue.length < 4) {
+          scrapeQueue.push(cat.linktreeUrl);
+        }
+        // 3. /contact and /about
+        for (const path of ["/contact", "/contact-us", "/about"]) {
+          if (scrapeQueue.length >= 4) break;
+          const pageUrl = `${baseOrigin}${path}`;
+          if (path !== currentPath && !scrapeQueue.includes(pageUrl)) {
+            scrapeQueue.push(pageUrl);
           }
         }
-      }
 
-      if (!firecrawlUsed) {
-        console.log("[firecrawl] falling back to basic fetch");
-        // Fall back to basic fetch + HTML strip
+        console.log("[import] scraping additional pages:", scrapeQueue);
+
+        const additionalResults = await Promise.allSettled(
+          scrapeQueue.map(pageUrl => firecrawlScrape(pageUrl, process.env.FIRECRAWL_API_KEY, 10000))
+        );
+
+        // Combine all content, max 12000 chars
+        let combined = mainMd.slice(0, 9000);
+
+        for (let i = 0; i < additionalResults.length; i++) {
+          if (additionalResults[i].status !== "fulfilled") continue;
+          const pageMd = additionalResults[i].value;
+          if (!pageMd || pageMd.length < 50) continue;
+
+          // If this is the linktree page, mine it for more booking/social/payment links
+          if (cat.linktreeUrl && scrapeQueue[i] === cat.linktreeUrl) {
+            const ltUrls = extractUrlObjects(pageMd, cat.linktreeUrl);
+            for (const ltu of ltUrls) {
+              if (!cat.bookingUrl && BOOKING_DOMAINS.some(d => domainMatches(ltu.hostname, d))) {
+                cat.bookingUrl = ltu.href;
+              }
+              if (!cat.payNowUrl && PAYMENT_DOMAINS.some(d => domainMatches(ltu.hostname, d))) {
+                cat.payNowUrl = ltu.href;
+              }
+              const socialDomain = SOCIAL_DOMAINS.find(d => domainMatches(ltu.hostname, d));
+              if (socialDomain) {
+                const key = SOCIAL_KEY_MAP[socialDomain] || null;
+                if (key && !cat.socialLinks[key]) {
+                  cat.socialLinks[key] = ltu.href;
+                } else if (!key && !cat.socialLinks.other.includes(ltu.href)) {
+                  cat.socialLinks.other.push(ltu.href);
+                }
+              }
+            }
+          }
+
+          const available = 12000 - combined.length;
+          if (available <= 100) break;
+          combined += `\n\n---\n${pageMd.slice(0, Math.min(available, 2500))}`;
+        }
+
+        content = combined;
+        console.log("[firecrawl] combined content length:", content.length);
+      } else {
+        // ── Basic fetch fallback ─────────────────────────────────────────
+        console.log("[import] no Firecrawl — basic fetch");
         const baseOrigin = `${parsed.protocol}//${parsed.host}`;
         const currentPath = parsed.pathname.replace(/\/$/, "");
         const contactUrls = ["/contact", "/contact-us"]
-          .filter((p) => p !== currentPath)
-          .map((p) => `${baseOrigin}${p}`);
+          .filter(p => p !== currentPath)
+          .map(p => `${baseOrigin}${p}`);
 
         const [mainResult, ...contactResults] = await Promise.allSettled([
           fetch(url, { headers: fetchHeaders, signal: AbortSignal.timeout(10000), redirect: "follow" }),
-          ...contactUrls.map((cu) =>
-            fetch(cu, { headers: fetchHeaders, signal: AbortSignal.timeout(7000), redirect: "follow" })
-          ),
+          ...contactUrls.map(cu => fetch(cu, { headers: fetchHeaders, signal: AbortSignal.timeout(7000), redirect: "follow" })),
         ]);
 
         if (mainResult.status === "rejected" || !mainResult.value.ok) {
@@ -251,18 +375,20 @@ export async function POST(request) {
         const html = await mainResult.value.text();
 
         const navLinks = extractNavLinks(html, url);
-        console.log("[import-website] nav links found:", navLinks.slice(0, 20));
-        content = stripHtml(html).slice(0, 7000);
+        console.log("[import] nav links found:", navLinks.slice(0, 20));
 
+        // Categorize links from the HTML
+        const urlObjects = extractUrlObjects(html, url);
+        cat = categorizeLinks(urlObjects, parsed.hostname);
+
+        content = stripHtml(html).slice(0, 7000);
         if (content.length < 50) {
           return json({ error: "Could not extract readable content from that page" }, { status: 422 });
         }
-
         if (navLinks.length > 0) {
           content += `\n\nNavigation links found:\n${navLinks.join("\n")}`;
         }
 
-        // Append the first usable contact page as an extra address/phone source
         for (const result of contactResults) {
           if (result.status === "fulfilled" && result.value.ok) {
             try {
@@ -271,24 +397,18 @@ export async function POST(request) {
               if (contactText.length > 50) {
                 content += `\n\nContact page content:\n${contactText}`;
               }
-            } catch {
-              // ignore
-            }
+            } catch {}
             break;
           }
         }
       }
     }
 
+    // ── Claude extraction ─────────────────────────────────────────────────
     const response = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "user",
-          content: `${EXTRACTION_PROMPT}\n\nWebsite text:\n${content}`,
-        },
-      ],
+      max_tokens: 2048,
+      messages: [{ role: "user", content: `${EXTRACTION_PROMPT}\n\nWebsite content:\n${content}` }],
     });
 
     const raw = response.content?.[0]?.text ?? "";
@@ -304,8 +424,8 @@ export async function POST(request) {
       return json({ error: "Could not parse extracted data" }, { status: 422 });
     }
 
-    // Claude occasionally wraps string values in extra quotes — strip them
-    for (const key of ["supportPhone", "supportEmail", "businessName", "websiteUrl", "menuUrl", "businessHours"]) {
+    // Strip extra quotes from string fields
+    for (const key of ["supportPhone", "supportEmail", "businessName", "websiteUrl", "menuUrl", "businessHours", "bookingUrl", "payNowUrl"]) {
       if (typeof extracted[key] === "string") {
         extracted[key] = extracted[key].replace(/^["']+|["']+$/g, "").trim() || null;
       }
@@ -321,17 +441,35 @@ export async function POST(request) {
     if (typeof extracted.servicesDescription === "string" && extracted.servicesDescription.length > 300) {
       extracted.servicesDescription = extracted.servicesDescription.slice(0, 297) + "...";
     }
+    if (typeof extracted.promotions === "string" && extracted.promotions.length > 1000) {
+      extracted.promotions = extracted.promotions.slice(0, 997) + "...";
+    }
+    if (typeof extracted.upcomingEvents === "string" && extracted.upcomingEvents.length > 1000) {
+      extracted.upcomingEvents = extracted.upcomingEvents.slice(0, 997) + "...";
+    }
+    if (typeof extracted.websiteKnowledge === "string" && extracted.websiteKnowledge.length > 2000) {
+      extracted.websiteKnowledge = extracted.websiteKnowledge.slice(0, 1997) + "...";
+    }
 
-    // Gym boolean fields can't be inferred from page text or nav links — force null
-    // so the bot never falsely claims "no free trial", "no group classes", etc.
     if (extracted.industry_hint === "gym") {
       extracted.hasFreeTrial = null;
       extracted.hasClasses = null;
       extracted.hasTrainers = null;
     }
 
-    console.log("[import-website] Claude extracted:", JSON.stringify(extracted, null, 2));
+    // ── Merge link categorization results (takes priority over Claude) ────
+    if (cat) {
+      if (cat.bookingUrl) extracted.bookingUrl = cat.bookingUrl;
+      if (cat.payNowUrl) extracted.payNowUrl = cat.payNowUrl;
 
+      const { socialLinks } = cat;
+      const hasSocial = socialLinks.instagram || socialLinks.facebook || socialLinks.tiktok || socialLinks.other.length > 0;
+      extracted.socialLinks = hasSocial ? socialLinks : null;
+    } else {
+      extracted.socialLinks = null;
+    }
+
+    console.log("[import-website] extracted:", JSON.stringify(extracted, null, 2));
     return json({ extracted });
   } catch (error) {
     console.error("[api/import-website] error:", error);
