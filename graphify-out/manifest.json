@@ -1,0 +1,332 @@
+{
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\.claude\\settings.local.json": {
+    "mtime": 1781460505.889837,
+    "ast_hash": "8ed5f98fe7b85cb46cfad08222441131",
+    "semantic_hash": "8ed5f98fe7b85cb46cfad08222441131"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\app\\api\\chat\\route.js": {
+    "mtime": 1781220165.8396592,
+    "ast_hash": "de8cc3a6e75e08fd6526b13ae15eba22",
+    "semantic_hash": "de8cc3a6e75e08fd6526b13ae15eba22"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\app\\api\\widget\\route.js": {
+    "mtime": 1781034869.8110983,
+    "ast_hash": "d6c8197369e2548f27fdb085bb4f5fd7",
+    "semantic_hash": "d6c8197369e2548f27fdb085bb4f5fd7"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\app\\builder\\page.js": {
+    "mtime": 1781220165.8356607,
+    "ast_hash": "f176a72d7108fd0dff4af74bb8afe81b",
+    "semantic_hash": "f176a72d7108fd0dff4af74bb8afe81b"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\app\\coming-soon\\page.js": {
+    "mtime": 1780250677.5314567,
+    "ast_hash": "cbb4d5bde487755f6b16b095bcf53f57",
+    "semantic_hash": "cbb4d5bde487755f6b16b095bcf53f57"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\app\\dashboard\\page.js": {
+    "mtime": 1781458175.726107,
+    "ast_hash": "ed82f77dff840ef11aa8673f718b0e3f",
+    "semantic_hash": "ed82f77dff840ef11aa8673f718b0e3f"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\app\\layout.tsx": {
+    "mtime": 1781458187.069454,
+    "ast_hash": "3042fa900657bd809e32bdcabcc7ad53",
+    "semantic_hash": "3042fa900657bd809e32bdcabcc7ad53"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\app\\login\\page.js": {
+    "mtime": 1781458158.5243275,
+    "ast_hash": "6d0da67b28c78a730dc1ba55d3454c3e",
+    "semantic_hash": "6d0da67b28c78a730dc1ba55d3454c3e"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\app\\page.js": {
+    "mtime": 1780798402.0930572,
+    "ast_hash": "7467924d0d11d555577aa27f0ccbd4c6",
+    "semantic_hash": "7467924d0d11d555577aa27f0ccbd4c6"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\app\\signup\\page.js": {
+    "mtime": 1781458142.4756026,
+    "ast_hash": "b0029a70239fecb937c3801a68eebb65",
+    "semantic_hash": "b0029a70239fecb937c3801a68eebb65"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\app\\success\\page.js": {
+    "mtime": 1781220165.8396592,
+    "ast_hash": "f1660f46586a3b6905436eb69f67b5f4",
+    "semantic_hash": "f1660f46586a3b6905436eb69f67b5f4"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\app\\test-widget\\page.js": {
+    "mtime": 1781220165.8396592,
+    "ast_hash": "522952fdd53ede53c31d301197567bc4",
+    "semantic_hash": "522952fdd53ede53c31d301197567bc4"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\components\\AuthProvider.jsx": {
+    "mtime": 1781458180.0285804,
+    "ast_hash": "a51249c22bd3a30b7a863262347ed75e",
+    "semantic_hash": "a51249c22bd3a30b7a863262347ed75e"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\components\\ChatWidget.jsx": {
+    "mtime": 1781220165.8396592,
+    "ast_hash": "339373a5571224f40c672270521bb094",
+    "semantic_hash": "339373a5571224f40c672270521bb094"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\components\\DemoChatSection.jsx": {
+    "mtime": 1780018514.2130146,
+    "ast_hash": "23c08d68ec568b7591fe45b7426b08c9",
+    "semantic_hash": "23c08d68ec568b7591fe45b7426b08c9"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\components\\builder\\AddressInput.jsx": {
+    "mtime": 1781220165.8396592,
+    "ast_hash": "c6cffbeb5e4da97aca661994d9bb75c6",
+    "semantic_hash": "c6cffbeb5e4da97aca661994d9bb75c6"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\components\\builder\\BrandColorPicker.jsx": {
+    "mtime": 1780021352.1282692,
+    "ast_hash": "7f4378d614f3d9cbfa04fe46453fe46a",
+    "semantic_hash": "7f4378d614f3d9cbfa04fe46453fe46a"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\components\\builder\\BuilderPageClient.jsx": {
+    "mtime": 1780250543.0616713,
+    "ast_hash": "9f88ba9460fed44ea8de8bde3e64dbb3",
+    "semantic_hash": "9f88ba9460fed44ea8de8bde3e64dbb3"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\components\\builder\\BusinessHoursEditor.jsx": {
+    "mtime": 1781220165.8376615,
+    "ast_hash": "c4b26ab898f7cc916c999bc04ce8e46b",
+    "semantic_hash": "c4b26ab898f7cc916c999bc04ce8e46b"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\components\\builder\\ChatThemeSelector.jsx": {
+    "mtime": 1780249764.5730684,
+    "ast_hash": "0567e021bdf5e76d4df27eda6b716035",
+    "semantic_hash": "0567e021bdf5e76d4df27eda6b716035"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\components\\builder\\FieldTooltip.jsx": {
+    "mtime": 1781220165.8396592,
+    "ast_hash": "3616ff8dc5b471c87b07060eae144488",
+    "semantic_hash": "3616ff8dc5b471c87b07060eae144488"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\components\\builder\\FormField.jsx": {
+    "mtime": 1781220165.8386586,
+    "ast_hash": "d2616977c85c5e0921ca508ec2384fa4",
+    "semantic_hash": "d2616977c85c5e0921ca508ec2384fa4"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\components\\builder\\IndustrySelector.jsx": {
+    "mtime": 1780021348.1007495,
+    "ast_hash": "7b902a70641bf02404973725534f8ef6",
+    "semantic_hash": "7b902a70641bf02404973725534f8ef6"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\components\\builder\\QuickRepliesEditor.jsx": {
+    "mtime": 1780021368.0253408,
+    "ast_hash": "7b727de826d58befa0dfa3f2f1239700",
+    "semantic_hash": "7b727de826d58befa0dfa3f2f1239700"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\components\\landing\\ContactSection.jsx": {
+    "mtime": 1780018446.8994756,
+    "ast_hash": "4285cb2162e247d2c3bbabee5a2fd1bb",
+    "semantic_hash": "4285cb2162e247d2c3bbabee5a2fd1bb"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\components\\landing\\FAQSection.jsx": {
+    "mtime": 1780018438.3295717,
+    "ast_hash": "bb4a7a91cf2974c1b433c801336a30b5",
+    "semantic_hash": "bb4a7a91cf2974c1b433c801336a30b5"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\components\\landing\\HeroSection.jsx": {
+    "mtime": 1780018461.1979735,
+    "ast_hash": "ae94331b52737c407bc67d789387e030",
+    "semantic_hash": "ae94331b52737c407bc67d789387e030"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\components\\landing\\LandingNav.jsx": {
+    "mtime": 1781458214.1091313,
+    "ast_hash": "53ad2e50d79f9c911c760655aa8373b0",
+    "semantic_hash": "53ad2e50d79f9c911c760655aa8373b0"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\components\\mascots\\MascotCharacter.jsx": {
+    "mtime": 1780249543.9470675,
+    "ast_hash": "e391750743f7553eefb29db9678e4434",
+    "semantic_hash": "e391750743f7553eefb29db9678e4434"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\eslint.config.mjs": {
+    "mtime": 1778618014.5410197,
+    "ast_hash": "dfa1f5f6a7037bf39dc510f30b180002",
+    "semantic_hash": "dfa1f5f6a7037bf39dc510f30b180002"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\lib\\AuthContext.js": {
+    "mtime": 1781458121.9491725,
+    "ast_hash": "89426048ad8378a0183d451dc0167735",
+    "semantic_hash": "89426048ad8378a0183d451dc0167735"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\lib\\builder-address.js": {
+    "mtime": 1780022029.906226,
+    "ast_hash": "a029272d7d624d2b1d61fe82e0b29257",
+    "semantic_hash": "a029272d7d624d2b1d61fe82e0b29257"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\lib\\builder-colors.js": {
+    "mtime": 1780019112.1627126,
+    "ast_hash": "55fd8694dcab4c566e01ad8b6a578e8f",
+    "semantic_hash": "55fd8694dcab4c566e01ad8b6a578e8f"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\lib\\builder-form.js": {
+    "mtime": 1780021318.9456546,
+    "ast_hash": "5be04e8bccbbb8cc2ab25e2c56e733c9",
+    "semantic_hash": "5be04e8bccbbb8cc2ab25e2c56e733c9"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\lib\\builder-hours.js": {
+    "mtime": 1780019098.2288013,
+    "ast_hash": "8823269535eca826fba4ac81df14250d",
+    "semantic_hash": "8823269535eca826fba4ac81df14250d"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\lib\\builder-quick-replies.js": {
+    "mtime": 1780019109.1321807,
+    "ast_hash": "11132a414e7bb44f9ddf4fa3b0e87575",
+    "semantic_hash": "11132a414e7bb44f9ddf4fa3b0e87575"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\lib\\builder-validation.js": {
+    "mtime": 1781220165.8396592,
+    "ast_hash": "2e1609295113fa8549a87418d275d855",
+    "semantic_hash": "2e1609295113fa8549a87418d275d855"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\lib\\chat-themes.js": {
+    "mtime": 1780249761.1743543,
+    "ast_hash": "55b7711422a25467342d7bd0f78b661c",
+    "semantic_hash": "55b7711422a25467342d7bd0f78b661c"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\lib\\chatbot-config.js": {
+    "mtime": 1781220165.8396592,
+    "ast_hash": "fa46fc4b058d16e3849db64834a6e02b",
+    "semantic_hash": "fa46fc4b058d16e3849db64834a6e02b"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\lib\\color.js": {
+    "mtime": 1780017683.9152684,
+    "ast_hash": "e2c2313299e82b5b2bdda051eb3e2d61",
+    "semantic_hash": "e2c2313299e82b5b2bdda051eb3e2d61"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\lib\\industries.js": {
+    "mtime": 1781220165.8396592,
+    "ast_hash": "0cb11163cec3402f99567723c308f079",
+    "semantic_hash": "0cb11163cec3402f99567723c308f079"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\lib\\supabase.js": {
+    "mtime": 1780882847.8786197,
+    "ast_hash": "61b791e916df1c26eafae990e47185c2",
+    "semantic_hash": "61b791e916df1c26eafae990e47185c2"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\lib\\us-states.js": {
+    "mtime": 1780022021.363248,
+    "ast_hash": "1380e9ea364e81b0990b60f452bea65d",
+    "semantic_hash": "1380e9ea364e81b0990b60f452bea65d"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\middleware.js": {
+    "mtime": 1781036200.3051915,
+    "ast_hash": "65e6cf6cdcd2594e31d957823c887313",
+    "semantic_hash": "65e6cf6cdcd2594e31d957823c887313"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\next.config.ts": {
+    "mtime": 1781035553.7943494,
+    "ast_hash": "8f7267cf0d49a2ae36840de71ec105b1",
+    "semantic_hash": "8f7267cf0d49a2ae36840de71ec105b1"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\package.json": {
+    "mtime": 1780882860.5935638,
+    "ast_hash": "272a7eec27d044a573dd03ac29f0022c",
+    "semantic_hash": "272a7eec27d044a573dd03ac29f0022c"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\postcss.config.mjs": {
+    "mtime": 1778618014.573748,
+    "ast_hash": "239f3ebf717465dc636818a1a619398d",
+    "semantic_hash": "239f3ebf717465dc636818a1a619398d"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\public\\widget.js": {
+    "mtime": 1781220165.8376615,
+    "ast_hash": "bd57a6598ba527fa4a297ee7201b9db6",
+    "semantic_hash": "bd57a6598ba527fa4a297ee7201b9db6"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\tsconfig.json": {
+    "mtime": 1779742260.8317108,
+    "ast_hash": "68e5f6286a5fe4af4f024b42980dff2e",
+    "semantic_hash": "68e5f6286a5fe4af4f024b42980dff2e"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\AGENTS.md": {
+    "mtime": 1778618132.0085857,
+    "ast_hash": "9e09241799026ac05be315a2f0b50055",
+    "semantic_hash": "9e09241799026ac05be315a2f0b50055"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\CLAUDE.md": {
+    "mtime": 1781226788.8248463,
+    "ast_hash": "ef41315fe1253198b13579c9ec0cbcf7",
+    "semantic_hash": "ef41315fe1253198b13579c9ec0cbcf7"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\README.md": {
+    "mtime": 1778618014.5159771,
+    "ast_hash": "f15aaa42d5d299d091b1171097ea56ad",
+    "semantic_hash": "f15aaa42d5d299d091b1171097ea56ad"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\public\\file.svg": {
+    "mtime": 1778618014.5840597,
+    "ast_hash": "d09f95206c3fa0bb9bd9fefabfd0ea71",
+    "semantic_hash": "d09f95206c3fa0bb9bd9fefabfd0ea71"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\public\\globe.svg": {
+    "mtime": 1778618014.5983746,
+    "ast_hash": "2aaafa6a49b6563925fe440891e32717",
+    "semantic_hash": "2aaafa6a49b6563925fe440891e32717"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\public\\mascots\\barber.png": {
+    "mtime": 1780248319.5987911,
+    "ast_hash": "8cf6f1d7ca00a8cc9b9474a4be74a59b",
+    "semantic_hash": "8cf6f1d7ca00a8cc9b9474a4be74a59b"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\public\\mascots\\dental.png": {
+    "mtime": 1780248287.5842605,
+    "ast_hash": "267bb13e65a033abe2d63adb02807611",
+    "semantic_hash": "267bb13e65a033abe2d63adb02807611"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\public\\mascots\\gym.png": {
+    "mtime": 1780248294.5274675,
+    "ast_hash": "8b99ddd63567fd36a2b40c4af80f1763",
+    "semantic_hash": "8b99ddd63567fd36a2b40c4af80f1763"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\public\\mascots\\law.png": {
+    "mtime": 1780248315.2306042,
+    "ast_hash": "f10ae7ed72ef9525be051aceb586089a",
+    "semantic_hash": "f10ae7ed72ef9525be051aceb586089a"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\public\\mascots\\lawncare.png": {
+    "mtime": 1780248324.2032156,
+    "ast_hash": "0bcb38b65755d4a5caa1756eeab328fe",
+    "semantic_hash": "0bcb38b65755d4a5caa1756eeab328fe"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\public\\mascots\\other.png": {
+    "mtime": 1780248329.1515343,
+    "ast_hash": "d2f77d2b2dd58420a29dd281178fbf66",
+    "semantic_hash": "d2f77d2b2dd58420a29dd281178fbf66"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\public\\mascots\\realestate.png": {
+    "mtime": 1780248310.6330273,
+    "ast_hash": "b888cb1116fc9c7a1fa28138396fe469",
+    "semantic_hash": "b888cb1116fc9c7a1fa28138396fe469"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\public\\mascots\\restaurant.png": {
+    "mtime": 1780248305.9517446,
+    "ast_hash": "f232bc116d2e1689faa124c0deb2af14",
+    "semantic_hash": "f232bc116d2e1689faa124c0deb2af14"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\public\\mascots\\salon.png": {
+    "mtime": 1780248300.6464581,
+    "ast_hash": "7643eb848a363f2665b893e2c66d5f61",
+    "semantic_hash": "7643eb848a363f2665b893e2c66d5f61"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\public\\next.svg": {
+    "mtime": 1778618014.6117105,
+    "ast_hash": "8e061864f388b47f33a1c3780831193e",
+    "semantic_hash": "8e061864f388b47f33a1c3780831193e"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\public\\vercel.svg": {
+    "mtime": 1778618014.6255858,
+    "ast_hash": "c0af2f507b369b085b35ef4bbe3bcf1e",
+    "semantic_hash": "c0af2f507b369b085b35ef4bbe3bcf1e"
+  },
+  "C:\\Users\\gowan\\OneDrive\\Desktop\\projects\\chathost\\public\\window.svg": {
+    "mtime": 1778618014.638879,
+    "ast_hash": "a2760511c65806022ad20adf74370ff3",
+    "semantic_hash": "a2760511c65806022ad20adf74370ff3"
+  }
+}

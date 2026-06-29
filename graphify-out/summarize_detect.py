@@ -1,0 +1,16 @@
+import json
+from pathlib import Path
+result = json.loads(Path('graphify-out/.graphify_detect.json').read_text(encoding='utf-8'))
+code = len(result['files'].get('code', []))
+docs = len(result['files'].get('document', []))
+papers = len(result['files'].get('paper', []))
+images = len(result['files'].get('image', []))
+total = result.get('total_files', code+docs+papers+images)
+words = result.get('total_words', 0)
+print(f'Corpus: {total} files  ~{words:,} words')
+print(f'  code:  {code} files')
+if docs:   print(f'  docs:  {docs} files')
+if papers: print(f'  papers:{papers} files')
+if images: print(f'  images:{images} files')
+skipped = result.get('skipped_sensitive', [])
+if skipped: print(f'  skipped sensitive: {len(skipped)} files')
