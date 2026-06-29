@@ -341,12 +341,11 @@ export default function BuilderPageClient() {
     setErrors({});
     setSummary([]);
     window.scrollTo({ top: 0, behavior: "instant" });
-    // When advancing to step 2, auto-expand sections that need completion
     if (step === 1) {
       setExpandedSections({
-        businessInfo: !form.businessName.trim() || !form.businessDescription.trim() || !form.servicesDescription.trim() || (!isBasic && !form.industry),
-        contact: !form.supportPhone.trim() || !form.supportEmail.trim(),
-        location: !form.address.street.trim() || !form.address.city.trim() || !form.address.state || !form.address.zip.trim(),
+        businessInfo: !(form.businessName.trim() && form.businessDescription.trim()),
+        contact: !(form.supportPhone.trim() && form.supportEmail.trim()),
+        location: !(form.address.street.trim() && form.address.city.trim() && form.address.state),
         hours: false,
         industryDetails: false,
       });
@@ -440,6 +439,10 @@ export default function BuilderPageClient() {
 
       console.log("[handleImport] patch:", JSON.stringify(patch, null, 2));
       update(patch);
+      setTimeout(() => {
+        console.log("[after update] form.supportPhone:", form.supportPhone);
+        console.log("[after update] form.address:", form.address);
+      }, 100);
 
       if (extracted.businessHours) {
         setHoursNote(`Hours found: "${extracted.businessHours}" — please set them manually in the hours section below.`);
@@ -922,11 +925,12 @@ export default function BuilderPageClient() {
                     showValidation={showValidation}
                     error={errors.businessDescription}
                     isValid={fieldValid("businessDescription", (f) => validateBusinessDescription(f.businessDescription))}
-                    counter={<span className={`text-xs ${descLen >= 50 ? "text-green-600" : "text-[#4A5568]"}`}>{descLen}/50</span>}
+                    counter={<span className={`text-xs ${descLen >= 50 ? "text-green-600" : "text-[#4A5568]"}`}>{descLen}/500</span>}
                   >
                     <textarea
                       id="business-description"
                       rows={4}
+                      maxLength={500}
                       value={form.businessDescription}
                       onChange={(e) => update({ businessDescription: e.target.value })}
                       placeholder="Tell customers about your business, mission, and what makes you unique…"
@@ -940,11 +944,12 @@ export default function BuilderPageClient() {
                     showValidation={showValidation}
                     error={errors.servicesDescription}
                     isValid={fieldValid("servicesDescription", (f) => validateServicesDescription(f.servicesDescription))}
-                    counter={<span className={`text-xs ${svcLen >= 20 ? "text-green-600" : "text-[#4A5568]"}`}>{svcLen}/20</span>}
+                    counter={<span className={`text-xs ${svcLen >= 20 ? "text-green-600" : "text-[#4A5568]"}`}>{svcLen}/300</span>}
                   >
                     <textarea
                       id="services"
                       rows={3}
+                      maxLength={300}
                       value={form.servicesDescription}
                       onChange={(e) => update({ servicesDescription: e.target.value })}
                       placeholder="List your main services, packages, or specialties…"
