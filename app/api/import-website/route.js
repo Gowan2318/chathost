@@ -555,6 +555,73 @@ export async function POST(request) {
       }
     }
 
+    // ── Search fallback: find missing phone/email via Firecrawl web search ──
+    const needsPhone = !extracted.supportPhone;
+    const needsEmail = !extracted.supportEmail;
+
+    if ((needsPhone || needsEmail) && extracted.businessName && process.env.FIRECRAWL_API_KEY) {
+      try {
+        console.log("[import] using search fallback for missing contact info");
+        const city = extracted.address?.city || "";
+        const searchQuery = `${extracted.businessName} ${city} phone email contact`.trim();
+
+        const searchResponse = await fetch("https://api.firecrawl.dev/v1/search", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${process.env.FIRECRAWL_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ query: searchQuery, limit: 3, scrapeOptions: { formats: ["markdown"] } }),
+          signal: AbortSignal.timeout(10000),
+        });
+
+        if (searchResponse.ok) {
+          const searchData = await searchResponse.json();
+          const searchContent = (searchData.data || [])
+            .map((r) => r.markdown || r.description || "")
+            .join("\n")
+            .slice(0, 3000);
+
+          if (searchContent.length > 50) {
+            const searchPrompt =
+              `Extract ONLY the phone number and email address from this search result content for the business "${extracted.businessName}". ` +
+              `Prefer results that explicitly mention the business name. ` +
+              `Return JSON: { "supportPhone": "string or null", "supportEmail": "string or null" }. ` +
+              `Return ONLY valid JSON, no explanation.\n\nContent:\n${searchContent}`;
+
+            const searchResp = await client.messages.create({
+              model: "claude-haiku-4-5-20251001",
+              max_tokens: 128,
+              messages: [{ role: "user", content: searchPrompt }],
+            });
+
+            const searchRaw = searchResp.content?.[0]?.text ?? "";
+            const searchMatch = searchRaw.match(/\{[\s\S]*\}/);
+            if (searchMatch) {
+              let searchExtracted;
+              try { searchExtracted = JSON.parse(searchMatch[0]); } catch {}
+
+              if (searchExtracted) {
+                if (needsPhone && searchExtracted.supportPhone) {
+                  const digits = String(searchExtracted.supportPhone).replace(/\D/g, "");
+                  if (digits.length >= 10 && digits.length <= 11) {
+                    extracted.supportPhone = searchExtracted.supportPhone;
+                    console.log("[import] search fallback filled phone:", extracted.supportPhone);
+                  }
+                }
+                if (needsEmail && isRealEmail(searchExtracted.supportEmail)) {
+                  extracted.supportEmail = searchExtracted.supportEmail;
+                  console.log("[import] search fallback filled email:", extracted.supportEmail);
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.log("[import] search fallback failed (non-fatal):", e.message);
+      }
+    }
+
     // ── Merge link categorization results (takes priority over Claude) ────
     const toHttps = (u) => (typeof u === "string" ? u.replace(/^http:\/\//, "https://") : u);
 
