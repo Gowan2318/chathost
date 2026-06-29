@@ -439,10 +439,6 @@ export default function BuilderPageClient() {
 
       console.log("[handleImport] patch:", JSON.stringify(patch, null, 2));
       update(patch);
-      setTimeout(() => {
-        console.log("[after update] form.supportPhone:", form.supportPhone);
-        console.log("[after update] form.address:", form.address);
-      }, 100);
 
       if (extracted.businessHours) {
         setHoursNote(`Hours found: "${extracted.businessHours}" — please set them manually in the hours section below.`);
