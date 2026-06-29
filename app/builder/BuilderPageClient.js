@@ -481,7 +481,7 @@ export default function BuilderPageClient() {
 
       setExpandedSections({
         businessInfo: !!(patch.businessName || patch.businessDescription || patch.servicesDescription),
-        contact: !!(patch.supportPhone || patch.supportEmail),
+        contact: !!(patch.supportPhone || patch.supportEmail || patch.bookingUrl || patch.payNowUrl),
         location: !!(patch.address?.street || patch.address?.city),
         hours: !!extracted.businessHours,
         industryDetails: !!(patch.hasReservations !== undefined || patch.hasDelivery !== undefined || patch.menuUrl),
@@ -583,7 +583,7 @@ export default function BuilderPageClient() {
 
       setExpandedSections({
         businessInfo: !!(patch.businessName || patch.businessDescription || patch.servicesDescription),
-        contact: !!(patch.supportPhone || patch.supportEmail),
+        contact: !!(patch.supportPhone || patch.supportEmail || patch.bookingUrl || patch.payNowUrl),
         location: !!(patch.address?.street || patch.address?.city),
         hours: !!extracted.businessHours,
         industryDetails: !!(patch.hasReservations !== undefined || patch.hasDelivery !== undefined || patch.menuUrl),
