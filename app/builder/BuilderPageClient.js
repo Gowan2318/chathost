@@ -448,13 +448,12 @@ export default function BuilderPageClient() {
       setImportStatus("success");
       setImportDone(true);
 
-      // Auto-expand step 2 sections that are still missing data; collapse filled ones
       setExpandedSections({
-        businessInfo: !patch.businessName || !patch.businessDescription || !patch.servicesDescription || (!isBasic && !patch.industry),
-        contact: !patch.supportPhone || !patch.supportEmail,
-        location: !patch.address?.street || !patch.address?.city || !patch.address?.state || !patch.address?.zip,
+        businessInfo: !!(patch.businessName || patch.businessDescription || patch.servicesDescription),
+        contact: !!(patch.supportPhone || patch.supportEmail),
+        location: !!(patch.address?.street || patch.address?.city),
         hours: false,
-        industryDetails: false,
+        industryDetails: !!(patch.hasReservations !== undefined || patch.hasDelivery !== undefined || patch.menuUrl),
       });
 
       // Advance to step 2 so the user can see all pre-filled fields immediately
@@ -524,13 +523,12 @@ export default function BuilderPageClient() {
       setImportStatus("success");
       setImportDone(true);
 
-      // Auto-expand step 2 sections that are still missing data; collapse filled ones
       setExpandedSections({
-        businessInfo: !patch.businessName || !patch.businessDescription || !patch.servicesDescription || (!isBasic && !patch.industry),
-        contact: !patch.supportPhone || !patch.supportEmail,
-        location: !patch.address?.street || !patch.address?.city || !patch.address?.state || !patch.address?.zip,
+        businessInfo: !!(patch.businessName || patch.businessDescription || patch.servicesDescription),
+        contact: !!(patch.supportPhone || patch.supportEmail),
+        location: !!(patch.address?.street || patch.address?.city),
         hours: false,
-        industryDetails: false,
+        industryDetails: !!(patch.hasReservations !== undefined || patch.hasDelivery !== undefined || patch.menuUrl),
       });
 
       // Advance to step 2 so the user can see all pre-filled fields immediately
