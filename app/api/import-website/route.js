@@ -563,7 +563,13 @@ export async function POST(request) {
       try {
         console.log("[import] using search fallback for missing contact info");
         const city = extracted.address?.city || "";
-        const searchQuery = `${extracted.businessName} ${city} phone email contact`.trim();
+        const businessName = extracted.businessName;
+
+        // Primary query: target third-party listing sites
+        const searchQuery = `"${businessName}" "${city}" site:yelp.com OR site:google.com OR site:facebook.com OR site:yellowpages.com`.trim();
+        console.log("[search fallback] query:", searchQuery);
+
+        let searchData = null;
 
         const searchResponse = await fetch("https://api.firecrawl.dev/v1/search", {
           method: "POST",
@@ -576,43 +582,81 @@ export async function POST(request) {
         });
 
         if (searchResponse.ok) {
-          const searchData = await searchResponse.json();
-          const searchContent = (searchData.data || [])
-            .map((r) => r.markdown || r.description || "")
-            .join("\n")
-            .slice(0, 3000);
+          searchData = await searchResponse.json();
+        }
 
-          if (searchContent.length > 50) {
-            const searchPrompt =
-              `Extract ONLY the phone number and email address from this search result content for the business "${extracted.businessName}". ` +
-              `Prefer results that explicitly mention the business name. ` +
-              `Return JSON: { "supportPhone": "string or null", "supportEmail": "string or null" }. ` +
-              `Return ONLY valid JSON, no explanation.\n\nContent:\n${searchContent}`;
+        console.log("[search fallback] search results count:", searchData?.data?.length);
 
-            const searchResp = await client.messages.create({
-              model: "claude-haiku-4-5-20251001",
-              max_tokens: 128,
-              messages: [{ role: "user", content: searchPrompt }],
-            });
+        // Fall back to generic query if primary returns no results
+        if (!searchData?.data?.length) {
+          const searchQuery2 = `"${businessName}" ${city} phone number address`.trim();
+          console.log("[search fallback] fallback query:", searchQuery2);
+          const searchResponse2 = await fetch("https://api.firecrawl.dev/v1/search", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${process.env.FIRECRAWL_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ query: searchQuery2, limit: 3, scrapeOptions: { formats: ["markdown"] } }),
+            signal: AbortSignal.timeout(10000),
+          });
+          if (searchResponse2.ok) {
+            searchData = await searchResponse2.json();
+            console.log("[search fallback] fallback results count:", searchData?.data?.length);
+          }
+        }
 
-            const searchRaw = searchResp.content?.[0]?.text ?? "";
-            const searchMatch = searchRaw.match(/\{[\s\S]*\}/);
-            if (searchMatch) {
-              let searchExtracted;
-              try { searchExtracted = JSON.parse(searchMatch[0]); } catch {}
+        // Also scrape Yelp search results directly
+        let yelpContent = "";
+        if (businessName && city) {
+          const yelpUrl = `https://www.yelp.com/search?find_desc=${encodeURIComponent(businessName)}&find_loc=${encodeURIComponent(city)}`;
+          console.log("[search fallback] scraping Yelp:", yelpUrl);
+          const yelpMd = await firecrawlScrape(yelpUrl, process.env.FIRECRAWL_API_KEY, 10000);
+          if (yelpMd.length > 50) {
+            yelpContent = yelpMd.slice(0, 2000);
+            console.log("[search fallback] Yelp content length:", yelpContent.length);
+          }
+        }
 
-              if (searchExtracted) {
-                if (needsPhone && searchExtracted.supportPhone) {
-                  const digits = String(searchExtracted.supportPhone).replace(/\D/g, "");
-                  if (digits.length >= 10 && digits.length <= 11) {
-                    extracted.supportPhone = searchExtracted.supportPhone;
-                    console.log("[import] search fallback filled phone:", extracted.supportPhone);
-                  }
+        const searchContent = [
+          ...(searchData?.data || []).map((r) => r.markdown || r.description || ""),
+          yelpContent,
+        ].join("\n").slice(0, 5000);
+
+        console.log("[search fallback] combined content:", searchContent.substring(0, 500));
+
+        if (searchContent.length > 50) {
+          const searchPrompt =
+            `Search these business listing results for "${businessName}"${city ? ` in ${city}` : ""}. ` +
+            `Find and extract the phone number (format: (XXX) XXX-XXXX or XXX-XXX-XXXX) and email address. ` +
+            `Only return contact info that clearly belongs to ${businessName}, not other businesses. ` +
+            `Return JSON: { "supportPhone": "string or null", "supportEmail": "string or null" }. ` +
+            `Return ONLY valid JSON, no explanation.\n\nContent:\n${searchContent}`;
+
+          const searchResp = await client.messages.create({
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 128,
+            messages: [{ role: "user", content: searchPrompt }],
+          });
+
+          const searchRaw = searchResp.content?.[0]?.text ?? "";
+          const searchMatch = searchRaw.match(/\{[\s\S]*\}/);
+          if (searchMatch) {
+            let searchExtracted;
+            try { searchExtracted = JSON.parse(searchMatch[0]); } catch {}
+
+            console.log("[search fallback] Claude extracted:", JSON.stringify(searchExtracted));
+            if (searchExtracted) {
+              if (needsPhone && searchExtracted.supportPhone) {
+                const digits = String(searchExtracted.supportPhone).replace(/\D/g, "");
+                if (digits.length >= 10 && digits.length <= 11) {
+                  extracted.supportPhone = searchExtracted.supportPhone;
+                  console.log("[import] search fallback filled phone:", extracted.supportPhone);
                 }
-                if (needsEmail && isRealEmail(searchExtracted.supportEmail)) {
-                  extracted.supportEmail = searchExtracted.supportEmail;
-                  console.log("[import] search fallback filled email:", extracted.supportEmail);
-                }
+              }
+              if (needsEmail && isRealEmail(searchExtracted.supportEmail)) {
+                extracted.supportEmail = searchExtracted.supportEmail;
+                console.log("[import] search fallback filled email:", extracted.supportEmail);
               }
             }
           }
