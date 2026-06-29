@@ -454,7 +454,26 @@ export default function BuilderPageClient() {
       update(patch);
 
       if (extracted.businessHours) {
-        setHoursNote(`Hours found: "${extracted.businessHours}" — please set them manually in the hours section below.`);
+        try {
+          const hoursRes = await fetch("/api/import-website", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ parseHours: true, hoursText: extracted.businessHours }),
+          });
+          if (hoursRes.ok) {
+            const hoursData = await hoursRes.json();
+            if (hoursData.parsedHours) {
+              update({ businessHours: hoursData.parsedHours });
+              setHoursNote(`Hours auto-filled from: "${extracted.businessHours}" — review in the hours section below.`);
+            } else {
+              setHoursNote(`Hours found: "${extracted.businessHours}" — please set them manually in the hours section below.`);
+            }
+          } else {
+            setHoursNote(`Hours found: "${extracted.businessHours}" — please set them manually in the hours section below.`);
+          }
+        } catch {
+          setHoursNote(`Hours found: "${extracted.businessHours}" — please set them manually in the hours section below.`);
+        }
       }
 
       setImportStatus("success");
@@ -464,7 +483,7 @@ export default function BuilderPageClient() {
         businessInfo: !!(patch.businessName || patch.businessDescription || patch.servicesDescription),
         contact: !!(patch.supportPhone || patch.supportEmail),
         location: !!(patch.address?.street || patch.address?.city),
-        hours: false,
+        hours: !!extracted.businessHours,
         industryDetails: !!(patch.hasReservations !== undefined || patch.hasDelivery !== undefined || patch.menuUrl),
       });
 
@@ -537,7 +556,26 @@ export default function BuilderPageClient() {
       update(patch);
 
       if (extracted.businessHours) {
-        setHoursNote(`Hours found: "${extracted.businessHours}" — please set them manually in the hours section.`);
+        try {
+          const hoursRes = await fetch("/api/import-website", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ parseHours: true, hoursText: extracted.businessHours }),
+          });
+          if (hoursRes.ok) {
+            const hoursData = await hoursRes.json();
+            if (hoursData.parsedHours) {
+              update({ businessHours: hoursData.parsedHours });
+              setHoursNote(`Hours auto-filled from: "${extracted.businessHours}" — review in the hours section below.`);
+            } else {
+              setHoursNote(`Hours found: "${extracted.businessHours}" — please set them manually in the hours section below.`);
+            }
+          } else {
+            setHoursNote(`Hours found: "${extracted.businessHours}" — please set them manually in the hours section below.`);
+          }
+        } catch {
+          setHoursNote(`Hours found: "${extracted.businessHours}" — please set them manually in the hours section below.`);
+        }
       }
 
       setImportStatus("success");
@@ -547,7 +585,7 @@ export default function BuilderPageClient() {
         businessInfo: !!(patch.businessName || patch.businessDescription || patch.servicesDescription),
         contact: !!(patch.supportPhone || patch.supportEmail),
         location: !!(patch.address?.street || patch.address?.city),
-        hours: false,
+        hours: !!extracted.businessHours,
         industryDetails: !!(patch.hasReservations !== undefined || patch.hasDelivery !== undefined || patch.menuUrl),
       });
 

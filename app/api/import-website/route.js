@@ -170,6 +170,77 @@ async function firecrawlScrape(url, apiKey, timeoutMs = 12000) {
   }
 }
 
+// Emails to treat as fake/placeholder and never surface
+const PLACEHOLDER_EMAIL_RE = /^(noreply|no-reply|donotreply|notifications?|mailer-daemon|postmaster|bounce)@/i;
+const FAKE_EMAIL_DOMAIN_RE = /@(example\.com|yourbusiness\.com|yourcompany\.com|yourdomain\.com|test\.com|domain\.com)$/i;
+const PLACEHOLDER_EMAILS = new Set([
+  "support@yourbusiness.com", "hello@yourbusiness.com", "email@yourbusiness.com",
+  "contact@yourbusiness.com", "info@example.com", "name@example.com", "user@example.com",
+  "example@email.com",
+]);
+
+function isRealEmail(email) {
+  if (!email || typeof email !== "string") return false;
+  const lower = email.toLowerCase();
+  return (
+    /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) &&
+    !PLACEHOLDER_EMAILS.has(lower) &&
+    !PLACEHOLDER_EMAIL_RE.test(lower) &&
+    !FAKE_EMAIL_DOMAIN_RE.test(lower) &&
+    email.length <= 254
+  );
+}
+
+const HOURS_PARSE_PROMPT = `Parse business hours text into a structured JSON object.
+
+Return an object with exactly these 7 keys: monday tuesday wednesday thursday friday saturday sunday.
+Each value must be: { "open": boolean, "openTime": "HH:MM", "closeTime": "HH:MM" } using 24-hour time.
+
+Rules:
+- Ranges like "Mon-Fri" or "Monday through Friday" = all those days open
+- "Closed" or "closed" → open: false
+- "By appointment" → open: true, use 09:00/17:00
+- Time conversion: "9am"→"09:00", "5pm"→"17:00", "5:30pm"→"17:30", "12pm"→"12:00", "12am"→"00:00"
+- Round times to nearest half-hour (e.g. 9:15→09:00, 9:20→09:30)
+- If a day is not mentioned, assume closed
+- Closed days: set open: false, keep openTime "09:00" closeTime "17:00" as placeholders
+
+Return ONLY valid JSON, no explanation.`;
+
+async function parseHoursText(hoursText) {
+  try {
+    const resp = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 512,
+      messages: [{ role: "user", content: `${HOURS_PARSE_PROMPT}\n\nHours text: "${hoursText}"` }],
+    });
+    const raw = resp.content?.[0]?.text ?? "";
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    const parsed = JSON.parse(match[0]);
+    const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+    if (!DAYS.every(d => parsed[d] && typeof parsed[d].open === "boolean")) return null;
+    // Ensure times are valid HH:MM and snap to 30-min grid
+    for (const day of DAYS) {
+      const slot = parsed[day];
+      slot.openTime = snapTime(slot.openTime) || "09:00";
+      slot.closeTime = snapTime(slot.closeTime) || "17:00";
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function snapTime(t) {
+  if (!/^\d{2}:\d{2}$/.test(t)) return null;
+  const [h, m] = t.split(":").map(Number);
+  if (h > 23 || m > 59) return null;
+  const snappedM = m < 15 ? 0 : m < 45 ? 30 : 0;
+  const snappedH = m >= 45 ? (h + 1) % 24 : h;
+  return `${String(snappedH).padStart(2, "0")}:${String(snappedM).padStart(2, "0")}`;
+}
+
 const EXTRACTION_PROMPT = `You are extracting business information from website content. Extract ONLY information explicitly present — do not invent or infer details.
 
 Return a JSON object with these fields (use null for any field not found):
@@ -215,6 +286,19 @@ export async function POST(request) {
 
     const body = await request.json();
     const { url, text: pastedText } = body;
+
+    // ── parseHours sub-request (lightweight follow-up from handleImport) ─
+    if (body.parseHours) {
+      const { hoursText } = body;
+      if (!hoursText || typeof hoursText !== "string" || hoursText.length > 500) {
+        return json({ error: "Invalid hoursText" }, { status: 400 });
+      }
+      const { allowed } = await checkRateLimit(clientIp, "/api/import-website/parse-hours", 10, 600);
+      if (!allowed) return json({ error: "Too many requests" }, { status: 429 });
+      const parsedHours = await parseHoursText(hoursText);
+      return json({ parsedHours: parsedHours ?? null });
+    }
+
     console.log("[import-website] received:", { hasUrl: !!url, hasText: !!pastedText, textLength: pastedText?.length });
 
     const isPaste = pastedText != null;
@@ -455,6 +539,20 @@ export async function POST(request) {
       extracted.hasFreeTrial = null;
       extracted.hasClasses = null;
       extracted.hasTrainers = null;
+    }
+
+    // ── Email: validate Claude's result; fallback to regex scan of content ─
+    if (!isRealEmail(extracted.supportEmail)) {
+      extracted.supportEmail = null;
+      const EMAIL_SCAN_RE = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+      const candidates = content.match(EMAIL_SCAN_RE) || [];
+      for (const candidate of candidates) {
+        if (isRealEmail(candidate)) {
+          extracted.supportEmail = candidate;
+          console.log("[import] email fallback found:", candidate);
+          break;
+        }
+      }
     }
 
     // ── Merge link categorization results (takes priority over Claude) ────
