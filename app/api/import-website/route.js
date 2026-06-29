@@ -458,15 +458,22 @@ export async function POST(request) {
     }
 
     // ── Merge link categorization results (takes priority over Claude) ────
+    const toHttps = (u) => (typeof u === "string" ? u.replace(/^http:\/\//, "https://") : u);
+
     if (cat) {
-      if (cat.bookingUrl) extracted.bookingUrl = cat.bookingUrl;
-      if (cat.payNowUrl) extracted.payNowUrl = cat.payNowUrl;
+      if (cat.bookingUrl) extracted.bookingUrl = toHttps(cat.bookingUrl);
+      if (cat.payNowUrl) extracted.payNowUrl = toHttps(cat.payNowUrl);
 
       const { socialLinks } = cat;
       const hasSocial = socialLinks.instagram || socialLinks.facebook || socialLinks.tiktok || socialLinks.other.length > 0;
       extracted.socialLinks = hasSocial ? socialLinks : null;
     } else {
       extracted.socialLinks = null;
+    }
+
+    // Upgrade any remaining http:// URLs to https://
+    for (const key of ["bookingUrl", "payNowUrl", "menuUrl", "websiteUrl"]) {
+      if (extracted[key]) extracted[key] = toHttps(extracted[key]);
     }
 
     console.log("[import-website] extracted:", JSON.stringify(extracted, null, 2));

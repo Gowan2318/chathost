@@ -417,7 +417,7 @@ export default function BuilderPageClient() {
       if (extracted.businessDescription) patch.businessDescription = extracted.businessDescription;
       if (extracted.servicesDescription) patch.servicesDescription = extracted.servicesDescription;
       if (extracted.supportPhone) patch.supportPhone = extracted.supportPhone;
-      if (extracted.supportEmail) patch.supportEmail = extracted.supportEmail;
+      if (extracted.supportEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(extracted.supportEmail)) patch.supportEmail = extracted.supportEmail;
       if (extracted.websiteUrl) patch.websiteUrl = extracted.websiteUrl;
 
       if (extracted.address && typeof extracted.address === "object") {
@@ -501,7 +501,7 @@ export default function BuilderPageClient() {
       if (extracted.businessDescription) patch.businessDescription = extracted.businessDescription;
       if (extracted.servicesDescription) patch.servicesDescription = extracted.servicesDescription;
       if (extracted.supportPhone) patch.supportPhone = extracted.supportPhone;
-      if (extracted.supportEmail) patch.supportEmail = extracted.supportEmail;
+      if (extracted.supportEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(extracted.supportEmail)) patch.supportEmail = extracted.supportEmail;
       if (extracted.websiteUrl) patch.websiteUrl = extracted.websiteUrl;
 
       if (extracted.address && typeof extracted.address === "object") {
