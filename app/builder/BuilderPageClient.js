@@ -452,6 +452,9 @@ export default function BuilderPageClient() {
 
       console.log("[handleImport] patch:", JSON.stringify(patch, null, 2));
       update(patch);
+      console.log("[handleImport] patch being applied:", JSON.stringify(patch));
+      console.log("[handleImport] bookingUrl in patch:", patch.bookingUrl);
+      console.log("[handleImport] address in patch:", patch.address);
 
       if (extracted.businessHours) {
         try {
@@ -943,6 +946,7 @@ export default function BuilderPageClient() {
 
                 {/* ── Section: Business Info ── */}
                 <SectionBlock
+                  key={`businessInfo-${importDone}`}
                   title="Business Info"
                   summary={[form.businessName, form.industry ? INDUSTRY_LABELS[form.industry] : null].filter(Boolean).join(" · ") || "Required"}
                   expanded={expandedSections.businessInfo}
@@ -1015,6 +1019,7 @@ export default function BuilderPageClient() {
 
                 {/* ── Section: Contact & Links ── */}
                 <SectionBlock
+                  key={`contact-${importDone}`}
                   title="Contact & Links"
                   summary={[form.supportPhone, form.supportEmail].filter(Boolean).join(" · ") || (form.bookingUrl?.trim() ? "Via booking link" : "Required")}
                   expanded={expandedSections.contact}
@@ -1100,6 +1105,7 @@ export default function BuilderPageClient() {
 
                 {/* ── Section: Location ── */}
                 <SectionBlock
+                  key={`location-${importDone}`}
                   title="Location"
                   summary={form.address.city ? [form.address.street, form.address.city, form.address.state].filter(Boolean).join(", ") : "Required"}
                   expanded={expandedSections.location}

@@ -40,11 +40,23 @@ body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
+/* ─── Base text color: ensure all inputs are always readable ─── */
+input, textarea, select {
+  color: #1A1A2E !important;
+  -webkit-text-fill-color: #1A1A2E !important;
+}
+
 /* ─── Autofill override (Chrome sets -webkit-text-fill-color: white on autofilled inputs) ─── */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
-input:-webkit-autofill:active,
+input:-webkit-autofill:active {
+  -webkit-text-fill-color: #1A1A2E !important;
+  -webkit-box-shadow: 0 0 0 30px white inset !important;
+  box-shadow: 0 0 0 30px white inset !important;
+  color: #1A1A2E !important;
+}
+
 select:-webkit-autofill,
 select:-webkit-autofill:hover,
 select:-webkit-autofill:focus,
