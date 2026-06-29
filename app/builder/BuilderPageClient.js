@@ -1016,13 +1016,13 @@ export default function BuilderPageClient() {
                 {/* ── Section: Contact & Links ── */}
                 <SectionBlock
                   title="Contact & Links"
-                  summary={[form.supportPhone, form.supportEmail].filter(Boolean).join(" · ") || "Required"}
+                  summary={[form.supportPhone, form.supportEmail].filter(Boolean).join(" · ") || (form.bookingUrl?.trim() ? "Via booking link" : "Required")}
                   expanded={expandedSections.contact}
                   onToggle={() => setExpandedSections((p) => ({ ...p, contact: !p.contact }))}
                 >
                   <div className="grid gap-5 sm:grid-cols-2">
                     <FormField
-                      label="Support phone"
+                      label={form.bookingUrl?.trim() ? "Support phone (optional — you have a booking link)" : "Support phone"}
                       htmlFor="support-phone"
                       tooltip="Your business phone number."
                       showValidation={showValidation}
@@ -1039,7 +1039,7 @@ export default function BuilderPageClient() {
                       />
                     </FormField>
                     <FormField
-                      label="Support email"
+                      label="Support email (optional)"
                       htmlFor="support-email"
                       tooltip="Your business email address."
                       showValidation={showValidation}
