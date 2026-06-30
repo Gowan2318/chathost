@@ -24,6 +24,7 @@
 
   var THEMES = {
     light: {
+      id: "light",
       chatBackground: "#ffffff",
       botBubble: "#f3f4f6",
       botText: "#374151",
@@ -37,8 +38,10 @@
       secondaryButtonBg: "#f8fafc",
       secondaryButtonText: "#475569",
       secondaryButtonBorder: "#e2e8f0",
+      quickReplyShade: -50,
     },
     dark: {
+      id: "dark",
       chatBackground: "#1A1A1A",
       botBubble: "#2A2A2A",
       botText: "#ffffff",
@@ -52,6 +55,41 @@
       secondaryButtonBg: "#2A2A2A",
       secondaryButtonText: "#d1d5db",
       secondaryButtonBorder: "#404040",
+      quickReplyShade: 60,
+    },
+    midnight: {
+      id: "midnight",
+      chatBackground: "#0A0A0F",
+      botBubble: "#1A1A2E",
+      botText: "#E0E0FF",
+      inputBackground: "#0F0F1A",
+      inputText: "#E0E0FF",
+      panelBorder: "#2A2A4A",
+      messagesArea: "#0A0A0F",
+      footerBackground: "#0A0A0F",
+      footerBorder: "#1A1A2E",
+      quickReplyBackground: "#0A0A0F",
+      secondaryButtonBg: "#1A1A2E",
+      secondaryButtonText: "#c4c4e8",
+      secondaryButtonBorder: "#2A2A4A",
+      quickReplyShade: 60,
+    },
+    glass: {
+      id: "glass",
+      chatBackground: "rgba(255,255,255,0.1)",
+      botBubble: "rgba(255,255,255,0.15)",
+      botText: "#ffffff",
+      inputBackground: "rgba(255,255,255,0.1)",
+      inputText: "#ffffff",
+      panelBorder: "rgba(255,255,255,0.2)",
+      messagesArea: "rgba(255,255,255,0.05)",
+      footerBackground: "rgba(255,255,255,0.08)",
+      footerBorder: "rgba(255,255,255,0.15)",
+      quickReplyBackground: "rgba(255,255,255,0.08)",
+      secondaryButtonBg: "rgba(255,255,255,0.12)",
+      secondaryButtonText: "#e5e5e5",
+      secondaryButtonBorder: "rgba(255,255,255,0.25)",
+      quickReplyShade: 50,
     },
   };
 
@@ -71,6 +109,7 @@
   function resolveTheme(themeId, brandColor) {
     var base = THEMES[themeId] || THEMES.light;
     return {
+      id: base.id || "light",
       chatBackground: base.chatBackground,
       botBubble: base.botBubble,
       botText: base.botText,
@@ -84,6 +123,7 @@
       secondaryButtonBg: base.secondaryButtonBg,
       secondaryButtonText: base.secondaryButtonText,
       secondaryButtonBorder: base.secondaryButtonBorder,
+      quickReplyShade: base.quickReplyShade != null ? base.quickReplyShade : -50,
       userBubble: brandColor,
       userText: "#ffffff",
     };
@@ -332,7 +372,7 @@
       "35;background:" +
       brandColor +
       "10;color:" +
-      shadeHex(brandColor, -50) +
+      shadeHex(brandColor, theme.quickReplyShade) +
       ";padding:10px 12px;font-size:12px;font-weight:500;text-align:left;cursor:pointer;line-height:1.3}" +
       ".vch-quick-btn:disabled{opacity:0.5;cursor:not-allowed}" +
       ".vch-header-right{display:flex;align-items:center;gap:8px}" +
@@ -349,6 +389,10 @@
       theme.inputBackground +
       ";color:" +
       theme.inputText +
+      ";caret-color:" +
+      theme.inputText +
+      ";color-scheme:" +
+      (theme.id === "light" ? "light" : "dark") +
       ";padding:10px 16px;font-size:14px;outline:none}" +
       ".vch-input:focus{box-shadow:0 0 0 2px " +
       brandColor +

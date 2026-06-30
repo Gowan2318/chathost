@@ -496,7 +496,7 @@ We're happy to assist you!`;
                   style={{
                     borderColor: `${brandColor}35`,
                     backgroundColor: `${brandColor}10`,
-                    color: shadeHex(brandColor, -50),
+                    color: shadeHex(brandColor, theme.quickReplyShade ?? -50),
                   }}
                 >
                   {label}
@@ -560,6 +560,8 @@ We're happy to assist you!`;
                 borderColor: theme.panelBorder,
                 backgroundColor: theme.inputBackground,
                 color: theme.inputText,
+                caretColor: theme.inputText,
+                colorScheme: chatTheme === "light" ? "light" : "dark",
                 ...(theme.glass ? { backdropFilter: "blur(8px)" } : {}),
               }}
             />
