@@ -126,15 +126,23 @@ const INITIAL = {
   websiteKnowledge: "",
 };
 
+function inputClassNameAF(showValidation, error, isValid, af) {
+  const base = "w-full rounded-xl border bg-white px-4 py-3 text-sm text-[#1A1A2E] outline-none transition placeholder-[#9CA3AF] focus:ring-2";
+  if (showValidation && error) return `${base} border-red-400 focus:border-red-400 focus:ring-red-400/20`;
+  if (showValidation && isValid) return `${base} border-green-500/60 focus:border-green-500/60 focus:ring-green-500/20`;
+  if (af) return `${base} border-green-400 ring-2 ring-green-100 focus:border-green-400 focus:ring-green-200`;
+  return `${base} border-[#E2E8F0] focus:border-[#0D7377]/50 focus:ring-[#0D7377]/20`;
+}
+
 // checked: null = unconfirmed (amber), true = yes (green), false = no (gray)
 // Clicking: null→true, true→false, false→true (never returns to null once touched).
-function Toggle({ label, hint, checked, onChange }) {
+function Toggle({ label, hint, checked, onChange, isAutoFilled }) {
   const isNull = checked === null || checked === undefined;
   const isTrue = checked === true;
   return (
     <div
       className={`flex cursor-pointer items-center justify-between gap-4 rounded-xl border px-4 py-3 ${
-        isNull ? "border-amber-300 bg-amber-50/60" : "border-[#E2E8F0] bg-white"
+        isNull ? "border-amber-300 bg-amber-50/60" : isAutoFilled ? "border-green-400 bg-white ring-2 ring-green-100" : "border-[#E2E8F0] bg-white"
       }`}
       onClick={() => onChange(isTrue ? false : true)}
     >
@@ -264,6 +272,8 @@ export default function BuilderPageClient() {
   const [importDone, setImportDone] = useState(false);
   const [hoursNote, setHoursNote] = useState("");
   const [pasteText, setPasteText] = useState("");
+  const [autoFilled, setAutoFilled] = useState(new Set());
+  const clearAF = (field) => setAutoFilled((p) => { const n = new Set(p); n.delete(field); return n; });
 
   // Step 2 accordion expanded state
   const [expandedSections, setExpandedSections] = useState({
@@ -418,6 +428,7 @@ export default function BuilderPageClient() {
     setImportStatus(null);
     setImportError("");
     setHoursNote("");
+    setAutoFilled(new Set());
     try {
       const res = await fetch("/api/import-website", {
         method: "POST",
@@ -479,6 +490,17 @@ export default function BuilderPageClient() {
       if (extracted.upcomingEvents) patch.upcomingEvents = extracted.upcomingEvents;
       if (extracted.websiteKnowledge) patch.websiteKnowledge = extracted.websiteKnowledge;
 
+      // Track which fields were auto-filled for green highlight
+      const autoFilledKeys = new Set(Object.keys(patch));
+      if (patch.address) {
+        autoFilledKeys.delete("address");
+        if (patch.address.street) autoFilledKeys.add("addressStreet");
+        if (patch.address.city) autoFilledKeys.add("addressCity");
+        if (patch.address.state) autoFilledKeys.add("addressState");
+        if (patch.address.zip) autoFilledKeys.add("addressZip");
+      }
+      setAutoFilled(autoFilledKeys);
+
       console.log("[handleImport] patch:", JSON.stringify(patch, null, 2));
       update(patch);
       console.log("[handleImport] patch being applied:", JSON.stringify(patch));
@@ -538,6 +560,7 @@ export default function BuilderPageClient() {
     setIsImporting(true);
     setImportError("");
     setHoursNote("");
+    setAutoFilled(new Set());
     try {
       const res = await fetch("/api/import-website", {
         method: "POST",
@@ -597,6 +620,17 @@ export default function BuilderPageClient() {
       if (extracted.promotions) patch.promotions = extracted.promotions;
       if (extracted.upcomingEvents) patch.upcomingEvents = extracted.upcomingEvents;
       if (extracted.websiteKnowledge) patch.websiteKnowledge = extracted.websiteKnowledge;
+
+      // Track which fields were auto-filled for green highlight
+      const autoFilledKeysPaste = new Set(Object.keys(patch));
+      if (patch.address) {
+        autoFilledKeysPaste.delete("address");
+        if (patch.address.street) autoFilledKeysPaste.add("addressStreet");
+        if (patch.address.city) autoFilledKeysPaste.add("addressCity");
+        if (patch.address.state) autoFilledKeysPaste.add("addressState");
+        if (patch.address.zip) autoFilledKeysPaste.add("addressZip");
+      }
+      setAutoFilled(autoFilledKeysPaste);
 
       update(patch);
 
@@ -867,7 +901,7 @@ export default function BuilderPageClient() {
                     value={importUrl}
                     onChange={(e) => setImportUrl(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleImport(); } }}
-                    placeholder="https://yourbusiness.com"
+                    placeholder="Enter your website URL"
                     disabled={isImporting}
                     className="flex-1 rounded-xl border border-[#E2E8F0] bg-white px-5 py-4 text-base text-[#1A1A2E] placeholder-[#9CA3AF] outline-none transition focus:border-[#0D7377]/50 focus:ring-2 focus:ring-[#0D7377]/20 disabled:opacity-60"
                   />
@@ -1007,9 +1041,9 @@ export default function BuilderPageClient() {
                       id="business-name"
                       type="text"
                       value={form.businessName}
-                      onChange={(e) => update({ businessName: e.target.value })}
-                      placeholder="e.g. Sunrise Dental Studio"
-                      className={inputClassName(showValidation, errors.businessName, fieldValid("businessName", (f) => validateBusinessName(f.businessName)))}
+                      onChange={(e) => { update({ businessName: e.target.value }); clearAF("businessName"); }}
+                      placeholder=""
+                      className={inputClassNameAF(showValidation, errors.businessName, fieldValid("businessName", (f) => validateBusinessName(f.businessName)), autoFilled.has("businessName"))}
                     />
                   </FormField>
                   {!isBasic && (
@@ -1035,9 +1069,9 @@ export default function BuilderPageClient() {
                       rows={4}
                       maxLength={500}
                       value={form.businessDescription}
-                      onChange={(e) => update({ businessDescription: e.target.value })}
-                      placeholder="Tell customers about your business, mission, and what makes you unique…"
-                      className={inputClassName(showValidation, errors.businessDescription, fieldValid("businessDescription", (f) => validateBusinessDescription(f.businessDescription)))}
+                      onChange={(e) => { update({ businessDescription: e.target.value }); clearAF("businessDescription"); }}
+                      placeholder="Describe your business, mission, and what makes you special"
+                      className={inputClassNameAF(showValidation, errors.businessDescription, fieldValid("businessDescription", (f) => validateBusinessDescription(f.businessDescription)), autoFilled.has("businessDescription"))}
                     />
                   </FormField>
                   <FormField
@@ -1054,9 +1088,9 @@ export default function BuilderPageClient() {
                       rows={3}
                       maxLength={300}
                       value={form.servicesDescription}
-                      onChange={(e) => update({ servicesDescription: e.target.value })}
-                      placeholder="List your main services, packages, or specialties…"
-                      className={inputClassName(showValidation, errors.servicesDescription, fieldValid("servicesDescription", (f) => validateServicesDescription(f.servicesDescription)))}
+                      onChange={(e) => { update({ servicesDescription: e.target.value }); clearAF("servicesDescription"); }}
+                      placeholder="List your main services and specialties"
+                      className={inputClassNameAF(showValidation, errors.servicesDescription, fieldValid("servicesDescription", (f) => validateServicesDescription(f.servicesDescription)), autoFilled.has("servicesDescription"))}
                     />
                   </FormField>
                 </SectionBlock>
@@ -1082,9 +1116,9 @@ export default function BuilderPageClient() {
                         id="support-phone"
                         type="tel"
                         value={form.supportPhone}
-                        onChange={(e) => update({ supportPhone: e.target.value })}
-                        placeholder="(555) 123-4567"
-                        className={inputClassName(showValidation, errors.supportPhone, fieldValid("supportPhone", (f) => validatePhone(f.supportPhone)))}
+                        onChange={(e) => { update({ supportPhone: e.target.value }); clearAF("supportPhone"); }}
+                        placeholder=""
+                        className={inputClassNameAF(showValidation, errors.supportPhone, fieldValid("supportPhone", (f) => validatePhone(f.supportPhone)), autoFilled.has("supportPhone"))}
                       />
                     </FormField>
                     <FormField
@@ -1099,9 +1133,9 @@ export default function BuilderPageClient() {
                         id="support-email"
                         type="email"
                         value={form.supportEmail}
-                        onChange={(e) => update({ supportEmail: e.target.value })}
-                        placeholder="hello@yourbusiness.com"
-                        className={inputClassName(showValidation, errors.supportEmail, fieldValid("supportEmail", (f) => validateEmail(f.supportEmail)))}
+                        onChange={(e) => { update({ supportEmail: e.target.value }); clearAF("supportEmail"); }}
+                        placeholder=""
+                        className={inputClassNameAF(showValidation, errors.supportEmail, fieldValid("supportEmail", (f) => validateEmail(f.supportEmail)), autoFilled.has("supportEmail"))}
                       />
                     </FormField>
                   </div>
@@ -1120,9 +1154,9 @@ export default function BuilderPageClient() {
                           id="booking-url"
                           type="url"
                           value={form.bookingUrl}
-                          onChange={(e) => update({ bookingUrl: e.target.value })}
-                          placeholder="https://calendly.com/yourbusiness"
-                          className={inputClassName(showValidation, errors.bookingUrl, showValidation && !errors.bookingUrl && form.bookingUrl.trim() && validateHttpsUrl(form.bookingUrl) === null)}
+                          onChange={(e) => { update({ bookingUrl: e.target.value }); clearAF("bookingUrl"); }}
+                          placeholder=""
+                          className={inputClassNameAF(showValidation, errors.bookingUrl, showValidation && !errors.bookingUrl && form.bookingUrl.trim() && validateHttpsUrl(form.bookingUrl) === null, autoFilled.has("bookingUrl"))}
                         />
                       </FormField>
                       <FormField
@@ -1138,9 +1172,9 @@ export default function BuilderPageClient() {
                           id="pay-url"
                           type="url"
                           value={form.payNowUrl}
-                          onChange={(e) => update({ payNowUrl: e.target.value })}
-                          placeholder="https://yourbusiness.com/pay"
-                          className={inputClassName(showValidation, errors.payNowUrl, showValidation && !errors.payNowUrl && form.payNowUrl.trim() && validateHttpsUrl(form.payNowUrl) === null)}
+                          onChange={(e) => { update({ payNowUrl: e.target.value }); clearAF("payNowUrl"); }}
+                          placeholder=""
+                          className={inputClassNameAF(showValidation, errors.payNowUrl, showValidation && !errors.payNowUrl && form.payNowUrl.trim() && validateHttpsUrl(form.payNowUrl) === null, autoFilled.has("payNowUrl"))}
                         />
                       </FormField>
                     </>
@@ -1163,8 +1197,10 @@ export default function BuilderPageClient() {
                   <AddressInput
                     address={form.address}
                     onChange={(address) => update({ address })}
+                    onFieldChange={(field) => clearAF(field)}
                     showValidation={showValidation}
                     errors={errors}
+                    autoFilled={autoFilled}
                     tooltip="Your business location. The chatbot will share this when customers ask where you're located."
                   />
                 </SectionBlock>
@@ -1217,96 +1253,96 @@ export default function BuilderPageClient() {
                     {form.industry === "restaurant" && (
                       <div className="space-y-4">
                         <FormField label="Menu URL" htmlFor="menu-url" hint="Link to your online menu" showValidation={false} error={null} isValid={false}>
-                          <input id="menu-url" type="url" value={form.menuUrl} onChange={(e) => update({ menuUrl: e.target.value })} placeholder="https://yourbusiness.com/menu" className={inputClassName(false, null, false)} />
+                          <input id="menu-url" type="url" value={form.menuUrl} onChange={(e) => { update({ menuUrl: e.target.value }); clearAF("menuUrl"); }} placeholder="" className={inputClassNameAF(false, null, false, autoFilled.has("menuUrl"))} />
                         </FormField>
-                        <Toggle label="Do you take reservations?" checked={form.hasReservations} onChange={(v) => update({ hasReservations: v })} />
+                        <Toggle label="Do you take reservations?" checked={form.hasReservations} onChange={(v) => { update({ hasReservations: v }); clearAF("hasReservations"); }} isAutoFilled={autoFilled.has("hasReservations")} />
                         {form.hasReservations && (
                           <FormField label="Reservation link" htmlFor="reservation-link" hint="Link to your reservation system" showValidation={false} error={null} isValid={false}>
-                            <input id="reservation-link" type="url" value={form.reservationLink} onChange={(e) => update({ reservationLink: e.target.value })} placeholder="https://opentable.com/yourbusiness" className={inputClassName(false, null, false)} />
+                            <input id="reservation-link" type="url" value={form.reservationLink} onChange={(e) => update({ reservationLink: e.target.value })} placeholder="" className={inputClassName(false, null, false)} />
                           </FormField>
                         )}
-                        <Toggle label="Do you offer delivery or takeout?" checked={form.hasDelivery} onChange={(v) => update({ hasDelivery: v })} />
+                        <Toggle label="Do you offer delivery or takeout?" checked={form.hasDelivery} onChange={(v) => { update({ hasDelivery: v }); clearAF("hasDelivery"); }} isAutoFilled={autoFilled.has("hasDelivery")} />
                         <FormField label="Dietary options" htmlFor="dietary-options" hint="e.g. Vegetarian, Vegan, Gluten-free, Halal" showValidation={false} error={null} isValid={false}>
-                          <textarea id="dietary-options" rows={2} value={form.dietaryOptions} onChange={(e) => update({ dietaryOptions: e.target.value })} placeholder="e.g. Vegetarian, Vegan, Gluten-free, Halal" className={inputClassName(false, null, false)} />
+                          <textarea id="dietary-options" rows={2} value={form.dietaryOptions} onChange={(e) => update({ dietaryOptions: e.target.value })} placeholder="" className={inputClassName(false, null, false)} />
                         </FormField>
                         <FormField label="Price range" htmlFor="price-range" hint="e.g. $10-20 per person" showValidation={false} error={null} isValid={false}>
-                          <input id="price-range" type="text" value={form.priceRange} onChange={(e) => update({ priceRange: e.target.value })} placeholder="e.g. $10-20 per person" className={inputClassName(false, null, false)} />
+                          <input id="price-range" type="text" value={form.priceRange} onChange={(e) => update({ priceRange: e.target.value })} placeholder="" className={inputClassName(false, null, false)} />
                         </FormField>
                       </div>
                     )}
                     {form.industry === "dental" && (
                       <div className="space-y-4">
-                        <Toggle label="Are you accepting new patients?" checked={form.acceptingNewPatients} onChange={(v) => update({ acceptingNewPatients: v })} />
+                        <Toggle label="Are you accepting new patients?" checked={form.acceptingNewPatients} onChange={(v) => { update({ acceptingNewPatients: v }); clearAF("acceptingNewPatients"); }} isAutoFilled={autoFilled.has("acceptingNewPatients")} />
                         <InsuranceSelector value={form.insurancePlans} onChange={(insurancePlans) => update({ insurancePlans })} />
-                        <Toggle label="Do you offer payment plans?" checked={form.hasPaymentPlans} onChange={(v) => update({ hasPaymentPlans: v })} />
+                        <Toggle label="Do you offer payment plans?" checked={form.hasPaymentPlans} onChange={(v) => { update({ hasPaymentPlans: v }); clearAF("hasPaymentPlans"); }} isAutoFilled={autoFilled.has("hasPaymentPlans")} />
                         {form.acceptingNewPatients && (
                           <FormField label="New patient form URL" htmlFor="new-patient-form" hint="Link to your new patient intake form" showValidation={false} error={null} isValid={false}>
-                            <input id="new-patient-form" type="url" value={form.newPatientFormUrl} onChange={(e) => update({ newPatientFormUrl: e.target.value })} placeholder="https://yourbusiness.com/new-patient" className={inputClassName(false, null, false)} />
+                            <input id="new-patient-form" type="url" value={form.newPatientFormUrl} onChange={(e) => update({ newPatientFormUrl: e.target.value })} placeholder="" className={inputClassName(false, null, false)} />
                           </FormField>
                         )}
                       </div>
                     )}
                     {form.industry === "salon" && (
                       <div className="space-y-4">
-                        <Toggle label="Do you accept walk-ins?" checked={form.walkInsWelcome} onChange={(v) => update({ walkInsWelcome: v })} />
+                        <Toggle label="Do you accept walk-ins?" checked={form.walkInsWelcome} onChange={(v) => { update({ walkInsWelcome: v }); clearAF("walkInsWelcome"); }} isAutoFilled={autoFilled.has("walkInsWelcome")} />
                         <FormField label="Services & pricing" htmlFor="services-pricing-salon" hint="List your main services and prices" showValidation={false} error={null} isValid={false}>
-                          <textarea id="services-pricing-salon" rows={3} value={form.servicesPricing} onChange={(e) => update({ servicesPricing: e.target.value })} placeholder="e.g. Haircut $35, Color $80+, Blowout $45" className={inputClassName(false, null, false)} />
+                          <textarea id="services-pricing-salon" rows={3} value={form.servicesPricing} onChange={(e) => update({ servicesPricing: e.target.value })} placeholder="" className={inputClassName(false, null, false)} />
                         </FormField>
-                        <Toggle label="Do you offer gift cards?" checked={form.hasGiftCards} onChange={(v) => update({ hasGiftCards: v })} />
+                        <Toggle label="Do you offer gift cards?" checked={form.hasGiftCards} onChange={(v) => { update({ hasGiftCards: v }); clearAF("hasGiftCards"); }} isAutoFilled={autoFilled.has("hasGiftCards")} />
                       </div>
                     )}
                     {form.industry === "barber" && (
                       <div className="space-y-4">
-                        <Toggle label="Do you accept walk-ins?" checked={form.walkInsWelcome} onChange={(v) => update({ walkInsWelcome: v })} />
+                        <Toggle label="Do you accept walk-ins?" checked={form.walkInsWelcome} onChange={(v) => { update({ walkInsWelcome: v }); clearAF("walkInsWelcome"); }} isAutoFilled={autoFilled.has("walkInsWelcome")} />
                         <FormField label="Services & pricing" htmlFor="services-pricing-barber" hint="List your main services and prices" showValidation={false} error={null} isValid={false}>
-                          <textarea id="services-pricing-barber" rows={3} value={form.servicesPricing} onChange={(e) => update({ servicesPricing: e.target.value })} placeholder="e.g. Haircut $30, Fade $35, Beard Trim $15" className={inputClassName(false, null, false)} />
+                          <textarea id="services-pricing-barber" rows={3} value={form.servicesPricing} onChange={(e) => update({ servicesPricing: e.target.value })} placeholder="" className={inputClassName(false, null, false)} />
                         </FormField>
-                        <Toggle label="Do you offer beard trims?" checked={form.hasBeardTrim} onChange={(v) => update({ hasBeardTrim: v })} />
+                        <Toggle label="Do you offer beard trims?" checked={form.hasBeardTrim} onChange={(v) => { update({ hasBeardTrim: v }); clearAF("hasBeardTrim"); }} isAutoFilled={autoFilled.has("hasBeardTrim")} />
                       </div>
                     )}
                     {form.industry === "gym" && (
                       <div className="space-y-4">
                         <FormField label="Membership page URL" htmlFor="membership-url" hint="Link to your memberships/pricing page" showValidation={false} error={null} isValid={false}>
-                          <input id="membership-url" type="url" value={form.membershipUrl} onChange={(e) => update({ membershipUrl: e.target.value })} placeholder="https://yourgym.com/memberships" className={inputClassName(false, null, false)} />
+                          <input id="membership-url" type="url" value={form.membershipUrl} onChange={(e) => update({ membershipUrl: e.target.value })} placeholder="" className={inputClassName(false, null, false)} />
                         </FormField>
-                        <Toggle label="Do you offer a free trial or guest pass?" checked={form.hasFreeTrial} onChange={(v) => update({ hasFreeTrial: v })} />
-                        <Toggle label="Do you offer classes?" checked={form.hasClasses} onChange={(v) => update({ hasClasses: v })} />
+                        <Toggle label="Do you offer a free trial or guest pass?" checked={form.hasFreeTrial} onChange={(v) => { update({ hasFreeTrial: v }); clearAF("hasFreeTrial"); }} isAutoFilled={autoFilled.has("hasFreeTrial")} />
+                        <Toggle label="Do you offer classes?" checked={form.hasClasses} onChange={(v) => { update({ hasClasses: v }); clearAF("hasClasses"); }} isAutoFilled={autoFilled.has("hasClasses")} />
                         {form.hasClasses && (
                           <FormField label="Class schedule URL" htmlFor="class-schedule-url" hint="Link to your class schedule" showValidation={false} error={null} isValid={false}>
-                            <input id="class-schedule-url" type="url" value={form.classScheduleUrl} onChange={(e) => update({ classScheduleUrl: e.target.value })} placeholder="https://yourgym.com/schedule" className={inputClassName(false, null, false)} />
+                            <input id="class-schedule-url" type="url" value={form.classScheduleUrl} onChange={(e) => update({ classScheduleUrl: e.target.value })} placeholder="" className={inputClassName(false, null, false)} />
                           </FormField>
                         )}
-                        <Toggle label="Do you have personal trainers?" checked={form.hasTrainers} onChange={(v) => update({ hasTrainers: v })} />
+                        <Toggle label="Do you have personal trainers?" checked={form.hasTrainers} onChange={(v) => { update({ hasTrainers: v }); clearAF("hasTrainers"); }} isAutoFilled={autoFilled.has("hasTrainers")} />
                         <FormField label="Equipment info" htmlFor="equipment-info" hint="Brief description of your main equipment" showValidation={false} error={null} isValid={false}>
-                          <textarea id="equipment-info" rows={2} value={form.equipmentInfo} onChange={(e) => update({ equipmentInfo: e.target.value })} placeholder="e.g. Free weights, treadmills, squat racks, cable machines" className={inputClassName(false, null, false)} />
+                          <textarea id="equipment-info" rows={2} value={form.equipmentInfo} onChange={(e) => update({ equipmentInfo: e.target.value })} placeholder="" className={inputClassName(false, null, false)} />
                         </FormField>
                       </div>
                     )}
                     {form.industry === "law" && (
                       <div className="space-y-4">
                         <FormField label="Practice areas" htmlFor="practice-areas" hint="e.g. Personal injury, Family law, Criminal defense" showValidation={false} error={null} isValid={false}>
-                          <textarea id="practice-areas" rows={2} value={form.practiceAreas} onChange={(e) => update({ practiceAreas: e.target.value })} placeholder="e.g. Personal injury, Family law, Criminal defense" className={inputClassName(false, null, false)} />
+                          <textarea id="practice-areas" rows={2} value={form.practiceAreas} onChange={(e) => update({ practiceAreas: e.target.value })} placeholder="" className={inputClassName(false, null, false)} />
                         </FormField>
-                        <Toggle label="Do you offer free consultations?" checked={form.freeConsultation} onChange={(v) => update({ freeConsultation: v })} />
+                        <Toggle label="Do you offer free consultations?" checked={form.freeConsultation} onChange={(v) => { update({ freeConsultation: v }); clearAF("freeConsultation"); }} isAutoFilled={autoFilled.has("freeConsultation")} />
                         <FormField label="Fee structure" htmlFor="fees-info" hint="e.g. Contingency fee, hourly rate starting at $X" showValidation={false} error={null} isValid={false}>
-                          <input id="fees-info" type="text" value={form.feesInfo} onChange={(e) => update({ feesInfo: e.target.value })} placeholder="e.g. Contingency fee (no win, no fee)" className={inputClassName(false, null, false)} />
+                          <input id="fees-info" type="text" value={form.feesInfo} onChange={(e) => update({ feesInfo: e.target.value })} placeholder="" className={inputClassName(false, null, false)} />
                         </FormField>
-                        <Toggle label="Do you work on contingency?" checked={form.worksOnContingency} onChange={(v) => update({ worksOnContingency: v })} />
+                        <Toggle label="Do you work on contingency?" checked={form.worksOnContingency} onChange={(v) => { update({ worksOnContingency: v }); clearAF("worksOnContingency"); }} isAutoFilled={autoFilled.has("worksOnContingency")} />
                         <FormField label="Typical case timeline" htmlFor="case-timeline" hint="e.g. Most cases resolve in 6-12 months" showValidation={false} error={null} isValid={false}>
-                          <input id="case-timeline" type="text" value={form.caseTimeline} onChange={(e) => update({ caseTimeline: e.target.value })} placeholder="e.g. Most cases resolve in 6-12 months" className={inputClassName(false, null, false)} />
+                          <input id="case-timeline" type="text" value={form.caseTimeline} onChange={(e) => update({ caseTimeline: e.target.value })} placeholder="" className={inputClassName(false, null, false)} />
                         </FormField>
                       </div>
                     )}
                     {form.industry === "lawn" && (
                       <div className="space-y-4">
                         <FormField label="Service area" htmlFor="service-area" hint="e.g. Pittsburgh and suburbs within 20 miles" showValidation={false} error={null} isValid={false}>
-                          <textarea id="service-area" rows={2} value={form.serviceArea} onChange={(e) => update({ serviceArea: e.target.value })} placeholder="e.g. Pittsburgh and surrounding suburbs within 20 miles" className={inputClassName(false, null, false)} />
+                          <textarea id="service-area" rows={2} value={form.serviceArea} onChange={(e) => update({ serviceArea: e.target.value })} placeholder="" className={inputClassName(false, null, false)} />
                         </FormField>
-                        <Toggle label="Do you offer free estimates?" checked={form.freeEstimates} onChange={(v) => update({ freeEstimates: v })} />
-                        <Toggle label="Do you offer recurring service plans?" checked={form.recurringPlans} onChange={(v) => update({ recurringPlans: v })} />
-                        <Toggle label="Are you licensed and insured?" checked={form.isLicensed} onChange={(v) => update({ isLicensed: v })} />
+                        <Toggle label="Do you offer free estimates?" checked={form.freeEstimates} onChange={(v) => { update({ freeEstimates: v }); clearAF("freeEstimates"); }} isAutoFilled={autoFilled.has("freeEstimates")} />
+                        <Toggle label="Do you offer recurring service plans?" checked={form.recurringPlans} onChange={(v) => { update({ recurringPlans: v }); clearAF("recurringPlans"); }} isAutoFilled={autoFilled.has("recurringPlans")} />
+                        <Toggle label="Are you licensed and insured?" checked={form.isLicensed} onChange={(v) => { update({ isLicensed: v }); clearAF("isLicensed"); }} isAutoFilled={autoFilled.has("isLicensed")} />
                         <FormField label="Services & pricing" htmlFor="services-pricing-lawn" hint="e.g. Lawn mowing from $35, Mulching from $150" showValidation={false} error={null} isValid={false}>
-                          <textarea id="services-pricing-lawn" rows={2} value={form.servicesPricing} onChange={(e) => update({ servicesPricing: e.target.value })} placeholder="e.g. Lawn mowing from $35, Mulching from $150" className={inputClassName(false, null, false)} />
+                          <textarea id="services-pricing-lawn" rows={2} value={form.servicesPricing} onChange={(e) => update({ servicesPricing: e.target.value })} placeholder="" className={inputClassName(false, null, false)} />
                         </FormField>
                       </div>
                     )}
@@ -1324,27 +1360,27 @@ export default function BuilderPageClient() {
                           </div>
                         </div>
                         <FormField label="Areas served" htmlFor="areas-served" hint="e.g. Pittsburgh, Mt. Lebanon, Bethel Park" showValidation={false} error={null} isValid={false}>
-                          <textarea id="areas-served" rows={2} value={form.areasServed} onChange={(e) => update({ areasServed: e.target.value })} placeholder="e.g. Pittsburgh, Mt. Lebanon, Bethel Park" className={inputClassName(false, null, false)} />
+                          <textarea id="areas-served" rows={2} value={form.areasServed} onChange={(e) => update({ areasServed: e.target.value })} placeholder="" className={inputClassName(false, null, false)} />
                         </FormField>
                         <FormField label="Listings page URL" htmlFor="listings-url" hint="Link to your active listings" showValidation={false} error={null} isValid={false}>
-                          <input id="listings-url" type="url" value={form.listingsUrl} onChange={(e) => update({ listingsUrl: e.target.value })} placeholder="https://youragent.com/listings" className={inputClassName(false, null, false)} />
+                          <input id="listings-url" type="url" value={form.listingsUrl} onChange={(e) => update({ listingsUrl: e.target.value })} placeholder="" className={inputClassName(false, null, false)} />
                         </FormField>
-                        <Toggle label="Are you accepting new clients?" checked={form.acceptingClients} onChange={(v) => update({ acceptingClients: v })} />
+                        <Toggle label="Are you accepting new clients?" checked={form.acceptingClients} onChange={(v) => { update({ acceptingClients: v }); clearAF("acceptingClients"); }} isAutoFilled={autoFilled.has("acceptingClients")} />
                         <FormField label="Fee/commission info" htmlFor="fees-info-re" hint="e.g. Standard 3% buyer's agent commission" showValidation={false} error={null} isValid={false}>
-                          <input id="fees-info-re" type="text" value={form.feesInfo} onChange={(e) => update({ feesInfo: e.target.value })} placeholder="e.g. Standard 3% buyer's agent commission" className={inputClassName(false, null, false)} />
+                          <input id="fees-info-re" type="text" value={form.feesInfo} onChange={(e) => update({ feesInfo: e.target.value })} placeholder="" className={inputClassName(false, null, false)} />
                         </FormField>
                       </div>
                     )}
                     {form.industry === "other" && (
                       <div className="space-y-4">
                         <FormField label="Services & pricing" htmlFor="other-services-pricing" hint="List your main services and prices" showValidation={false} error={null} isValid={false}>
-                          <textarea id="other-services-pricing" rows={3} value={form.servicesPricing} onChange={(e) => update({ servicesPricing: e.target.value })} placeholder="e.g. Web design from $500, Logo design $200" className={inputClassName(false, null, false)} />
+                          <textarea id="other-services-pricing" rows={3} value={form.servicesPricing} onChange={(e) => update({ servicesPricing: e.target.value })} placeholder="" className={inputClassName(false, null, false)} />
                         </FormField>
                         <FormField label="Payment methods accepted" htmlFor="payment-info" hint="e.g. Cash, Card, Venmo, Zelle" showValidation={false} error={null} isValid={false}>
-                          <textarea id="payment-info" rows={2} value={form.paymentInfo} onChange={(e) => update({ paymentInfo: e.target.value })} placeholder="e.g. Cash, Card, Venmo, Zelle" className={inputClassName(false, null, false)} />
+                          <textarea id="payment-info" rows={2} value={form.paymentInfo} onChange={(e) => update({ paymentInfo: e.target.value })} placeholder="" className={inputClassName(false, null, false)} />
                         </FormField>
                         <FormField label="Additional information" htmlFor="extra-info" hint="Add any extra details your chatbot should know" showValidation={false} error={null} isValid={false}>
-                          <textarea id="extra-info" rows={4} value={form.extraInfo} onChange={(e) => update({ extraInfo: e.target.value })} placeholder="Add any extra details your chatbot should know…" className={inputClassName(false, null, false)} />
+                          <textarea id="extra-info" rows={4} value={form.extraInfo} onChange={(e) => update({ extraInfo: e.target.value })} placeholder="" className={inputClassName(false, null, false)} />
                         </FormField>
                       </div>
                     )}
@@ -1392,7 +1428,7 @@ export default function BuilderPageClient() {
                         type="text"
                         value={form.mascotName}
                         onChange={(e) => update({ mascotName: e.target.value })}
-                        placeholder="e.g. Smiley, Coach Max, Leafy"
+                        placeholder=""
                         maxLength={20}
                         className={inputClassName(showValidation, errors.mascotName, fieldValid("mascotName", (f) => validateMascotName(f.mascotName)))}
                       />
@@ -1511,12 +1547,13 @@ export default function BuilderPageClient() {
                       id="website-url"
                       type="url"
                       value={form.websiteUrl}
-                      onChange={(e) => update({ websiteUrl: e.target.value })}
-                      placeholder="https://yourbusiness.com"
-                      className={inputClassName(
+                      onChange={(e) => { update({ websiteUrl: e.target.value }); clearAF("websiteUrl"); }}
+                      placeholder=""
+                      className={inputClassNameAF(
                         showValidation,
                         errors.websiteUrl,
-                        fieldValid("websiteUrl", (f) => validateWebsiteUrl(f.websiteUrl))
+                        fieldValid("websiteUrl", (f) => validateWebsiteUrl(f.websiteUrl)),
+                        autoFilled.has("websiteUrl")
                       )}
                     />
                   </FormField>

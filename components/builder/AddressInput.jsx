@@ -5,14 +5,27 @@ import { US_STATES } from "../../lib/us-states";
 import { FormField, inputClassName } from "./FormField";
 import FieldTooltip from "./FieldTooltip";
 
+function inputClassNameAF(showValidation, error, isValid, af) {
+  const base = "w-full rounded-xl border bg-white px-4 py-3 text-sm text-[#1A1A2E] outline-none transition placeholder-[#9CA3AF] focus:ring-2";
+  if (showValidation && error) return `${base} border-red-400 focus:border-red-400 focus:ring-red-400/20`;
+  if (showValidation && isValid) return `${base} border-green-500/60 focus:border-green-500/60 focus:ring-green-500/20`;
+  if (af) return `${base} border-green-400 ring-2 ring-green-100 focus:border-green-400 focus:ring-green-200`;
+  return `${base} border-[#E2E8F0] focus:border-[#0D7377]/50 focus:ring-[#0D7377]/20`;
+}
+
 export default function AddressInput({
   address,
   onChange,
+  onFieldChange,
   showValidation = false,
   errors = {},
+  autoFilled,
   tooltip,
 }) {
-  const update = (patch) => onChange({ ...address, ...patch });
+  const update = (patch, field) => {
+    onChange({ ...address, ...patch });
+    onFieldChange?.(field);
+  };
 
   const streetValid =
     showValidation && !errors.addressStreet && address.street?.trim().length >= 10;
@@ -48,10 +61,10 @@ export default function AddressInput({
           id="address-street"
           type="text"
           value={address.street}
-          onChange={(e) => update({ street: e.target.value })}
-          placeholder="123 Main Street"
+          onChange={(e) => update({ street: e.target.value }, "addressStreet")}
+          placeholder=""
           autoComplete="street-address"
-          className={inputClassName(showValidation, errors.addressStreet, streetValid)}
+          className={inputClassNameAF(showValidation, errors.addressStreet, streetValid, autoFilled?.has("addressStreet"))}
         />
       </FormField>
 
@@ -67,10 +80,10 @@ export default function AddressInput({
             id="address-city"
             type="text"
             value={address.city}
-            onChange={(e) => update({ city: e.target.value.replace(/[^a-zA-Z\s-]/g, "") })}
-            placeholder="Pittsburgh"
+            onChange={(e) => update({ city: e.target.value.replace(/[^a-zA-Z\s-]/g, "") }, "addressCity")}
+            placeholder=""
             autoComplete="address-level2"
-            className={inputClassName(showValidation, errors.addressCity, cityValid)}
+            className={inputClassNameAF(showValidation, errors.addressCity, cityValid, autoFilled?.has("addressCity"))}
           />
         </FormField>
 
@@ -84,9 +97,9 @@ export default function AddressInput({
           <select
             id="address-state"
             value={address.state}
-            onChange={(e) => update({ state: e.target.value })}
+            onChange={(e) => update({ state: e.target.value }, "addressState")}
             autoComplete="address-level1"
-            className={`${inputClassName(showValidation, errors.addressState, stateValid)} appearance-none`}
+            className={`${inputClassNameAF(showValidation, errors.addressState, stateValid, autoFilled?.has("addressState"))} appearance-none`}
           >
             <option value="">Select state…</option>
             {US_STATES.map((s) => (
@@ -111,10 +124,10 @@ export default function AddressInput({
           inputMode="numeric"
           maxLength={5}
           value={address.zip}
-          onChange={(e) => update({ zip: e.target.value.replace(/\D/g, "").slice(0, 5) })}
-          placeholder="15201"
+          onChange={(e) => update({ zip: e.target.value.replace(/\D/g, "").slice(0, 5) }, "addressZip")}
+          placeholder=""
           autoComplete="postal-code"
-          className={`max-w-[140px] ${inputClassName(showValidation, errors.addressZip, zipValid)}`}
+          className={`max-w-[140px] ${inputClassNameAF(showValidation, errors.addressZip, zipValid, autoFilled?.has("addressZip"))}`}
         />
       </FormField>
 
