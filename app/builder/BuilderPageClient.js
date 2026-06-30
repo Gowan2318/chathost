@@ -57,7 +57,9 @@ const INITIAL = {
   industry: "",
   businessDescription: "",
   servicesDescription: "",
-  businessHours: createDefaultBusinessHours(),
+  // null = not yet set (import found nothing); createDefaultBusinessHours() is only used
+  // as a fallback for the editor display, never as a silent "confirmed" value.
+  businessHours: null,
   address: { street: "", city: "", state: "", zip: "" },
   supportPhone: "",
   supportEmail: "",
@@ -70,49 +72,50 @@ const INITIAL = {
   mascotName: "",
   websiteUrl: "",
   // Industry-specific fields (Pro only)
+  // null = unconfirmed; toggle shows "Please confirm" until owner explicitly picks yes/no.
   // Restaurant
   menuUrl: "",
-  hasReservations: false,
+  hasReservations: null,
   reservationLink: "",
-  hasDelivery: false,
+  hasDelivery: null,
   dietaryOptions: "",
   priceRange: "",
   // Dental
-  acceptingNewPatients: false,
+  acceptingNewPatients: null,
   insurancePlans: [],
-  hasPaymentPlans: false,
+  hasPaymentPlans: null,
   newPatientFormUrl: "",
   // Salon / Barber / Lawncare / Other
-  walkInsWelcome: false,
+  walkInsWelcome: null,
   servicesPricing: "",
   // Salon
-  hasGiftCards: false,
+  hasGiftCards: null,
   // Barber
-  hasBeardTrim: false,
+  hasBeardTrim: null,
   // Gym
   membershipUrl: "",
-  hasFreeTrial: false,
-  hasClasses: false,
+  hasFreeTrial: null,
+  hasClasses: null,
   classScheduleUrl: "",
-  hasTrainers: false,
+  hasTrainers: null,
   equipmentInfo: "",
   // Law + Real estate
   feesInfo: "",
   // Law
   practiceAreas: "",
-  freeConsultation: false,
-  worksOnContingency: false,
+  freeConsultation: null,
+  worksOnContingency: null,
   caseTimeline: "",
   // Lawncare
   serviceArea: "",
-  freeEstimates: false,
-  recurringPlans: false,
-  isLicensed: false,
+  freeEstimates: null,
+  recurringPlans: null,
+  isLicensed: null,
   // Real estate
   clientType: "both",
   areasServed: "",
   listingsUrl: "",
-  acceptingClients: false,
+  acceptingClients: null,
   // Other
   extraInfo: "",
   paymentInfo: "",
@@ -123,22 +126,37 @@ const INITIAL = {
   websiteKnowledge: "",
 };
 
+// checked: null = unconfirmed (amber), true = yes (green), false = no (gray)
+// Clicking: null→true, true→false, false→true (never returns to null once touched).
 function Toggle({ label, hint, checked, onChange }) {
+  const isNull = checked === null || checked === undefined;
+  const isTrue = checked === true;
   return (
     <div
-      className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-[#E2E8F0] bg-white px-4 py-3"
-      onClick={() => onChange(!checked)}
+      className={`flex cursor-pointer items-center justify-between gap-4 rounded-xl border px-4 py-3 ${
+        isNull ? "border-amber-300 bg-amber-50/60" : "border-[#E2E8F0] bg-white"
+      }`}
+      onClick={() => onChange(isTrue ? false : true)}
     >
       <div>
         <span className="text-sm font-medium text-[#1A1A2E]">{label}</span>
         {hint && <p className="mt-0.5 text-xs text-[#9CA3AF]">{hint}</p>}
+        {isNull && (
+          <p className="mt-0.5 text-xs font-semibold text-amber-600">Please confirm — tap to answer</p>
+        )}
       </div>
       <div className="flex flex-shrink-0 items-center gap-2">
-        <div className={`relative h-6 w-11 rounded-full transition-colors ${checked ? "bg-[#0D7377]" : "bg-[#CBD5E0]"}`}>
-          <div className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${checked ? "translate-x-5" : "translate-x-0"}`} />
+        <div className={`relative h-6 w-11 rounded-full transition-colors ${
+          isTrue ? "bg-[#0D7377]" : isNull ? "bg-amber-300" : "bg-[#CBD5E0]"
+        }`}>
+          <div className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+            isTrue ? "translate-x-5" : "translate-x-0"
+          }`} />
         </div>
-        <span className={`w-6 text-sm font-medium ${checked ? "text-[#0D7377]" : "text-[#9CA3AF]"}`}>
-          {checked ? "Yes" : "No"}
+        <span className={`w-7 text-sm font-semibold ${
+          isTrue ? "text-[#0D7377]" : isNull ? "text-amber-600" : "text-[#9CA3AF]"
+        }`}>
+          {isTrue ? "Yes" : isNull ? "?" : "No"}
         </span>
       </div>
     </div>
@@ -477,6 +495,8 @@ export default function BuilderPageClient() {
         } catch {
           setHoursNote(`Hours found: "${extracted.businessHours}" — please set them manually in the hours section below.`);
         }
+      } else {
+        setHoursNote("Hours not found — please set your actual business hours in the section below.");
       }
 
       setImportStatus("success");
@@ -486,7 +506,7 @@ export default function BuilderPageClient() {
         businessInfo: !!(patch.businessName || patch.businessDescription || patch.servicesDescription),
         contact: !!(patch.supportPhone || patch.supportEmail || patch.bookingUrl || patch.payNowUrl),
         location: !!(patch.address?.street || patch.address?.city),
-        hours: !!extracted.businessHours,
+        hours: true,
         industryDetails: !!(patch.hasReservations !== undefined || patch.hasDelivery !== undefined || patch.menuUrl),
       });
 
@@ -579,6 +599,8 @@ export default function BuilderPageClient() {
         } catch {
           setHoursNote(`Hours found: "${extracted.businessHours}" — please set them manually in the hours section below.`);
         }
+      } else {
+        setHoursNote("Hours not found — please set your actual business hours in the section below.");
       }
 
       setImportStatus("success");
@@ -588,7 +610,7 @@ export default function BuilderPageClient() {
         businessInfo: !!(patch.businessName || patch.businessDescription || patch.servicesDescription),
         contact: !!(patch.supportPhone || patch.supportEmail || patch.bookingUrl || patch.payNowUrl),
         location: !!(patch.address?.street || patch.address?.city),
-        hours: !!extracted.businessHours,
+        hours: true,
         industryDetails: !!(patch.hasReservations !== undefined || patch.hasDelivery !== undefined || patch.menuUrl),
       });
 
@@ -1123,12 +1145,17 @@ export default function BuilderPageClient() {
                 {/* ── Section: Hours ── */}
                 <SectionBlock
                   title="Business Hours"
-                  summary="Set your opening hours for each day"
+                  summary={form.businessHours ? "Set your opening hours for each day" : "⚠ Hours not confirmed — please set"}
                   expanded={expandedSections.hours}
                   onToggle={() => setExpandedSections((p) => ({ ...p, hours: !p.hours }))}
                 >
+                  {hoursNote && (
+                    <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
+                      ⚠ {hoursNote}
+                    </p>
+                  )}
                   <BusinessHoursEditor
-                    hours={form.businessHours}
+                    hours={form.businessHours ?? createDefaultBusinessHours()}
                     onChange={(businessHours) => update({ businessHours })}
                     tooltip="Set when you're open. The chatbot will tell customers your hours."
                   />
