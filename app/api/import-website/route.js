@@ -296,6 +296,39 @@ websiteKnowledge: write as a rich paragraph the bot can draw on to answer any cu
 
 Return ONLY valid JSON, no explanation, no markdown.`;
 
+const SITEMAP_PRIORITY_KEYWORDS = [
+  "services", "service", "menu", "about", "contact", "faq", "hours",
+  "pricing", "price", "team", "staff", "booking", "appointments",
+  "location", "locations",
+];
+
+async function fetchSitemap(baseOrigin) {
+  for (const path of ["/sitemap.xml", "/sitemap_index.xml"]) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 5000);
+      const res = await fetch(`${baseOrigin}${path}`, { signal: ctrl.signal });
+      clearTimeout(timer);
+      if (!res.ok) continue;
+      const xml = await res.text();
+      const locs = [...xml.matchAll(/<loc>\s*(https?:\/\/[^\s<]+)\s*<\/loc>/gi)].map(m => m[1].trim());
+      if (locs.length === 0) continue;
+      const ownHostname = new URL(baseOrigin).hostname;
+      const sameDomain = locs.filter(u => { try { return new URL(u).hostname === ownHostname; } catch { return false; } });
+      if (sameDomain.length === 0) continue;
+      const priority = sameDomain.filter(u => {
+        const p = new URL(u).pathname.toLowerCase();
+        return SITEMAP_PRIORITY_KEYWORDS.some(kw => p.includes(kw));
+      });
+      const rest = sameDomain.filter(u => !priority.includes(u));
+      return [...priority, ...rest].slice(0, 6);
+    } catch {
+      // try next candidate
+    }
+  }
+  return [];
+}
+
 export async function POST(request) {
   try {
     const clientIp = getClientIp(request);
@@ -395,25 +428,37 @@ export async function POST(request) {
           linktreeUrl: cat.linktreeUrl,
         });
 
-        // Build scrape queue: priority pages + /about + /contact (max 4 total)
+        // Build scrape queue: sitemap preferred, fall back to link categorization (max 5)
         const baseOrigin = `${parsed.protocol}//${parsed.host}`;
         const currentPath = parsed.pathname.replace(/\/$/, "");
         const scrapeQueue = [];
 
-        // 1. Service/promo/menu pages (up to 2)
-        for (const p of cat.pagesToScrape.slice(0, 2)) {
-          scrapeQueue.push(p);
-        }
-        // 2. Linktree (if found)
-        if (cat.linktreeUrl && scrapeQueue.length < 4) {
-          scrapeQueue.push(cat.linktreeUrl);
-        }
-        // 3. /contact and /about
-        for (const path of ["/contact", "/contact-us", "/about"]) {
-          if (scrapeQueue.length >= 4) break;
-          const pageUrl = `${baseOrigin}${path}`;
-          if (path !== currentPath && !scrapeQueue.includes(pageUrl)) {
-            scrapeQueue.push(pageUrl);
+        const sitemapPages = await fetchSitemap(baseOrigin);
+        if (sitemapPages.length > 0) {
+          console.log("[import] sitemap found", sitemapPages.length, "pages, using:", sitemapPages.slice(0, 5));
+          for (const sitemapUrl of sitemapPages) {
+            if (scrapeQueue.length >= 5) break;
+            if (sitemapUrl !== url && !scrapeQueue.includes(sitemapUrl)) {
+              scrapeQueue.push(sitemapUrl);
+            }
+          }
+        } else {
+          console.log("[import] no sitemap found, using link categorization");
+          // 1. Service/promo/menu pages (up to 2)
+          for (const p of cat.pagesToScrape.slice(0, 2)) {
+            scrapeQueue.push(p);
+          }
+          // 2. Linktree (if found)
+          if (cat.linktreeUrl && scrapeQueue.length < 5) {
+            scrapeQueue.push(cat.linktreeUrl);
+          }
+          // 3. /contact and /about
+          for (const path of ["/contact", "/contact-us", "/about"]) {
+            if (scrapeQueue.length >= 5) break;
+            const pageUrl = `${baseOrigin}${path}`;
+            if (path !== currentPath && !scrapeQueue.includes(pageUrl)) {
+              scrapeQueue.push(pageUrl);
+            }
           }
         }
 
