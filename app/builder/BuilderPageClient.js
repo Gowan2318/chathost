@@ -459,6 +459,17 @@ export default function BuilderPageClient() {
       if (extracted.hasReservations !== undefined) patch.hasReservations = extracted.hasReservations;
       if (extracted.hasDelivery !== undefined) patch.hasDelivery = extracted.hasDelivery;
       if (extracted.menuUrl) patch.menuUrl = extracted.menuUrl;
+      if (extracted.walkInsWelcome !== undefined && extracted.walkInsWelcome !== null) patch.walkInsWelcome = extracted.walkInsWelcome;
+      if (extracted.hasBeardTrim !== undefined && extracted.hasBeardTrim !== null) patch.hasBeardTrim = extracted.hasBeardTrim;
+      if (extracted.hasGiftCards !== undefined && extracted.hasGiftCards !== null) patch.hasGiftCards = extracted.hasGiftCards;
+      if (extracted.acceptingNewPatients !== undefined && extracted.acceptingNewPatients !== null) patch.acceptingNewPatients = extracted.acceptingNewPatients;
+      if (extracted.hasPaymentPlans !== undefined && extracted.hasPaymentPlans !== null) patch.hasPaymentPlans = extracted.hasPaymentPlans;
+      if (extracted.freeConsultation !== undefined && extracted.freeConsultation !== null) patch.freeConsultation = extracted.freeConsultation;
+      if (extracted.worksOnContingency !== undefined && extracted.worksOnContingency !== null) patch.worksOnContingency = extracted.worksOnContingency;
+      if (extracted.freeEstimates !== undefined && extracted.freeEstimates !== null) patch.freeEstimates = extracted.freeEstimates;
+      if (extracted.recurringPlans !== undefined && extracted.recurringPlans !== null) patch.recurringPlans = extracted.recurringPlans;
+      if (extracted.isLicensed !== undefined && extracted.isLicensed !== null) patch.isLicensed = extracted.isLicensed;
+      if (extracted.acceptingClients !== undefined && extracted.acceptingClients !== null) patch.acceptingClients = extracted.acceptingClients;
 
       // New fields from multi-page scrape
       if (extracted.bookingUrl && !form.bookingUrl) patch.bookingUrl = extracted.bookingUrl;
@@ -567,6 +578,17 @@ export default function BuilderPageClient() {
       if (extracted.hasReservations !== undefined) patch.hasReservations = extracted.hasReservations;
       if (extracted.hasDelivery !== undefined) patch.hasDelivery = extracted.hasDelivery;
       if (extracted.menuUrl) patch.menuUrl = extracted.menuUrl;
+      if (extracted.walkInsWelcome !== undefined && extracted.walkInsWelcome !== null) patch.walkInsWelcome = extracted.walkInsWelcome;
+      if (extracted.hasBeardTrim !== undefined && extracted.hasBeardTrim !== null) patch.hasBeardTrim = extracted.hasBeardTrim;
+      if (extracted.hasGiftCards !== undefined && extracted.hasGiftCards !== null) patch.hasGiftCards = extracted.hasGiftCards;
+      if (extracted.acceptingNewPatients !== undefined && extracted.acceptingNewPatients !== null) patch.acceptingNewPatients = extracted.acceptingNewPatients;
+      if (extracted.hasPaymentPlans !== undefined && extracted.hasPaymentPlans !== null) patch.hasPaymentPlans = extracted.hasPaymentPlans;
+      if (extracted.freeConsultation !== undefined && extracted.freeConsultation !== null) patch.freeConsultation = extracted.freeConsultation;
+      if (extracted.worksOnContingency !== undefined && extracted.worksOnContingency !== null) patch.worksOnContingency = extracted.worksOnContingency;
+      if (extracted.freeEstimates !== undefined && extracted.freeEstimates !== null) patch.freeEstimates = extracted.freeEstimates;
+      if (extracted.recurringPlans !== undefined && extracted.recurringPlans !== null) patch.recurringPlans = extracted.recurringPlans;
+      if (extracted.isLicensed !== undefined && extracted.isLicensed !== null) patch.isLicensed = extracted.isLicensed;
+      if (extracted.acceptingClients !== undefined && extracted.acceptingClients !== null) patch.acceptingClients = extracted.acceptingClients;
 
       // New fields from multi-page scrape
       if (extracted.bookingUrl && !form.bookingUrl) patch.bookingUrl = extracted.bookingUrl;

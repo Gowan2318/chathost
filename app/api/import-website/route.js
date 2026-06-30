@@ -268,6 +268,20 @@ Return a JSON object with these fields (use null for any field not found):
   "industry_hint": "string (one of: restaurant, dental, salon, barber, gym, lawncare, realestate, law, other) or null",
   "hasReservations": true/false/null,
   "hasDelivery": true/false/null,
+  "walkInsWelcome": true/false/null,
+  "hasBeardTrim": true/false/null,
+  "hasGiftCards": true/false/null,
+  "acceptingNewPatients": true/false/null,
+  "hasPaymentPlans": true/false/null,
+  "hasFreeTrial": true/false/null,
+  "hasClasses": true/false/null,
+  "hasTrainers": true/false/null,
+  "freeConsultation": true/false/null,
+  "worksOnContingency": true/false/null,
+  "freeEstimates": true/false/null,
+  "recurringPlans": true/false/null,
+  "isLicensed": true/false/null,
+  "acceptingClients": true/false/null,
   "menuUrl": "string (URL of online menu if found) or null",
   "bookingUrl": "string (URL of a booking or scheduling page visible in content, e.g. a calendly or square link) or null",
   "payNowUrl": "string (URL of a payment page visible in content) or null",
@@ -277,7 +291,7 @@ Return a JSON object with these fields (use null for any field not found):
 }
 
 Address rules: look in footer, contact sections, schema markup. Extract street/city/state/zip separately.
-hasReservations/hasDelivery: true only if explicitly offered, false only if explicitly NOT offered, null otherwise.
+All true/false/null fields: true only if explicitly stated on the page, false only if explicitly stated as NOT offered/accepted, null if not mentioned at all.
 websiteKnowledge: write as a rich paragraph the bot can draw on to answer any customer question. Include all useful details from all pages provided.
 
 Return ONLY valid JSON, no explanation, no markdown.`;
