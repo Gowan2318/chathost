@@ -131,7 +131,7 @@ function inputClassNameAF(showValidation, error, isValid, af) {
   if (showValidation && error) return `${base} border-red-400 focus:border-red-400 focus:ring-red-400/20`;
   if (showValidation && isValid) return `${base} border-green-500/60 focus:border-green-500/60 focus:ring-green-500/20`;
   if (af) return `${base} border-green-400 ring-2 ring-green-100 focus:border-green-400 focus:ring-green-200`;
-  return `${base} border-[#E2E8F0] focus:border-[#0D7377]/50 focus:ring-[#0D7377]/20`;
+  return `${base} border-[#CBD5E0] focus:border-[#0D7377]/50 focus:ring-[#0D7377]/20`;
 }
 
 // checked: null = unconfirmed (amber), true = yes (green), false = no (gray)
@@ -903,7 +903,7 @@ export default function BuilderPageClient() {
                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleImport(); } }}
                     placeholder="Enter your website URL"
                     disabled={isImporting}
-                    className="flex-1 rounded-xl border border-[#E2E8F0] bg-white px-5 py-4 text-base text-[#1A1A2E] placeholder-[#9CA3AF] outline-none transition focus:border-[#0D7377]/50 focus:ring-2 focus:ring-[#0D7377]/20 disabled:opacity-60"
+                    className="flex-1 rounded-xl border border-[#CBD5E0] bg-white px-5 py-4 text-base text-[#1A1A2E] placeholder-[#9CA3AF] outline-none transition focus:border-[#0D7377]/50 focus:ring-2 focus:ring-[#0D7377]/20 disabled:opacity-60"
                   />
                   <button
                     type="button"
@@ -963,7 +963,7 @@ export default function BuilderPageClient() {
                         onChange={(e) => setPasteText(e.target.value)}
                         placeholder="Paste your website text here..."
                         rows={6}
-                        className="mt-4 w-full border border-[#E2E8F0] rounded-lg p-3 text-[#1A1A2E] text-sm focus:outline-none focus:ring-2 focus:ring-[#0D7377] resize-none"
+                        className="mt-4 w-full border border-[#CBD5E0] rounded-lg p-3 text-[#1A1A2E] text-sm focus:outline-none focus:ring-2 focus:ring-[#0D7377] resize-none"
                       />
                       <button
                         type="button"
@@ -1593,7 +1593,7 @@ export default function BuilderPageClient() {
                           value={authEmail}
                           onChange={(e) => setAuthEmail(e.target.value)}
                           placeholder="you@example.com"
-                          className="w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#1A1A2E] placeholder-[#9CA3AF] outline-none transition focus:border-[#0D7377]/50 focus:ring-2 focus:ring-[#0D7377]/20"
+                          className="w-full rounded-xl border border-[#CBD5E0] bg-white px-4 py-3 text-sm text-[#1A1A2E] placeholder-[#9CA3AF] outline-none transition focus:border-[#0D7377]/50 focus:ring-2 focus:ring-[#0D7377]/20"
                         />
                       </div>
                       <div>
@@ -1604,7 +1604,7 @@ export default function BuilderPageClient() {
                           value={authPassword}
                           onChange={(e) => setAuthPassword(e.target.value)}
                           placeholder={authTab === "signup" ? "At least 8 characters" : "Your password"}
-                          className="w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#1A1A2E] placeholder-[#9CA3AF] outline-none transition focus:border-[#0D7377]/50 focus:ring-2 focus:ring-[#0D7377]/20"
+                          className="w-full rounded-xl border border-[#CBD5E0] bg-white px-4 py-3 text-sm text-[#1A1A2E] placeholder-[#9CA3AF] outline-none transition focus:border-[#0D7377]/50 focus:ring-2 focus:ring-[#0D7377]/20"
                         />
                       </div>
                       {authTab === "signup" && (
@@ -1616,7 +1616,7 @@ export default function BuilderPageClient() {
                             value={authConfirm}
                             onChange={(e) => setAuthConfirm(e.target.value)}
                             placeholder="Repeat your password"
-                            className="w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#1A1A2E] placeholder-[#9CA3AF] outline-none transition focus:border-[#0D7377]/50 focus:ring-2 focus:ring-[#0D7377]/20"
+                            className="w-full rounded-xl border border-[#CBD5E0] bg-white px-4 py-3 text-sm text-[#1A1A2E] placeholder-[#9CA3AF] outline-none transition focus:border-[#0D7377]/50 focus:ring-2 focus:ring-[#0D7377]/20"
                           />
                         </div>
                       )}

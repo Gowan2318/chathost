@@ -10,7 +10,7 @@ function inputClassNameAF(showValidation, error, isValid, af) {
   if (showValidation && error) return `${base} border-red-400 focus:border-red-400 focus:ring-red-400/20`;
   if (showValidation && isValid) return `${base} border-green-500/60 focus:border-green-500/60 focus:ring-green-500/20`;
   if (af) return `${base} border-green-400 ring-2 ring-green-100 focus:border-green-400 focus:ring-green-200`;
-  return `${base} border-[#E2E8F0] focus:border-[#0D7377]/50 focus:ring-[#0D7377]/20`;
+  return `${base} border-[#CBD5E0] focus:border-[#0D7377]/50 focus:ring-[#0D7377]/20`;
 }
 
 export default function AddressInput({

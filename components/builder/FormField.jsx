@@ -76,5 +76,5 @@ export function inputClassName(showValidation, error, isValid) {
   if (showValidation && isValid) {
     return `${base} border-green-500/60 focus:border-green-500/60 focus:ring-green-500/20`;
   }
-  return `${base} border-[#E2E8F0] focus:border-[#0D7377]/50 focus:ring-[#0D7377]/20`;
+  return `${base} border-[#CBD5E0] focus:border-[#0D7377]/50 focus:ring-[#0D7377]/20`;
 }
