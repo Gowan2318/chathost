@@ -41,7 +41,10 @@ body {
 }
 
 /* ─── Base text color: ensure all inputs are always readable ─── */
-input, textarea, select {
+/* Excludes the chat widget preview, which manages its own text color per theme */
+input:not(.vesta-chat-widget-root *),
+textarea:not(.vesta-chat-widget-root *),
+select:not(.vesta-chat-widget-root *) {
   color: #1A1A2E !important;
   -webkit-text-fill-color: #1A1A2E !important;
 }
