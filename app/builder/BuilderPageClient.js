@@ -452,24 +452,24 @@ export default function BuilderPageClient() {
         if (VALID_INDUSTRIES.has(mapped)) patch.industry = mapped;
       }
 
-      // Industry-specific field overrides
-      if (extracted.hasFreeTrial !== undefined) patch.hasFreeTrial = extracted.hasFreeTrial;
-      if (extracted.hasClasses !== undefined) patch.hasClasses = extracted.hasClasses;
-      if (extracted.hasTrainers !== undefined) patch.hasTrainers = extracted.hasTrainers;
-      if (extracted.hasReservations !== undefined) patch.hasReservations = extracted.hasReservations;
-      if (extracted.hasDelivery !== undefined) patch.hasDelivery = extracted.hasDelivery;
+      // Industry-specific field overrides — only patch when explicitly true or false (null = unconfirmed, leave as-is)
+      if (extracted.hasFreeTrial === true || extracted.hasFreeTrial === false) patch.hasFreeTrial = extracted.hasFreeTrial;
+      if (extracted.hasClasses === true || extracted.hasClasses === false) patch.hasClasses = extracted.hasClasses;
+      if (extracted.hasTrainers === true || extracted.hasTrainers === false) patch.hasTrainers = extracted.hasTrainers;
+      if (extracted.hasReservations === true || extracted.hasReservations === false) patch.hasReservations = extracted.hasReservations;
+      if (extracted.hasDelivery === true || extracted.hasDelivery === false) patch.hasDelivery = extracted.hasDelivery;
       if (extracted.menuUrl) patch.menuUrl = extracted.menuUrl;
-      if (extracted.walkInsWelcome !== undefined && extracted.walkInsWelcome !== null) patch.walkInsWelcome = extracted.walkInsWelcome;
-      if (extracted.hasBeardTrim !== undefined && extracted.hasBeardTrim !== null) patch.hasBeardTrim = extracted.hasBeardTrim;
-      if (extracted.hasGiftCards !== undefined && extracted.hasGiftCards !== null) patch.hasGiftCards = extracted.hasGiftCards;
-      if (extracted.acceptingNewPatients !== undefined && extracted.acceptingNewPatients !== null) patch.acceptingNewPatients = extracted.acceptingNewPatients;
-      if (extracted.hasPaymentPlans !== undefined && extracted.hasPaymentPlans !== null) patch.hasPaymentPlans = extracted.hasPaymentPlans;
-      if (extracted.freeConsultation !== undefined && extracted.freeConsultation !== null) patch.freeConsultation = extracted.freeConsultation;
-      if (extracted.worksOnContingency !== undefined && extracted.worksOnContingency !== null) patch.worksOnContingency = extracted.worksOnContingency;
-      if (extracted.freeEstimates !== undefined && extracted.freeEstimates !== null) patch.freeEstimates = extracted.freeEstimates;
-      if (extracted.recurringPlans !== undefined && extracted.recurringPlans !== null) patch.recurringPlans = extracted.recurringPlans;
-      if (extracted.isLicensed !== undefined && extracted.isLicensed !== null) patch.isLicensed = extracted.isLicensed;
-      if (extracted.acceptingClients !== undefined && extracted.acceptingClients !== null) patch.acceptingClients = extracted.acceptingClients;
+      if (extracted.walkInsWelcome === true || extracted.walkInsWelcome === false) patch.walkInsWelcome = extracted.walkInsWelcome;
+      if (extracted.hasBeardTrim === true || extracted.hasBeardTrim === false) patch.hasBeardTrim = extracted.hasBeardTrim;
+      if (extracted.hasGiftCards === true || extracted.hasGiftCards === false) patch.hasGiftCards = extracted.hasGiftCards;
+      if (extracted.acceptingNewPatients === true || extracted.acceptingNewPatients === false) patch.acceptingNewPatients = extracted.acceptingNewPatients;
+      if (extracted.hasPaymentPlans === true || extracted.hasPaymentPlans === false) patch.hasPaymentPlans = extracted.hasPaymentPlans;
+      if (extracted.freeConsultation === true || extracted.freeConsultation === false) patch.freeConsultation = extracted.freeConsultation;
+      if (extracted.worksOnContingency === true || extracted.worksOnContingency === false) patch.worksOnContingency = extracted.worksOnContingency;
+      if (extracted.freeEstimates === true || extracted.freeEstimates === false) patch.freeEstimates = extracted.freeEstimates;
+      if (extracted.recurringPlans === true || extracted.recurringPlans === false) patch.recurringPlans = extracted.recurringPlans;
+      if (extracted.isLicensed === true || extracted.isLicensed === false) patch.isLicensed = extracted.isLicensed;
+      if (extracted.acceptingClients === true || extracted.acceptingClients === false) patch.acceptingClients = extracted.acceptingClients;
 
       // New fields from multi-page scrape
       if (extracted.bookingUrl && !form.bookingUrl) patch.bookingUrl = extracted.bookingUrl;
@@ -516,7 +516,7 @@ export default function BuilderPageClient() {
       setExpandedSections({
         businessInfo: !!(patch.businessName || patch.businessDescription || patch.servicesDescription),
         contact: !!(patch.supportPhone || patch.supportEmail || patch.bookingUrl || patch.payNowUrl),
-        location: !!(patch.address?.street || patch.address?.city),
+        location: true,
         hours: true,
         industryDetails: !!(patch.hasReservations !== undefined || patch.hasDelivery !== undefined || patch.menuUrl),
       });
@@ -571,24 +571,24 @@ export default function BuilderPageClient() {
         if (VALID_INDUSTRIES.has(mapped)) patch.industry = mapped;
       }
 
-      // Industry-specific field overrides
-      if (extracted.hasFreeTrial !== undefined) patch.hasFreeTrial = extracted.hasFreeTrial;
-      if (extracted.hasClasses !== undefined) patch.hasClasses = extracted.hasClasses;
-      if (extracted.hasTrainers !== undefined) patch.hasTrainers = extracted.hasTrainers;
-      if (extracted.hasReservations !== undefined) patch.hasReservations = extracted.hasReservations;
-      if (extracted.hasDelivery !== undefined) patch.hasDelivery = extracted.hasDelivery;
+      // Industry-specific field overrides — only patch when explicitly true or false (null = unconfirmed, leave as-is)
+      if (extracted.hasFreeTrial === true || extracted.hasFreeTrial === false) patch.hasFreeTrial = extracted.hasFreeTrial;
+      if (extracted.hasClasses === true || extracted.hasClasses === false) patch.hasClasses = extracted.hasClasses;
+      if (extracted.hasTrainers === true || extracted.hasTrainers === false) patch.hasTrainers = extracted.hasTrainers;
+      if (extracted.hasReservations === true || extracted.hasReservations === false) patch.hasReservations = extracted.hasReservations;
+      if (extracted.hasDelivery === true || extracted.hasDelivery === false) patch.hasDelivery = extracted.hasDelivery;
       if (extracted.menuUrl) patch.menuUrl = extracted.menuUrl;
-      if (extracted.walkInsWelcome !== undefined && extracted.walkInsWelcome !== null) patch.walkInsWelcome = extracted.walkInsWelcome;
-      if (extracted.hasBeardTrim !== undefined && extracted.hasBeardTrim !== null) patch.hasBeardTrim = extracted.hasBeardTrim;
-      if (extracted.hasGiftCards !== undefined && extracted.hasGiftCards !== null) patch.hasGiftCards = extracted.hasGiftCards;
-      if (extracted.acceptingNewPatients !== undefined && extracted.acceptingNewPatients !== null) patch.acceptingNewPatients = extracted.acceptingNewPatients;
-      if (extracted.hasPaymentPlans !== undefined && extracted.hasPaymentPlans !== null) patch.hasPaymentPlans = extracted.hasPaymentPlans;
-      if (extracted.freeConsultation !== undefined && extracted.freeConsultation !== null) patch.freeConsultation = extracted.freeConsultation;
-      if (extracted.worksOnContingency !== undefined && extracted.worksOnContingency !== null) patch.worksOnContingency = extracted.worksOnContingency;
-      if (extracted.freeEstimates !== undefined && extracted.freeEstimates !== null) patch.freeEstimates = extracted.freeEstimates;
-      if (extracted.recurringPlans !== undefined && extracted.recurringPlans !== null) patch.recurringPlans = extracted.recurringPlans;
-      if (extracted.isLicensed !== undefined && extracted.isLicensed !== null) patch.isLicensed = extracted.isLicensed;
-      if (extracted.acceptingClients !== undefined && extracted.acceptingClients !== null) patch.acceptingClients = extracted.acceptingClients;
+      if (extracted.walkInsWelcome === true || extracted.walkInsWelcome === false) patch.walkInsWelcome = extracted.walkInsWelcome;
+      if (extracted.hasBeardTrim === true || extracted.hasBeardTrim === false) patch.hasBeardTrim = extracted.hasBeardTrim;
+      if (extracted.hasGiftCards === true || extracted.hasGiftCards === false) patch.hasGiftCards = extracted.hasGiftCards;
+      if (extracted.acceptingNewPatients === true || extracted.acceptingNewPatients === false) patch.acceptingNewPatients = extracted.acceptingNewPatients;
+      if (extracted.hasPaymentPlans === true || extracted.hasPaymentPlans === false) patch.hasPaymentPlans = extracted.hasPaymentPlans;
+      if (extracted.freeConsultation === true || extracted.freeConsultation === false) patch.freeConsultation = extracted.freeConsultation;
+      if (extracted.worksOnContingency === true || extracted.worksOnContingency === false) patch.worksOnContingency = extracted.worksOnContingency;
+      if (extracted.freeEstimates === true || extracted.freeEstimates === false) patch.freeEstimates = extracted.freeEstimates;
+      if (extracted.recurringPlans === true || extracted.recurringPlans === false) patch.recurringPlans = extracted.recurringPlans;
+      if (extracted.isLicensed === true || extracted.isLicensed === false) patch.isLicensed = extracted.isLicensed;
+      if (extracted.acceptingClients === true || extracted.acceptingClients === false) patch.acceptingClients = extracted.acceptingClients;
 
       // New fields from multi-page scrape
       if (extracted.bookingUrl && !form.bookingUrl) patch.bookingUrl = extracted.bookingUrl;
@@ -631,7 +631,7 @@ export default function BuilderPageClient() {
       setExpandedSections({
         businessInfo: !!(patch.businessName || patch.businessDescription || patch.servicesDescription),
         contact: !!(patch.supportPhone || patch.supportEmail || patch.bookingUrl || patch.payNowUrl),
-        location: !!(patch.address?.street || patch.address?.city),
+        location: true,
         hours: true,
         industryDetails: !!(patch.hasReservations !== undefined || patch.hasDelivery !== undefined || patch.menuUrl),
       });
@@ -1151,10 +1151,15 @@ export default function BuilderPageClient() {
                 <SectionBlock
                   key={`location-${importDone}`}
                   title="Location"
-                  summary={form.address.city ? [form.address.street, form.address.city, form.address.state].filter(Boolean).join(", ") : "Required"}
+                  summary={form.address.city ? [form.address.street, form.address.city, form.address.state].filter(Boolean).join(", ") : "⚠ Address not confirmed — please enter"}
                   expanded={expandedSections.location}
                   onToggle={() => setExpandedSections((p) => ({ ...p, location: !p.location }))}
                 >
+                  {!form.address.city && !form.address.street && (
+                    <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
+                      ⚠ Address not found — please enter your business address below.
+                    </p>
+                  )}
                   <AddressInput
                     address={form.address}
                     onChange={(address) => update({ address })}
