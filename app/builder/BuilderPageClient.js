@@ -1149,16 +1149,34 @@ export default function BuilderPageClient() {
                   expanded={expandedSections.hours}
                   onToggle={() => setExpandedSections((p) => ({ ...p, hours: !p.hours }))}
                 >
-                  {hoursNote && (
-                    <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
-                      ⚠ {hoursNote}
-                    </p>
+                  {form.businessHours === null ? (
+                    <div className="rounded-xl border-2 border-dashed border-amber-300 bg-amber-50/60 p-6 text-center">
+                      <p className="text-sm font-semibold text-amber-700">Hours not confirmed</p>
+                      <p className="mt-1 text-xs text-amber-600">
+                        We couldn&apos;t find your hours automatically. Please set them below.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => update({ businessHours: createDefaultBusinessHours() })}
+                        className="mt-3 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-600"
+                      >
+                        Set my hours
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      {hoursNote && (
+                        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
+                          ⚠ {hoursNote}
+                        </p>
+                      )}
+                      <BusinessHoursEditor
+                        hours={form.businessHours}
+                        onChange={(businessHours) => update({ businessHours })}
+                        tooltip="Set when you're open. The chatbot will tell customers your hours."
+                      />
+                    </>
                   )}
-                  <BusinessHoursEditor
-                    hours={form.businessHours ?? createDefaultBusinessHours()}
-                    onChange={(businessHours) => update({ businessHours })}
-                    tooltip="Set when you're open. The chatbot will tell customers your hours."
-                  />
                 </SectionBlock>
 
                 {/* ── Section: Industry Details (Pro only) ── */}
