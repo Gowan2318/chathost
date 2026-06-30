@@ -136,6 +136,13 @@ function extractNavLinks(html, baseUrl) {
   return links;
 }
 
+// Returns head + tail of a string so footer content isn't cut off on long pages.
+// If the string fits within headLen+tailLen, returns it unchanged (no duplication).
+function headTail(s, headLen, tailLen) {
+  if (s.length <= headLen + tailLen) return s;
+  return s.slice(0, headLen) + "\n\n---\n" + s.slice(-tailLen);
+}
+
 function stripHtml(html) {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
@@ -324,7 +331,7 @@ export async function POST(request) {
       if (pastedText.length > 100000) {
         return json({ error: "Pasted text too long" }, { status: 400 });
       }
-      content = stripHtml(pastedText).slice(0, 8000);
+      content = headTail(stripHtml(pastedText), 5000, 3000);
       if (content.length < 50) {
         return json({ error: "Please paste more text from your website (at least a few sentences)" }, { status: 400 });
       }
@@ -403,7 +410,7 @@ export async function POST(request) {
         );
 
         // Combine all content, max 12000 chars
-        let combined = mainMd.slice(0, 9000);
+        let combined = headTail(mainMd, 6000, 3000);
 
         for (let i = 0; i < additionalResults.length; i++) {
           if (additionalResults[i].status !== "fulfilled") continue;
@@ -465,7 +472,7 @@ export async function POST(request) {
         const urlObjects = extractUrlObjects(html, url);
         cat = categorizeLinks(urlObjects, parsed.hostname);
 
-        content = stripHtml(html).slice(0, 7000);
+        content = headTail(stripHtml(html), 4500, 2500);
         if (content.length < 50) {
           return json({ error: "Could not extract readable content from that page" }, { status: 422 });
         }
