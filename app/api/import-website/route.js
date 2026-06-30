@@ -166,7 +166,7 @@ async function firecrawlScrape(url, apiKey, timeoutMs = 12000) {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
+      body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: false, waitFor: 2000 }),
       signal: AbortSignal.timeout(timeoutMs),
     });
     if (!res.ok) return "";
