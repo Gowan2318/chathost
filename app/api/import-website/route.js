@@ -29,6 +29,10 @@ const BOOKING_DOMAINS = [
   "mindbodyonline.com", "acuityscheduling.com", "appointmentplus.com",
   "setmore.com", "fresha.com", "boulevard.io", "gloss.app", "styleseat.com",
 ];
+const SCRAPEABLE_BOOKING_DOMAINS = [
+  "ampbyus.com", "vagaro.com", "booksy.com", "square.com", "squareup.com",
+  "acuityscheduling.com", "mindbodyonline.com", "styleseat.com", "fresha.com",
+];
 const PAYMENT_DOMAINS = [
   "paypal.com", "paypal.me", "venmo.com", "cash.app", "cashapp.com",
   "stripe.com", "buy.stripe.com", "zelle.com",
@@ -501,6 +505,26 @@ export async function POST(request) {
           const available = 12000 - combined.length;
           if (available <= 100) break;
           combined += `\n\n---\n${pageMd.slice(0, Math.min(available, 2500))}`;
+        }
+
+        // Bonus scrape: booking platform pages often show phone/hours prominently
+        if (cat.bookingUrl) {
+          try {
+            const bookingHostname = new URL(cat.bookingUrl).hostname;
+            if (SCRAPEABLE_BOOKING_DOMAINS.some(d => domainMatches(bookingHostname, d))) {
+              console.log("[import] scraping booking page for contact info:", cat.bookingUrl);
+              const bookingMd = await firecrawlScrape(cat.bookingUrl, process.env.FIRECRAWL_API_KEY, 10000);
+              if (bookingMd && bookingMd.length >= 50) {
+                const bookingSnippet = headTail(bookingMd, 1000, 1000);
+                const available = 12000 - combined.length;
+                if (available > 100) {
+                  combined += `\n\n--- Booking page ---\n${bookingSnippet.slice(0, Math.min(available, 2000))}`;
+                }
+              }
+            }
+          } catch {
+            // ignore booking page scrape failures
+          }
         }
 
         content = combined;
