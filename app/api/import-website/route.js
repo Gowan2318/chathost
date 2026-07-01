@@ -259,8 +259,8 @@ Return a JSON object with these fields (use null for any field not found):
   "businessName": "string or null",
   "businessDescription": "string (brief description of what the business does, max 500 chars) or null",
   "servicesDescription": "string (list of main services offered, max 300 chars) or null",
-  "supportPhone": "string (phone number as it appears on the page, e.g. '(412) 968-0848') or null",
-  "supportEmail": "string (email address) or null",
+  "supportPhone": "string (ONLY if an exact phone number is visibly present in the page content — do NOT guess or infer. Return null if no phone number is explicitly shown) or null",
+  "supportEmail": "string (ONLY if an exact email address is visibly present in the page content — do NOT guess, infer, or construct an email address. Return null if no email is explicitly shown) or null",
   "websiteUrl": "string (the URL itself) or null",
   "address": {
     "street": "string or null",
