@@ -703,7 +703,7 @@ export async function POST(request) {
           console.log("[search fallback] scraping Yelp:", yelpUrl);
           const yelpMd = await firecrawlScrape(yelpUrl, process.env.FIRECRAWL_API_KEY, 10000);
           if (yelpMd.length > 50) {
-            yelpContent = yelpMd.slice(0, 2000);
+            yelpContent = headTail(yelpMd, 2000, 2000);
             console.log("[search fallback] Yelp content length:", yelpContent.length);
           }
         }
