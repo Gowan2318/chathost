@@ -708,10 +708,11 @@ export async function POST(request) {
           }
         }
 
-        const searchContent = [
+        let searchContent = [
           ...(searchData?.data || []).map((r) => r.markdown || r.description || ""),
           yelpContent,
-        ].join("\n").slice(0, 5000);
+        ].join("\n");
+        searchContent = headTail(searchContent, 3000, 2000);
 
         console.log("[search fallback] combined content:", searchContent.substring(0, 500));
 
