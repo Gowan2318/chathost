@@ -9,14 +9,14 @@ const REQUEST_TIMEOUT_MS = 60000;
 const DELAY_BETWEEN_TESTS_MS = 3000;
 
 const TEST_CASES = [
-  { industry: "dental", url: "https://www.greenfielddentalcare.com" },
-  { industry: "gym", url: "https://www.planetfitness.com/gyms/munhall-pa-1563" },
-  { industry: "salon", url: "https://www.ulta.com/stores/homestead-pa-116" },
-  { industry: "barber", url: "https://www.supercuts.com" },
-  { industry: "restaurant", url: "https://www.primantibros.com/locations/waterfront" },
-  { industry: "law", url: "https://www.spinalaw.com" },
-  { industry: "lawn", url: "https://www.trugreen.com" },
-  { industry: "real_estate", url: "https://www.howardhanna.com" },
+  { industry: "dental", url: "https://www.clearchoice.com/locations/pa/pittsburgh/5500-corporate-dr/" },
+  { industry: "gym", url: "https://www.fitnessfactorypgh.com/" },
+  { industry: "salon", url: "https://bloombeautyparlor.com/" },
+  { industry: "barber", url: "https://www.dieselbarbershop.com/location/pittsburgh-pa-lawrenceville" },
+  { industry: "restaurant", url: "https://www.babyloneats.com/" },
+  { industry: "law", url: "https://www.edgarsnyder.com/" },
+  { industry: "lawn", url: "https://www.ajlawnpros.com/" },
+  { industry: "real_estate", url: "https://www.kandsrealestate.com/" },
   { industry: "other", url: "https://www.servpro.com" },
 ];
 
