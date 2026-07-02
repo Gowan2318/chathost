@@ -9,6 +9,30 @@ import {
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// Simple in-memory cache for scrape results — avoids repeat Firecrawl calls
+// Cache entries expire after 1 hour (3600000ms)
+const scrapeCache = new Map();
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+function getCached(url) {
+  const entry = scrapeCache.get(url);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+    scrapeCache.delete(url);
+    return null;
+  }
+  return entry.content;
+}
+
+function setCache(url, content) {
+  scrapeCache.set(url, { content, timestamp: Date.now() });
+  // Prevent unbounded memory growth — keep max 200 entries
+  if (scrapeCache.size > 200) {
+    const oldestKey = scrapeCache.keys().next().value;
+    scrapeCache.delete(oldestKey);
+  }
+}
+
 function json(body, init = {}) {
   return NextResponse.json(body, init);
 }
@@ -165,6 +189,11 @@ function stripHtml(html) {
 }
 
 async function firecrawlScrape(url, apiKey, timeoutMs = 12000) {
+  const cached = getCached(url);
+  if (cached) {
+    console.log("[firecrawl] cache hit:", url);
+    return cached;
+  }
   try {
     const res = await fetch("https://api.firecrawl.dev/v1/scrape", {
       method: "POST",
@@ -177,7 +206,9 @@ async function firecrawlScrape(url, apiKey, timeoutMs = 12000) {
     });
     if (!res.ok) return "";
     const data = await res.json();
-    return data.data?.markdown || "";
+    const content = data.data?.markdown || "";
+    if (content && content.length > 100) setCache(url, content);
+    return content;
   } catch {
     return "";
   }
