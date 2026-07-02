@@ -230,12 +230,6 @@
     var displayMascotName = mascotName || businessName;
     var mascotUrl = baseUrl + (MASCOT_SRC[industry] || MASCOT_SRC.other);
 
-    var pricingInfo =
-      config.pricingInfo ||
-      "Here's how our pricing works:\n\nContact " +
-        businessName +
-        " for current rates and packages.\n\nYou can pay securely online when you're ready.";
-
     function supportMessage() {
       return (
         "I want to make sure you get the best help! Please contact our team directly:\n" +
@@ -665,7 +659,8 @@
         .then(function (data) {
           state.isTyping = false;
           var botText = data.message;
-          state.messages.push({ role: "assistant", content: botText });
+          var payButtonUrl = payNowUrl && isPaymentIntent(botText) ? payNowUrl : undefined;
+          state.messages.push({ role: "assistant", content: botText, payButtonUrl: payButtonUrl });
           state.contextualQuickReplies = buildContextualReplies(botText);
           render();
           if (CONVERSATION_END_PATTERN.test(botText) && allButtons.length > 0) {
@@ -701,10 +696,6 @@
 
       if (isBookingIntent(trimmed)) {
         handleBooking();
-        return;
-      }
-      if (isPaymentIntent(trimmed)) {
-        addMessage(pricingInfo, { payButtonUrl: payNowUrl || undefined });
         return;
       }
       if (isTalkToSomeoneIntent(trimmed)) {

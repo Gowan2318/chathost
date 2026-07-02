@@ -129,13 +129,6 @@ function MessageContent({ msg, onStartNewChat, brandColor }) {
   );
 }
 
-const DEFAULT_PRICING = `Here's how our pricing works:
-
-• Service packages vary by business
-• Contact us for a custom quote
-
-You can pay securely online when you're ready.`;
-
 const INDUSTRY_EXAMPLES = {
   restaurant: "'What's on your menu?' or 'Do you take reservations?'",
   dental: "'Are you accepting new patients?' or 'What insurance do you accept?'",
@@ -207,10 +200,6 @@ We're happy to assist you!`;
   const messagesContainerRef = useRef(null);
   const inputRef = useRef(null);
   const reShowTimerRef = useRef(null);
-
-  const pricingInfo =
-    config.pricingInfo ||
-    `Here's how our pricing works:\n\nContact ${businessName} for current rates and packages.\n\nYou can pay securely online when you're ready.`;
 
   useEffect(() => {
     setMessages([initialMessage]);
@@ -302,10 +291,6 @@ We're happy to assist you!`;
       handleBooking();
       return;
     }
-    if (isPaymentIntent(trimmed)) {
-      addAssistantMessage(pricingInfo, { payButtonUrl: payNowUrl || undefined });
-      return;
-    }
     if (isTalkToSomeoneIntent(trimmed)) {
       addAssistantMessage(getSupportFallbackMessage());
       return;
@@ -338,7 +323,8 @@ We're happy to assist you!`;
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Request failed");
 
-      setMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
+      const payButtonUrl = payNowUrl && isPaymentIntent(data.message) ? payNowUrl : undefined;
+      setMessages((prev) => [...prev, { role: "assistant", content: data.message, payButtonUrl }]);
       setContextualReplies(buildContextualReplies(data.message));
       if (CONVERSATION_END_PATTERN.test(data.message) && allButtons.length > 0) {
         reShowTimerRef.current = setTimeout(() => {
