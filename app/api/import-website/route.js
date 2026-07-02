@@ -462,6 +462,7 @@ export async function POST(request) {
         // ── Firecrawl path ───────────────────────────────────────────────
         console.log("[firecrawl] scraping main page:", url);
         const mainMd = await firecrawlScrape(url, process.env.FIRECRAWL_API_KEY, 15000);
+
         console.log("[firecrawl] main page content length:", mainMd.length);
 
         if (mainMd.length < 100) {
@@ -542,8 +543,8 @@ export async function POST(request) {
           scrapeQueue.map(pageUrl => firecrawlScrape(pageUrl, process.env.FIRECRAWL_API_KEY, 10000))
         );
 
-        // Combine all content, max 12000 chars
-        let combined = headTail(mainMd, 6000, 5000);
+        // Combine all content, max 16000 chars
+        let combined = headTail(mainMd, 13000, 2000);
 
         for (let i = 0; i < additionalResults.length; i++) {
           if (additionalResults[i].status !== "fulfilled") continue;
@@ -572,7 +573,7 @@ export async function POST(request) {
             }
           }
 
-          const available = 12000 - combined.length;
+          const available = 16000 - combined.length;
           if (available <= 100) break;
           combined += `\n\n---\n${pageMd.slice(0, Math.min(available, 2500))}`;
         }
@@ -586,7 +587,7 @@ export async function POST(request) {
               const bookingMd = await firecrawlScrape(cat.bookingUrl, process.env.FIRECRAWL_API_KEY, 10000);
               if (bookingMd && bookingMd.length >= 50) {
                 const bookingSnippet = headTail(bookingMd, 1000, 1000);
-                const available = 12000 - combined.length;
+                const available = 16000 - combined.length;
                 if (available > 100) {
                   combined += `\n\n--- Booking page ---\n${bookingSnippet.slice(0, Math.min(available, 2000))}`;
                 }
