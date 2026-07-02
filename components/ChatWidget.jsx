@@ -438,6 +438,7 @@ We're happy to assist you!`;
                             backgroundColor: theme.botBubble,
                             color: theme.botText,
                             border: `1px solid ${theme.panelBorder}`,
+                            ...(theme.glass ? { textShadow: "0 1px 3px rgba(0,0,0,0.5)" } : {}),
                           }
                     }
                   >
@@ -477,6 +478,7 @@ We're happy to assist you!`;
                     borderColor: `${brandColor}35`,
                     backgroundColor: `${brandColor}10`,
                     color: shadeHex(brandColor, theme.quickReplyShade ?? -50),
+                    ...(theme.glass ? { textShadow: "0 1px 3px rgba(0,0,0,0.5)" } : {}),
                   }}
                 >
                   {label}
@@ -508,6 +510,7 @@ We're happy to assist you!`;
                       borderColor: `${brandColor}35`,
                       backgroundColor: `${brandColor}10`,
                       color: shadeHex(brandColor, -50),
+                      ...(theme.glass ? { textShadow: "0 1px 3px rgba(0,0,0,0.5)" } : {}),
                     }}
                   >
                     {label}

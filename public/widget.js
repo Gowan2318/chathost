@@ -76,16 +76,16 @@
     },
     glass: {
       id: "glass",
-      chatBackground: "rgba(255,255,255,0.1)",
-      botBubble: "rgba(255,255,255,0.15)",
+      chatBackground: "rgba(0,0,0,0.25)",
+      botBubble: "rgba(0,0,0,0.3)",
       botText: "#ffffff",
-      inputBackground: "rgba(255,255,255,0.1)",
+      inputBackground: "rgba(0,0,0,0.2)",
       inputText: "#ffffff",
       panelBorder: "rgba(255,255,255,0.2)",
-      messagesArea: "rgba(255,255,255,0.05)",
-      footerBackground: "rgba(255,255,255,0.08)",
+      messagesArea: "rgba(0,0,0,0.15)",
+      footerBackground: "rgba(0,0,0,0.2)",
       footerBorder: "rgba(255,255,255,0.15)",
-      quickReplyBackground: "rgba(255,255,255,0.08)",
+      quickReplyBackground: "rgba(0,0,0,0.2)",
       secondaryButtonBg: "rgba(255,255,255,0.12)",
       secondaryButtonText: "#e5e5e5",
       secondaryButtonBorder: "rgba(255,255,255,0.25)",
@@ -339,7 +339,9 @@
       theme.botText +
       ";border:1px solid " +
       theme.panelBorder +
-      ";border-bottom-left-radius:4px}" +
+      ";border-bottom-left-radius:4px" +
+      (theme.id === "glass" ? ";text-shadow:0 1px 3px rgba(0,0,0,0.5)" : "") +
+      "}" +
       ".vch-action{display:flex;width:100%;margin-top:10px;align-items:center;justify-content:center;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:600;color:#fff;text-decoration:none}" +
       ".vch-btn-solid{display:flex;width:100%;margin-top:10px;align-items:center;justify-content:center;border:none;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:600;color:#fff;cursor:pointer}" +
       ".vch-typing{display:flex;justify-content:flex-start;margin-bottom:12px}" +
@@ -367,7 +369,9 @@
       brandColor +
       "10;color:" +
       shadeHex(brandColor, theme.quickReplyShade) +
-      ";padding:10px 12px;font-size:12px;font-weight:500;text-align:left;cursor:pointer;line-height:1.3}" +
+      ";padding:10px 12px;font-size:12px;font-weight:500;text-align:left;cursor:pointer;line-height:1.3" +
+      (theme.id === "glass" ? ";text-shadow:0 1px 3px rgba(0,0,0,0.5)" : "") +
+      "}" +
       ".vch-quick-btn:disabled{opacity:0.5;cursor:not-allowed}" +
       ".vch-header-right{display:flex;align-items:center;gap:8px}" +
       ".vch-start-link{border:none;background:transparent;color:rgba(255,255,255,0.65);font-size:11px;cursor:pointer;padding:4px 8px;border-radius:6px;transition:color 0.15s}" +
