@@ -562,27 +562,25 @@ We're happy to assist you!`;
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => setIsOpen((o) => !o)}
-        className={`flex items-center justify-center rounded-full text-white shadow-lg transition hover:scale-105 active:scale-95 ${
-          embedded ? "absolute bottom-4 right-4 h-14 w-14" : "h-14 w-14"
-        }`}
-        style={{
-          background: `linear-gradient(to bottom right, ${brandColor}, ${brandDark})`,
-          boxShadow: `0 10px 25px ${brandColor}40`,
-        }}
-        aria-label={isOpen ? "Close chat" : "Open chat"}
-        aria-expanded={isOpen}
-      >
-        {isOpen ? (
-          <CloseIcon />
-        ) : (
+      {!isOpen && (
+        <button
+          type="button"
+          onClick={() => setIsOpen((o) => !o)}
+          className={`flex items-center justify-center rounded-full text-white shadow-lg transition hover:scale-105 active:scale-95 ${
+            embedded ? "absolute bottom-4 right-4 h-14 w-14" : "h-14 w-14"
+          }`}
+          style={{
+            background: `linear-gradient(to bottom right, ${brandColor}, ${brandDark})`,
+            boxShadow: `0 10px 25px ${brandColor}40`,
+          }}
+          aria-label="Open chat"
+          aria-expanded={isOpen}
+        >
           <span className="flex items-center justify-center">
             <MascotCharacter industry={industry} animation={mascotAnimation} size={36} />
           </span>
-        )}
-      </button>
+        </button>
+      )}
     </div>
   );
 }

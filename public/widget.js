@@ -408,7 +408,8 @@
       brandColor +
       "40;transition:transform 0.15s}" +
       ".vch-launcher:hover{transform:scale(1.05)}" +
-      ".vch-launcher:active{transform:scale(0.95)}";
+      ".vch-launcher:active{transform:scale(0.95)}" +
+      ".vch-panel.open ~ .vch-launcher{display:none}";
     shadow.appendChild(style);
 
     var root = document.createElement("div");
