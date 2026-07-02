@@ -268,7 +268,7 @@ Return a JSON object with these fields (use null for any field not found):
     "state": "string 2-letter abbreviation or null",
     "zip": "string 5-digit zip or null"
   },
-  "businessHours": "string (hours of operation if found, as plain text) or null",
+  "businessHours": "string (hours of operation as plain text — search the footer, contact page, header, and any 'hours' or 'schedule' section. Look for patterns like 'Mon-Fri 9am-5pm', 'Monday: 9:00 AM - 5:00 PM', 'Open daily', '24/7', etc. Include all days found. Return null only if no hours information is found anywhere in the content) or null",
   "industry_hint": "string (one of: restaurant, dental, salon, barber, gym, lawncare, realestate, law, other) or null",
   "hasReservations": true/false/null,
   "hasDelivery": true/false/null,
@@ -294,7 +294,7 @@ Return a JSON object with these fields (use null for any field not found):
   "websiteKnowledge": "string (comprehensive knowledge base summary — services, pricing, policies, specialties, unique offerings, team, FAQ-style info; max 2000 chars) or null"
 }
 
-Address rules: look in footer, contact sections, schema markup. Extract street/city/state/zip separately.
+Address rules: Search EVERYWHERE in the content for a physical street address — check the footer (most business sites put their address there), the contact page, the about page, the header, any Google Maps embed text, schema.org/ld+json markup (look for 'streetAddress', 'addressLocality', 'addressRegion', 'postalCode'), and any text formatted like '123 Main St, City, State ZIP'. Extract street/city/state/zip as separate fields. The street field should contain only the street number and name (e.g. '214 N. Highland Avenue'). City is the city name only. State is the 2-letter abbreviation. Zip is the 5-digit code. If you find an address anywhere in the content, extract it — do not return null just because it is not prominently featured.
 All true/false/null fields: true only if explicitly stated on the page, false only if explicitly stated as NOT offered/accepted, null if not mentioned at all.
 websiteKnowledge: write as a rich paragraph the bot can draw on to answer any customer question. Include all useful details from all pages provided.
 
