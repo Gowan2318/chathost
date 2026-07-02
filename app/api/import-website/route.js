@@ -32,6 +32,8 @@ const BOOKING_DOMAINS = [
 const SCRAPEABLE_BOOKING_DOMAINS = [
   "ampbyus.com", "vagaro.com", "booksy.com", "square.com", "squareup.com",
   "acuityscheduling.com", "mindbodyonline.com", "styleseat.com", "fresha.com",
+  "opentable.com", "resy.com", "toasttab.com", "yelp.com",
+  "exploretock.com", "dishio.com",
 ];
 const PAYMENT_DOMAINS = [
   "paypal.com", "paypal.me", "venmo.com", "cash.app", "cashapp.com",
@@ -303,7 +305,9 @@ Return ONLY valid JSON, no explanation, no markdown.`;
 const SITEMAP_PRIORITY_KEYWORDS = [
   "services", "service", "menu", "about", "contact", "faq", "hours",
   "pricing", "price", "team", "staff", "booking", "appointments",
-  "location", "locations",
+  "location", "locations", "find-us", "find_us", "our-location",
+  "visit", "directions", "address", "schedule", "open", "opening-hours",
+  "where", "map", "get-in-touch", "reach-us",
 ];
 
 async function fetchSitemap(baseOrigin) {
@@ -456,8 +460,8 @@ export async function POST(request) {
           if (cat.linktreeUrl && scrapeQueue.length < 5) {
             scrapeQueue.push(cat.linktreeUrl);
           }
-          // 3. /contact and /about
-          for (const path of ["/contact", "/contact-us", "/about"]) {
+          // 3. /contact, /about, /location, /hours
+          for (const path of ["/contact", "/contact-us", "/about", "/location", "/hours"]) {
             if (scrapeQueue.length >= 5) break;
             const pageUrl = `${baseOrigin}${path}`;
             if (path !== currentPath && !scrapeQueue.includes(pageUrl)) {
