@@ -344,6 +344,11 @@ const SITEMAP_PRIORITY_KEYWORDS = [
   "where", "map", "get-in-touch", "reach-us",
 ];
 
+const SITEMAP_EXCLUDE_PATTERNS = [
+  "/product/", "/item/", "/menu-item/", "/blog/", "/post/",
+  "/news/", "/event/", "/gallery/", "/photo/",
+];
+
 async function fetchSitemap(baseOrigin) {
   for (const path of ["/sitemap.xml", "/sitemap_index.xml"]) {
     try {
@@ -358,11 +363,15 @@ async function fetchSitemap(baseOrigin) {
       const ownHostname = new URL(baseOrigin).hostname;
       const sameDomain = locs.filter(u => { try { return new URL(u).hostname === ownHostname; } catch { return false; } });
       if (sameDomain.length === 0) continue;
-      const priority = sameDomain.filter(u => {
+      const filtered = sameDomain.filter(u => {
+        const p = new URL(u).pathname.toLowerCase();
+        return !SITEMAP_EXCLUDE_PATTERNS.some(pat => p.includes(pat));
+      });
+      const priority = filtered.filter(u => {
         const p = new URL(u).pathname.toLowerCase();
         return SITEMAP_PRIORITY_KEYWORDS.some(kw => p.includes(kw));
       });
-      const rest = sameDomain.filter(u => !priority.includes(u));
+      const rest = filtered.filter(u => !priority.includes(u));
       return [...priority, ...rest].slice(0, 6);
     } catch {
       // try next candidate
@@ -504,6 +513,16 @@ export async function POST(request) {
           }
         }
 
+        // Always try contact/location/about/hours as fallbacks, even when the
+        // sitemap didn't list them (or listed product pages instead)
+        for (const path of ["/contact", "/location", "/about", "/hours"]) {
+          if (scrapeQueue.length >= 5) break;
+          const pageUrl = `${baseOrigin}${path}`;
+          if (path !== currentPath && !scrapeQueue.includes(pageUrl)) {
+            scrapeQueue.push(pageUrl);
+          }
+        }
+
         console.log("[import] scraping additional pages:", scrapeQueue);
 
         const additionalResults = await Promise.allSettled(
@@ -511,7 +530,7 @@ export async function POST(request) {
         );
 
         // Combine all content, max 12000 chars
-        let combined = headTail(mainMd, 6000, 4000);
+        let combined = headTail(mainMd, 6000, 5000);
 
         for (let i = 0; i < additionalResults.length; i++) {
           if (additionalResults[i].status !== "fulfilled") continue;
