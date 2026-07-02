@@ -331,7 +331,7 @@ Return a JSON object with these fields (use null for any field not found):
 }
 
 Address rules: Search EVERYWHERE in the content for a physical street address — check the footer (most business sites put their address there), the contact page, the about page, the header, any Google Maps embed text, schema.org/ld+json markup (look for 'streetAddress', 'addressLocality', 'addressRegion', 'postalCode'), and any text formatted like '123 Main St, City, State ZIP'. Extract street/city/state/zip as separate fields. The street field should contain only the street number and name (e.g. '214 N. Highland Avenue'). City is the city name only. State is the 2-letter abbreviation. Zip is the 5-digit code. If you find an address anywhere in the content, extract it — do not return null just because it is not prominently featured.
-All true/false/null fields: true only if explicitly stated on the page, false only if explicitly stated as NOT offered/accepted, null if not mentioned at all.
+All true/false/null fields: true only if explicitly stated on the page, false only if explicitly stated as NOT offered/accepted, null if not mentioned at all. Return null for ANY boolean field that is not relevant to this type of business — for example, hasBeardTrim should always be null for a restaurant, gym, law firm, etc. Only return true or false if the field is directly relevant to this industry AND the page explicitly mentions it.
 websiteKnowledge: write as a rich paragraph the bot can draw on to answer any customer question. Include all useful details from all pages provided.
 
 Return ONLY valid JSON, no explanation, no markdown.`;
@@ -511,7 +511,7 @@ export async function POST(request) {
         );
 
         // Combine all content, max 12000 chars
-        let combined = headTail(mainMd, 6000, 3000);
+        let combined = headTail(mainMd, 6000, 4000);
 
         for (let i = 0; i < additionalResults.length; i++) {
           if (additionalResults[i].status !== "fulfilled") continue;
