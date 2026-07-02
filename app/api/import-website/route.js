@@ -306,22 +306,22 @@ Return a JSON object with these fields (use null for any field not found):
   },
   "businessHours": "string (hours of operation as plain text — search the footer, contact page, header, and any 'hours' or 'schedule' section. Look for patterns like 'Mon-Fri 9am-5pm', 'Monday: 9:00 AM - 5:00 PM', 'Open daily', '24/7', etc. Include all days found. Return null only if no hours information is found anywhere in the content) or null",
   "industry_hint": "string (one of: restaurant, dental, salon, barber, gym, lawncare, realestate, law, other) or null",
-  "hasReservations": true/false/null,
-  "hasDelivery": true/false/null,
-  "walkInsWelcome": true/false/null,
-  "hasBeardTrim": true/false/null,
-  "hasGiftCards": true/false/null,
-  "acceptingNewPatients": true/false/null,
-  "hasPaymentPlans": true/false/null,
-  "hasFreeTrial": "true if free trial, guest pass, day pass, trial membership, or 'try before you commit' is mentioned. false only if explicitly stated no trials available. null if not mentioned at all.",
-  "hasClasses": "true if group classes, fitness classes, class schedule, or group training sessions are mentioned anywhere. false only if explicitly stated they do NOT offer classes. null if not mentioned at all.",
-  "hasTrainers": "true if personal trainers, training staff, or training services are mentioned anywhere on the page — even phrases like 'personal trainers available', 'training inquiries', 'work with a trainer', or 'training services' count as true. false only if explicitly stated they do NOT have trainers. null if not mentioned at all.",
-  "freeConsultation": true/false/null,
-  "worksOnContingency": true/false/null,
-  "freeEstimates": true/false/null,
-  "recurringPlans": true/false/null,
-  "isLicensed": true/false/null,
-  "acceptingClients": true/false/null,
+  "hasReservations": "true if reservations, bookings, 'reserve a table', 'book a table', or similar are mentioned. false only if explicitly stated they do NOT take reservations. null if not mentioned.",
+  "hasDelivery": "true if delivery, 'we deliver', DoorDash, Uber Eats, Grubhub, or similar delivery services are mentioned. false only if explicitly stated no delivery. null if not mentioned.",
+  "walkInsWelcome": "true if 'walk-ins welcome', 'walk-ins accepted', 'no appointment needed', 'drop in anytime', or similar phrases appear. false only if 'by appointment only', 'no walk-ins', or similar appear. null if not mentioned.",
+  "hasBeardTrim": "true if beard trims, beard grooming, beard services, shaves, or hot towel shaves are mentioned. false only if explicitly stated they do NOT do beard services. null if not mentioned.",
+  "hasGiftCards": "true if gift cards, gift certificates, or gift vouchers are mentioned. false only if explicitly stated no gift cards. null if not mentioned.",
+  "acceptingNewPatients": "true if 'accepting new patients', 'welcoming new patients', 'new patients welcome', or similar appear. false only if 'not accepting new patients' appears. null if not mentioned.",
+  "hasPaymentPlans": "true if payment plans, financing, CareCredit, installments, or 'pay over time' are mentioned. false only if explicitly stated no payment plans. null if not mentioned.",
+  "hasFreeTrial": "true if free trial, guest pass, day pass, trial membership, 'try before you commit', or 'first class free' are mentioned. false only if explicitly stated no trials. null if not mentioned.",
+  "hasClasses": "true if group classes, fitness classes, class schedule, yoga, spin, Zumba, HIIT, or any group training sessions are mentioned. false only if explicitly stated no classes offered. null if not mentioned.",
+  "hasTrainers": "true if personal trainers, training staff, 'work with a trainer', 'personal training', 'training services', or 'training inquiries' are mentioned anywhere. false only if explicitly stated no trainers available. null if not mentioned.",
+  "freeConsultation": "true if free consultation, free case review, free estimate (for law), or 'no cost to talk to us' are mentioned. false only if explicitly stated consultations are not free. null if not mentioned.",
+  "worksOnContingency": "true if 'no fee unless we win', 'contingency', 'you don't pay unless we win', or similar appear. false only if explicitly stated upfront fees required. null if not mentioned.",
+  "freeEstimates": "true if free estimates, free quotes, free assessment, or 'no charge for estimates' are mentioned. false only if explicitly stated estimates cost money. null if not mentioned.",
+  "recurringPlans": "true if recurring plans, maintenance plans, weekly/monthly service plans, subscriptions, or 'regular service' options are mentioned. false only if explicitly stated no recurring plans. null if not mentioned.",
+  "isLicensed": "true if licensed, insured, certified, bonded, or credentials/certifications are mentioned. false only if explicitly stated not licensed. null if not mentioned.",
+  "acceptingClients": "true if 'accepting new clients', 'taking new clients', 'available for new projects', or similar appear. false only if explicitly stated not taking new clients. null if not mentioned.",
   "menuUrl": "string (URL of online menu if found) or null",
   "bookingUrl": "string (URL of a booking or scheduling page visible in content, e.g. a calendly or square link) or null",
   "payNowUrl": "string (URL of a payment page visible in content) or null",
@@ -331,7 +331,7 @@ Return a JSON object with these fields (use null for any field not found):
 }
 
 Address rules: Search EVERYWHERE in the content for a physical street address — check the footer (most business sites put their address there), the contact page, the about page, the header, any Google Maps embed text, schema.org/ld+json markup (look for 'streetAddress', 'addressLocality', 'addressRegion', 'postalCode'), and any text formatted like '123 Main St, City, State ZIP'. Extract street/city/state/zip as separate fields. The street field should contain only the street number and name (e.g. '214 N. Highland Avenue'). City is the city name only. State is the 2-letter abbreviation. Zip is the 5-digit code. If you find an address anywhere in the content, extract it — do not return null just because it is not prominently featured.
-All true/false/null fields: true only if explicitly stated on the page, false only if explicitly stated as NOT offered/accepted, null if not mentioned at all. Return null for ANY boolean field that is not relevant to this type of business — for example, hasBeardTrim should always be null for a restaurant, gym, law firm, etc. Only return true or false if the field is directly relevant to this industry AND the page explicitly mentions it.
+Return null for ANY boolean field that is not relevant to this type of business — for example, hasBeardTrim should always be null for a restaurant, gym, law firm, etc. Only return true or false if the field is directly relevant to this industry AND the page explicitly mentions it.
 websiteKnowledge: write as a rich paragraph the bot can draw on to answer any customer question. Include all useful details from all pages provided.
 
 Return ONLY valid JSON, no explanation, no markdown.`;
