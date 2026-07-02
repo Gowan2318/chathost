@@ -326,12 +326,6 @@ We're happy to assist you!`;
       const payButtonUrl = payNowUrl && isPaymentIntent(data.message) ? payNowUrl : undefined;
       setMessages((prev) => [...prev, { role: "assistant", content: data.message, payButtonUrl }]);
       setContextualReplies(buildContextualReplies(data.message));
-      if (CONVERSATION_END_PATTERN.test(data.message) && allButtons.length > 0) {
-        reShowTimerRef.current = setTimeout(() => {
-          setShowQuickReplies(true);
-          reShowTimerRef.current = null;
-        }, 1000);
-      }
     } catch {
       setMessages((prev) => [
         ...prev,
