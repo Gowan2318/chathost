@@ -17,7 +17,7 @@ const TEST_CASES = [
   { industry: "law", url: "https://www.edgarsnyder.com/" },
   { industry: "lawn", url: "https://www.ajlawnpros.com/" },
   { industry: "real_estate", url: "https://www.kandsrealestate.com/" },
-  { industry: "other", url: "https://www.servproofpittsburghnortheast.com" },
+  { industry: "other", url: "https://www.stahlplumbinganddrain.com/" },
 ];
 
 // Relevant industry boolean fields checked as a single combined field (#10)
