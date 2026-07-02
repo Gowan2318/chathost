@@ -493,6 +493,19 @@ export async function POST(request) {
               scrapeQueue.push(sitemapUrl);
             }
           }
+
+          // Reserve the last 1-2 slots for /contact and /location so they're
+          // always attempted, even when the sitemap fills the queue with pages
+          // (e.g. /shop/*) that don't have contact info
+          if (scrapeQueue.length >= 4) {
+            const contactUrl = `${baseOrigin}/contact`;
+            const locationUrl = `${baseOrigin}/location`;
+            if (scrapeQueue.length >= 5) {
+              scrapeQueue.splice(-2, 2, contactUrl, locationUrl);
+            } else {
+              scrapeQueue.splice(-1, 1, contactUrl);
+            }
+          }
         } else {
           console.log("[import] no sitemap found, using link categorization");
           // 1. Service/promo/menu pages (up to 2)
@@ -699,6 +712,54 @@ export async function POST(request) {
           console.log("[import] email fallback found:", candidate);
           break;
         }
+      }
+    }
+
+    // ── Bonus scrape: Facebook page for missing address/phone/hours ────────
+    const missingAddress = !extracted.address || (!extracted.address.street && !extracted.address.city);
+    if (missingAddress && !extracted.supportPhone && !extracted.businessHours && cat?.socialLinks?.facebook && process.env.FIRECRAWL_API_KEY) {
+      try {
+        console.log("[import] scraping Facebook for missing contact info:", cat.socialLinks.facebook);
+        const facebookMd = await firecrawlScrape(cat.socialLinks.facebook, process.env.FIRECRAWL_API_KEY, 10000);
+        if (facebookMd && facebookMd.length >= 50) {
+          const facebookSnippet = headTail(facebookMd, 2000, 2000);
+          content += `\n\n--- Facebook page ---\n${facebookSnippet}`;
+
+          const fbPrompt =
+            `Extract business contact info from this Facebook page content for "${extracted.businessName || "this business"}". ` +
+            `Find the street address, phone number, and business hours if present. ` +
+            `Return JSON: { "address": { "street": "string or null", "city": "string or null", "state": "string 2-letter abbreviation or null", "zip": "string 5-digit zip or null" }, "supportPhone": "string or null", "businessHours": "string or null" }. ` +
+            `Return ONLY valid JSON, no explanation.\n\nContent:\n${facebookSnippet}`;
+
+          const fbResp = await client.messages.create({
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 256,
+            messages: [{ role: "user", content: fbPrompt }],
+          });
+
+          const fbRaw = fbResp.content?.[0]?.text ?? "";
+          const fbMatch = fbRaw.match(/\{[\s\S]*\}/);
+          if (fbMatch) {
+            let fbExtracted;
+            try { fbExtracted = JSON.parse(fbMatch[0]); } catch {}
+            if (fbExtracted) {
+              if (!extracted.supportPhone && fbExtracted.supportPhone) {
+                extracted.supportPhone = fbExtracted.supportPhone;
+                console.log("[import] Facebook fallback filled phone:", extracted.supportPhone);
+              }
+              if (!extracted.businessHours && fbExtracted.businessHours) {
+                extracted.businessHours = fbExtracted.businessHours;
+                console.log("[import] Facebook fallback filled hours:", extracted.businessHours);
+              }
+              if (missingAddress && fbExtracted.address && (fbExtracted.address.street || fbExtracted.address.city)) {
+                extracted.address = fbExtracted.address;
+                console.log("[import] Facebook fallback filled address:", JSON.stringify(extracted.address));
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.log("[import] Facebook fallback failed (non-fatal):", e.message);
       }
     }
 
