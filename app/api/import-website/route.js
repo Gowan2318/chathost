@@ -248,6 +248,9 @@ Rules:
 - Round times to nearest half-hour (e.g. 9:15→09:00, 9:20→09:30)
 - If a day is not mentioned, assume closed
 - Closed days: set open: false, keep openTime "09:00" closeTime "17:00" as placeholders
+- If the text contains multiple sets of hours (e.g. "Salon Hours" and "Phone Hours", or "Office Hours" and "Call Center Hours"), always use the PRIMARY set (usually listed first, or labeled "Salon", "Store", "Office", or "Business" hours) — ignore secondary sets like phone/call center hours.
+- Parse each day individually and carefully. A day mentioned as closed in a secondary hours section (like phone hours) does NOT mean it is closed in the primary hours section.
+- Double-check your output — if a day appears in the open hours list of the primary section, it must have open: true in your output regardless of what other sections say about that day.
 
 Return ONLY valid JSON, no explanation.`;
 
