@@ -84,6 +84,11 @@ export default function QuickRepliesEditor({
         </span>
       </div>
 
+      <p className="text-sm text-[#4A5568]">
+        Quick reply buttons appear as tappable shortcuts when customers open your chat. Click one and it
+        sends that question to your bot — the AI answers it automatically from your business info.
+      </p>
+
       <div className="space-y-4">
         <div>
           <p className="text-sm font-medium text-[#4A5568]">
@@ -182,8 +187,12 @@ export default function QuickRepliesEditor({
         <div className="mb-4">
           <h3 className="text-base font-semibold text-[#1A1A2E]">Custom Questions &amp; Answers</h3>
           <p className="mt-1 text-sm text-[#4A5568]">
-            Teach your bot exact answers. Each pair uses one slot
-            {remaining > 0 ? ` (${remaining} remaining).` : "."}
+            Want to control exactly what your bot says for a specific question? Add it here. Unlike quick
+            replies (where the AI answers freely), these return your exact pre-written answer every time —
+            great for pricing, policies, or anything you want worded precisely.
+          </p>
+          <p className="mt-1 text-sm text-[#4A5568]">
+            {remaining > 0 ? `You can add up to ${remaining} more pairs.` : "You've used all available slots."}
           </p>
         </div>
 
