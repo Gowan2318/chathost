@@ -60,6 +60,7 @@ const INITIAL = {
   // null = not yet set (import found nothing); createDefaultBusinessHours() is only used
   // as a fallback for the editor display, never as a silent "confirmed" value.
   businessHours: null,
+  businessHoursRaw: null,
   address: { street: "", city: "", state: "", zip: "" },
   supportPhone: "",
   supportEmail: "",
@@ -520,13 +521,16 @@ export default function BuilderPageClient() {
               update({ businessHours: hoursData.parsedHours });
               setHoursNote(`Hours auto-filled from: "${extracted.businessHours}" — review in the hours section below.`);
             } else {
-              setHoursNote(`Hours found: "${extracted.businessHours}" — please set them manually in the hours section below.`);
+              update({ businessHoursRaw: extracted.businessHours });
+              setHoursNote(`Hours auto-filled from: "${extracted.businessHours}" — review in the hours section below.`);
             }
           } else {
-            setHoursNote(`Hours found: "${extracted.businessHours}" — please set them manually in the hours section below.`);
+            update({ businessHoursRaw: extracted.businessHours });
+            setHoursNote(`Hours auto-filled from: "${extracted.businessHours}" — review in the hours section below.`);
           }
         } catch {
-          setHoursNote(`Hours found: "${extracted.businessHours}" — please set them manually in the hours section below.`);
+          update({ businessHoursRaw: extracted.businessHours });
+          setHoursNote(`Hours auto-filled from: "${extracted.businessHours}" — review in the hours section below.`);
         }
       } else {
         setHoursNote("Hours not found — please set your actual business hours in the section below.");
@@ -647,13 +651,16 @@ export default function BuilderPageClient() {
               update({ businessHours: hoursData.parsedHours });
               setHoursNote(`Hours auto-filled from: "${extracted.businessHours}" — review in the hours section below.`);
             } else {
-              setHoursNote(`Hours found: "${extracted.businessHours}" — please set them manually in the hours section below.`);
+              update({ businessHoursRaw: extracted.businessHours });
+              setHoursNote(`Hours auto-filled from: "${extracted.businessHours}" — review in the hours section below.`);
             }
           } else {
-            setHoursNote(`Hours found: "${extracted.businessHours}" — please set them manually in the hours section below.`);
+            update({ businessHoursRaw: extracted.businessHours });
+            setHoursNote(`Hours auto-filled from: "${extracted.businessHours}" — review in the hours section below.`);
           }
         } catch {
-          setHoursNote(`Hours found: "${extracted.businessHours}" — please set them manually in the hours section below.`);
+          update({ businessHoursRaw: extracted.businessHours });
+          setHoursNote(`Hours auto-filled from: "${extracted.businessHours}" — review in the hours section below.`);
         }
       } else {
         setHoursNote("Hours not found — please set your actual business hours in the section below.");
