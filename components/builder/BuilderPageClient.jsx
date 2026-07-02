@@ -100,7 +100,7 @@ export default function BuilderPage() {
       businessName: form.businessName || "Your Business",
       businessInfo: businessInfo || "Add your business details in the builder.",
       supportPhone: form.supportPhone || "(555) 000-0000",
-      supportEmail: form.supportEmail || "support@yourbusiness.com",
+      supportEmail: form.supportEmail || "",
       payNowUrl: form.payNowUrl,
       quickReplies: form.quickReplies.filter(Boolean).slice(0, 8),
       brandColor: form.brandColor,

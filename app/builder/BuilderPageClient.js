@@ -313,7 +313,7 @@ export default function BuilderPageClient() {
     businessName: form.businessName || "Your Business",
     businessInfo: composeBusinessInfo(form) || "Add your business details in the builder.",
     supportPhone: form.supportPhone || "(555) 000-0000",
-    supportEmail: form.supportEmail || "support@yourbusiness.com",
+    supportEmail: form.supportEmail || "",
     payNowUrl: form.payNowUrl,
     booking_url: form.bookingUrl || "",
     quickReplies: form.quickReplies.filter(Boolean).slice(0, 8),
