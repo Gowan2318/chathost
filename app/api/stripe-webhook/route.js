@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { sendOnboardingEmail } from "../../../lib/email";
+import { sendOnboardingEmail, sendNewSignupNotification, sendPaymentFailedNotification } from "../../../lib/email";
 
 // Must run on Node.js runtime — Edge runtime doesn't support the Stripe SDK's
 // crypto primitives needed for webhook signature verification.
@@ -27,8 +27,23 @@ async function sendOnboardingNotification(db, userId, businessName, plan, client
 
     console.log("[stripe-webhook] sending onboarding email to:", ownerEmail);
     await sendOnboardingEmail({ ownerEmail, businessName, plan, clientId });
+    await sendNewSignupNotification({ ownerEmail, businessName, plan, clientId });
   } catch (err) {
     console.error("[stripe-webhook] onboarding email failed:", err);
+  }
+}
+
+// Fire-and-forget — mirrors sendOnboardingNotification but for a failed-payment alert to the founder.
+async function sendPaymentFailedNotificationTask(db, userId, businessName, plan, clientId, failureReason) {
+  if (!userId) return;
+  try {
+    const { data, error } = await db.auth.admin.getUserById(userId);
+    const ownerEmail = data?.user?.email;
+    if (error || !ownerEmail) return;
+
+    await sendPaymentFailedNotification({ ownerEmail, businessName, plan, clientId, failureReason });
+  } catch (err) {
+    console.error("[stripe-webhook] payment failed notification error:", err);
   }
 }
 
@@ -285,6 +300,39 @@ export async function POST(req) {
           if (refundErr) {
             console.error("[stripe-webhook] payment_transactions refund update failed:", refundErr);
           }
+        }
+        break;
+      }
+
+      case "invoice.payment_failed": {
+        const invoice = event.data.object;
+        const stripeCustomerId = invoice.customer;
+        if (!stripeCustomerId) {
+          console.warn("[stripe-webhook] invoice.payment_failed missing customer", event.id);
+          break;
+        }
+        resolvedCustomerId = stripeCustomerId;
+        newStatus = "past_due";
+
+        const { data: bot } = await db
+          .from("chatbots")
+          .select("client_id, user_id, config, plan")
+          .eq("stripe_customer_id", stripeCustomerId)
+          .maybeSingle();
+        resolvedClientId = bot?.client_id ?? null;
+
+        console.log("[stripe-webhook] payment failed for customer:", stripeCustomerId);
+
+        if (bot) {
+          const failureReason = invoice.last_finalization_error?.message ?? null;
+          sendPaymentFailedNotificationTask(
+            db,
+            bot.user_id,
+            bot.config?.businessName ?? "your business",
+            bot.plan ?? bot.config?.plan ?? null,
+            bot.client_id,
+            failureReason
+          );
         }
         break;
       }
