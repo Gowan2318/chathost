@@ -6,8 +6,23 @@ import Link from "next/link";
 import { useAuth } from "../../lib/AuthContext";
 import { getSupabaseClient } from "../../lib/supabase";
 import { INDUSTRY_LABELS } from "../../lib/industries";
+import { PLAN_LIMITS } from "../../lib/plans";
 import EmbedCodeCard from "../../components/EmbedCodeCard";
 import MascotCharacter from "../../components/mascots/MascotCharacter";
+
+const PRO_CHECKOUT_URL = "https://buy.stripe.com/00w28qcIsbDp4jMgEbdfG01";
+
+const PLAN_LABELS = { basic: "Basic", pro: "Pro" };
+
+function formatBillingDate(isoString) {
+  if (!isoString) return null;
+  return new Date(isoString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
 
 function DashboardHeader({ email, onSignOut }) {
   return (
@@ -171,6 +186,17 @@ export default function DashboardPage() {
 
   const config = chatbot?.config ?? null;
 
+  const plan = (chatbot?.plan ?? config?.plan) === "pro" ? "pro" : "basic";
+  const messageLimit = PLAN_LIMITS[plan];
+  const messagesUsed = chatbot?.monthly_message_count ?? 0;
+  const nextBillingDate = formatBillingDate(chatbot?.current_period_end);
+  const upgradeUrl = (() => {
+    const url = new URL(PRO_CHECKOUT_URL);
+    if (chatbot?.client_id) url.searchParams.set("client_reference_id", chatbot.client_id);
+    if (user?.email) url.searchParams.set("prefilled_email", user.email);
+    return url.toString();
+  })();
+
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
       <DashboardHeader email={user.email} onSignOut={handleSignOut} />
@@ -237,6 +263,46 @@ export default function DashboardPage() {
                 Embed Code
               </p>
               <EmbedCodeCard clientId={chatbot.client_id} />
+            </div>
+
+            {/* Usage & billing */}
+            <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold uppercase tracking-widest text-[#0D7377]">
+                  Usage & Billing
+                </p>
+                <span className="rounded-full bg-[#0D7377]/10 px-3 py-1 text-xs font-bold text-[#0D7377]">
+                  {PLAN_LABELS[plan]} Plan
+                </span>
+              </div>
+
+              <p className="mt-4 text-sm text-[#4A5568]">
+                <span className="font-semibold text-[#1A1A2E]">
+                  {messagesUsed.toLocaleString()} / {messageLimit.toLocaleString()}
+                </span>{" "}
+                messages used this month
+              </p>
+              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[#E2E8F0]">
+                <div
+                  className="h-full rounded-full bg-[#0D7377]"
+                  style={{ width: `${Math.min(100, (messagesUsed / messageLimit) * 100)}%` }}
+                />
+              </div>
+
+              {nextBillingDate && (
+                <p className="mt-3 text-sm text-[#4A5568]">
+                  Next billing date: <span className="font-semibold text-[#1A1A2E]">{nextBillingDate}</span>
+                </p>
+              )}
+
+              {plan === "basic" && (
+                <a
+                  href={upgradeUrl}
+                  className="mt-5 inline-block rounded-xl bg-[#0D7377] px-5 py-2.5 text-center text-sm font-semibold text-white shadow-lg shadow-[#0D7377]/20 transition hover:bg-[#0A5D61]"
+                >
+                  Upgrade to Pro — 1,500 messages/mo
+                </a>
+              )}
             </div>
 
             {/* Action cards */}

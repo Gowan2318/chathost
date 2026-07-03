@@ -8,6 +8,7 @@ import {
   autoBlockIfAbusive,
 } from "../../../lib/rateLimit";
 import { sendUsageWarningEmail, sendLimitReachedEmail } from "../../../lib/email";
+import { PLAN_LIMITS } from "../../../lib/plans";
 
 function adminClient() {
   return createClient(
@@ -16,8 +17,6 @@ function adminClient() {
     { auth: { persistSession: false } }
   );
 }
-
-const PLAN_LIMITS = { pro: 1500, basic: 500 };
 
 function currentMonthStart() {
   const now = new Date();
@@ -42,7 +41,7 @@ async function checkAndReserveUsage(clientId) {
   const db = adminClient();
   const { data: bot } = await db
     .from("chatbots")
-    .select("config, monthly_message_count, usage_reset_date, user_id")
+    .select("config, monthly_message_count, usage_reset_date, user_id, plan")
     .eq("client_id", clientId)
     .maybeSingle();
 
@@ -61,7 +60,9 @@ async function checkAndReserveUsage(clientId) {
       .catch(() => {});
   }
 
-  const plan = bot.config?.plan === "pro" ? "pro" : "basic";
+  // The top-level `plan` column is kept in sync with Stripe (upgrades/downgrades),
+  // config.plan only reflects what was chosen at signup — prefer the live value.
+  const plan = (bot.plan ?? bot.config?.plan) === "pro" ? "pro" : "basic";
   const limit = PLAN_LIMITS[plan];
   const shared = {
     plan,

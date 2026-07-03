@@ -90,6 +90,29 @@ export async function POST(req) {
           );
         }
 
+        // Determine plan from amount_total: Basic ~$32-$40 (<4500 cents), Pro ~$48-$60 (>=4500 cents)
+        const amountTotal = session.amount_total ?? null;
+        const plan = amountTotal === null ? null : amountTotal < 4500 ? "basic" : "pro";
+
+        const subscriptionId = session.subscription;
+        let periodStart = null;
+        let periodEnd = null;
+
+        if (subscriptionId) {
+          try {
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+            periodStart = new Date(subscription.current_period_start * 1000).toISOString();
+            periodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+          } catch (e) {
+            console.warn("[stripe-webhook] could not retrieve subscription:", e.message);
+          }
+        }
+
+        updateFields.plan = plan;
+        updateFields.stripe_subscription_id = subscriptionId ?? null;
+        updateFields.current_period_start = periodStart;
+        updateFields.current_period_end = periodEnd;
+
         const { data: chatbot, error } = await db
           .from("chatbots")
           .update(updateFields)
@@ -100,10 +123,6 @@ export async function POST(req) {
         if (error) {
           console.error("[stripe-webhook] DB update failed (checkout.session.completed):", error);
         }
-
-        // Determine plan from amount_total: Basic ~$32-$40 (<4500 cents), Pro ~$48-$60 (>=4500 cents)
-        const amountTotal = session.amount_total ?? null;
-        const plan = amountTotal === null ? null : amountTotal < 4500 ? "basic" : "pro";
 
         sendOnboardingNotification(
           db,
@@ -155,9 +174,23 @@ export async function POST(req) {
           .maybeSingle();
         resolvedClientId = bot?.client_id ?? null;
 
+        const subUpdateFields = { subscription_status: sub.status };
+        if (sub.current_period_start) {
+          subUpdateFields.current_period_start = new Date(sub.current_period_start * 1000).toISOString();
+        }
+        if (sub.current_period_end) {
+          subUpdateFields.current_period_end = new Date(sub.current_period_end * 1000).toISOString();
+        }
+
+        // Plan may have changed (upgrade/downgrade) — re-derive it from the current price.
+        const priceAmount = sub.items?.data?.[0]?.price?.unit_amount ?? null;
+        if (priceAmount !== null) {
+          subUpdateFields.plan = priceAmount < 4500 ? "basic" : "pro";
+        }
+
         const { error } = await db
           .from("chatbots")
-          .update({ subscription_status: sub.status })
+          .update(subUpdateFields)
           .eq("stripe_customer_id", sub.customer);
 
         if (error) {
