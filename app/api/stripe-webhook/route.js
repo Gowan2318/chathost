@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { sendOnboardingEmail } from "../../../lib/email";
 
 // Must run on Node.js runtime — Edge runtime doesn't support the Stripe SDK's
 // crypto primitives needed for webhook signature verification.
@@ -13,6 +14,22 @@ function adminClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
   );
+}
+
+// Fire-and-forget — resolves the owner's email via Supabase auth and sends the
+// welcome email. Never awaited by the caller so it can't slow the webhook response.
+async function sendOnboardingNotification(db, userId, businessName, plan, clientId) {
+  if (!userId) return;
+  try {
+    const { data, error } = await db.auth.admin.getUserById(userId);
+    const ownerEmail = data?.user?.email;
+    if (error || !ownerEmail) return;
+
+    console.log("[stripe-webhook] sending onboarding email to:", ownerEmail);
+    await sendOnboardingEmail({ ownerEmail, businessName, plan, clientId });
+  } catch (err) {
+    console.error("[stripe-webhook] onboarding email failed:", err);
+  }
 }
 
 export async function POST(req) {
@@ -73,10 +90,12 @@ export async function POST(req) {
           );
         }
 
-        const { error } = await db
+        const { data: chatbot, error } = await db
           .from("chatbots")
           .update(updateFields)
-          .eq("client_id", clientId);
+          .eq("client_id", clientId)
+          .select("user_id, config")
+          .maybeSingle();
 
         if (error) {
           console.error("[stripe-webhook] DB update failed (checkout.session.completed):", error);
@@ -85,6 +104,14 @@ export async function POST(req) {
         // Determine plan from amount_total: Basic ~$32-$40 (<4500 cents), Pro ~$48-$60 (>=4500 cents)
         const amountTotal = session.amount_total ?? null;
         const plan = amountTotal === null ? null : amountTotal < 4500 ? "basic" : "pro";
+
+        sendOnboardingNotification(
+          db,
+          chatbot?.user_id,
+          chatbot?.config?.businessName ?? "your business",
+          plan,
+          clientId
+        );
 
         // Upsert payment transaction — idempotent via ON CONFLICT on stripe_session_id
         const { error: txError } = await db
