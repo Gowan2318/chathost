@@ -321,16 +321,34 @@ We're happy to assist you!`;
         body: JSON.stringify({ messages: nextMessages, businessName, businessInfo: effectiveBusinessInfo }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Request failed");
+      if (!response.ok) {
+        const err = new Error(data.error || "Request failed");
+        err.code = data.error;
+        throw err;
+      }
 
       const payButtonUrl = payNowUrl && isPaymentIntent(data.message) ? payNowUrl : undefined;
       setMessages((prev) => [...prev, { role: "assistant", content: data.message, payButtonUrl }]);
       setContextualReplies(buildContextualReplies(data.message));
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Sorry, something went wrong on our end. Please try again in a moment." },
-      ]);
+    } catch (err) {
+      if (err?.code === "monthly_limit_reached") {
+        const contactParts = [];
+        if (supportPhone) contactParts.push(`call us at ${supportPhone}`);
+        if (supportEmail) contactParts.push(`email us at ${supportEmail}`);
+        const contactMsg = contactParts.length ? ` You can ${contactParts.join(" or ")}.` : "";
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: `This assistant has reached its monthly limit. Please contact us directly for help!${contactMsg}`,
+          },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "Sorry, something went wrong on our end. Please try again in a moment." },
+        ]);
+      }
     } finally {
       setIsTyping(false);
     }

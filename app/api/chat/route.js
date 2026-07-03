@@ -16,6 +16,64 @@ function adminClient() {
   );
 }
 
+const PLAN_LIMITS = { pro: 1500, basic: 500 };
+
+function currentMonthStart() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+}
+
+function toDateOnly(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+// Returns { allowed, nextCount } — nextCount is the value to persist after this
+// message goes through (either "denied" leaves count untouched, or count + 1).
+async function checkAndReserveUsage(clientId) {
+  if (!clientId) return { allowed: true, nextCount: null };
+
+  const db = adminClient();
+  const { data: bot } = await db
+    .from("chatbots")
+    .select("config, monthly_message_count, usage_reset_date")
+    .eq("client_id", clientId)
+    .maybeSingle();
+
+  if (!bot) return { allowed: true, nextCount: null };
+
+  const monthStart = currentMonthStart();
+  const resetDate = bot.usage_reset_date ? new Date(bot.usage_reset_date) : null;
+  const needsReset = !resetDate || resetDate < monthStart;
+  const currentCount = needsReset ? 0 : bot.monthly_message_count ?? 0;
+
+  if (needsReset) {
+    db.from("chatbots")
+      .update({ monthly_message_count: 0, usage_reset_date: toDateOnly(monthStart) })
+      .eq("client_id", clientId)
+      .then(() => {})
+      .catch(() => {});
+  }
+
+  const plan = bot.config?.plan === "pro" ? "pro" : "basic";
+  const limit = PLAN_LIMITS[plan];
+
+  if (currentCount >= limit) {
+    return { allowed: false, nextCount: currentCount };
+  }
+
+  return { allowed: true, nextCount: currentCount + 1 };
+}
+
+async function incrementUsage(clientId, nextCount) {
+  if (!clientId || nextCount === null) return;
+  try {
+    const db = adminClient();
+    await db.from("chatbots").update({ monthly_message_count: nextCount }).eq("client_id", clientId);
+  } catch {
+    // Non-fatal — never block the chat response
+  }
+}
+
 async function logConversation(clientId, sessionId, userContent, assistantContent) {
   if (!clientId || !sessionId) return;
   try {
@@ -194,6 +252,18 @@ export async function POST(request) {
 
     const safeIndustry = VALID_INDUSTRIES.has(industry) ? industry : "other";
 
+    const usage = await checkAndReserveUsage(clientId);
+    if (!usage.allowed) {
+      return corsJson(
+        {
+          error: "monthly_limit_reached",
+          message:
+            "This chatbot has reached its monthly message limit. Please contact the business for assistance.",
+        },
+        { status: 429 }
+      );
+    }
+
     const response = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 450,
@@ -210,6 +280,7 @@ export async function POST(request) {
     // Fire-and-forget — don't await, never slows down response
     const lastUserMsg = apiMessages[apiMessages.length - 1]?.content ?? "";
     logConversation(clientId, sessionId, lastUserMsg, message);
+    incrementUsage(clientId, usage.nextCount);
 
     return corsJson({ message });
   } catch (error) {

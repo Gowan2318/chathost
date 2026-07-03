@@ -657,7 +657,11 @@
       })
         .then(function (res) {
           return res.json().then(function (data) {
-            if (!res.ok) throw new Error(data.error || "Request failed");
+            if (!res.ok) {
+              var err = new Error(data.error || "Request failed");
+              err.code = data.error;
+              throw err;
+            }
             return data;
           });
         })
@@ -676,11 +680,21 @@
             }, 1000);
           }
         })
-        .catch(function () {
+        .catch(function (err) {
           state.isTyping = false;
-          addMessage(
-            "Sorry, something went wrong on our end. Please try again in a moment."
-          );
+          if (err && err.code === "monthly_limit_reached") {
+            var contactParts = [];
+            if (supportPhone) contactParts.push("call us at " + supportPhone);
+            if (supportEmail) contactParts.push("email us at " + supportEmail);
+            var contactMsg = contactParts.length ? " You can " + contactParts.join(" or ") + "." : "";
+            addMessage(
+              "This assistant has reached its monthly limit. Please contact us directly for help!" + contactMsg
+            );
+          } else {
+            addMessage(
+              "Sorry, something went wrong on our end. Please try again in a moment."
+            );
+          }
         });
     }
 
