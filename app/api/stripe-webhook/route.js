@@ -113,23 +113,64 @@ export async function POST(req) {
         updateFields.current_period_start = periodStart;
         updateFields.current_period_end = periodEnd;
 
-        const { data: chatbot, error } = await db
+        // Resolve which chatbot row to update. Normally the row already exists
+        // (created by the builder flow before checkout), so an update filtered
+        // on client_id finds it directly. If not — e.g. a customer upgrading
+        // whose checkout session was created against a different/stale
+        // client_id — fall back to matching on stripe_customer_id so we don't
+        // silently no-op the update.
+        let chatbot = null;
+        let error = null;
+
+        const byClientId = await db
           .from("chatbots")
           .update(updateFields)
           .eq("client_id", clientId)
-          .select("user_id, config")
+          .select("user_id, config, client_id")
           .maybeSingle();
+        error = byClientId.error;
+
+        if (byClientId.data) {
+          chatbot = byClientId.data;
+          console.log("[stripe-webhook] new subscription for:", clientId);
+        } else if (stripeCustomerId) {
+          const byCustomerId = await db
+            .from("chatbots")
+            .update(updateFields)
+            .eq("stripe_customer_id", stripeCustomerId)
+            .select("user_id, config, client_id")
+            .maybeSingle();
+          error = byCustomerId.error;
+
+          if (byCustomerId.data) {
+            chatbot = byCustomerId.data;
+            console.log("[stripe-webhook] upgrade detected for existing customer:", chatbot.client_id);
+          }
+        }
+
+        if (!chatbot) {
+          console.warn(
+            "[stripe-webhook] no chatbot row found by client_id or stripe_customer_id — new chatbot should already exist from builder flow:",
+            clientId
+          );
+        }
 
         if (error) {
           console.error("[stripe-webhook] DB update failed (checkout.session.completed):", error);
         }
+
+        // The row actually updated may carry a different client_id than the
+        // session's (see stripe_customer_id fallback above) — use it for
+        // anything referencing the chatbot going forward.
+        const resolvedRowClientId = chatbot?.client_id ?? clientId;
+        resolvedClientId = resolvedRowClientId;
 
         sendOnboardingNotification(
           db,
           chatbot?.user_id,
           chatbot?.config?.businessName ?? "your business",
           plan,
-          clientId
+          resolvedRowClientId
         );
 
         // Upsert payment transaction — idempotent via ON CONFLICT on stripe_session_id
@@ -137,7 +178,7 @@ export async function POST(req) {
           .from("payment_transactions")
           .upsert(
             {
-              client_id: clientId,
+              client_id: resolvedRowClientId,
               stripe_session_id: session.id,
               stripe_customer_id: stripeCustomerId ?? null,
               amount: amountTotal,
