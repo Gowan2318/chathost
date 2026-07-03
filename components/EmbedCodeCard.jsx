@@ -22,73 +22,73 @@ export default function EmbedCodeCard({ clientId }) {
 
   return (
     <div className="space-y-3">
-      <div className="overflow-hidden rounded-2xl border border-[#D4AF37]/20 bg-[#1A1A1A]">
+      <div className="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-[#F8F9FA]">
         <button
           type="button"
           onClick={() => setInstallHelpOpen((o) => !o)}
-          className="flex w-full items-center justify-between gap-3 px-6 py-4 text-left transition hover:bg-[#D4AF37]/5"
+          className="flex w-full items-center justify-between gap-3 px-6 py-4 text-left transition hover:bg-[#0D7377]/10"
           aria-expanded={installHelpOpen}
         >
-          <span className="text-sm font-semibold text-[#F0D060]">
+          <span className="text-sm font-semibold text-[#0D7377]">
             Need help installing this?
           </span>
           <span
-            className={`shrink-0 text-[#D4AF37] transition-transform ${installHelpOpen ? "rotate-180" : ""}`}
+            className={`shrink-0 text-[#0D7377] transition-transform ${installHelpOpen ? "rotate-180" : ""}`}
             aria-hidden
           >
             ▼
           </span>
         </button>
         {installHelpOpen && (
-          <div className="border-t border-white/10 px-6 pb-6 pt-4">
-            <p className="text-sm text-[#a3a3a3]">
+          <div className="border-t border-[#E2E8F0] px-6 pb-6 pt-4">
+            <p className="text-sm text-[#4A5568]">
               If you&apos;re not sure how to add this to your website:
             </p>
-            <ul className="mt-4 space-y-3 text-sm leading-relaxed text-[#a3a3a3]">
+            <ul className="mt-4 space-y-3 text-sm leading-relaxed text-[#4A5568]">
               <li>
-                <span className="font-medium text-white">WordPress:</span> Use a
+                <span className="font-medium text-[#1A1A2E]">WordPress:</span> Use a
                 plugin like &quot;Insert Headers and Footers&quot; and paste the
                 code in the footer section
               </li>
               <li>
-                <span className="font-medium text-white">Wix:</span> Go to
+                <span className="font-medium text-[#1A1A2E]">Wix:</span> Go to
                 Settings &gt; Custom Code &gt; Add Code to Footer
               </li>
               <li>
-                <span className="font-medium text-white">Squarespace:</span> Go
+                <span className="font-medium text-[#1A1A2E]">Squarespace:</span> Go
                 to Settings &gt; Advanced &gt; Code Injection &gt; Footer
               </li>
               <li>
-                <span className="font-medium text-white">Shopify:</span> Go to
+                <span className="font-medium text-[#1A1A2E]">Shopify:</span> Go to
                 Online Store &gt; Themes &gt; Edit Code &gt; theme.liquid, paste
-                before <code className="text-[#F0D060]">&lt;/body&gt;</code>
+                before <code className="text-[#0D7377]">&lt;/body&gt;</code>
               </li>
               <li>
-                <span className="font-medium text-white">Other/Custom site:</span>{" "}
+                <span className="font-medium text-[#1A1A2E]">Other/Custom site:</span>{" "}
                 Send this code to your web developer and ask them to add it
                 before the closing{" "}
-                <code className="text-[#F0D060]">&lt;/body&gt;</code> tag
+                <code className="text-[#0D7377]">&lt;/body&gt;</code> tag
               </li>
             </ul>
           </div>
         )}
       </div>
 
-      <div className="rounded-2xl border border-[#D4AF37]/30 bg-[#1A1A1A] p-6">
-        <p className="text-sm font-semibold text-[#F0D060]">Your embed code</p>
-        <p className="mt-2 text-xs text-[#a3a3a3]">
+      <div className="rounded-2xl border border-[#E2E8F0] bg-[#F8F9FA] p-6">
+        <p className="text-sm font-semibold text-[#0D7377]">Your embed code</p>
+        <p className="mt-2 text-xs text-[#4A5568]">
           Paste this snippet before the closing{" "}
-          <code className="text-[#F0D060]">&lt;/body&gt;</code> tag on your
+          <code className="text-[#0D7377]">&lt;/body&gt;</code> tag on your
           website.
         </p>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start">
-          <pre className="flex-1 overflow-x-auto rounded-xl border border-white/10 bg-[#0A0A0A] p-4 text-left text-xs leading-relaxed text-[#F0D060]">
+          <pre className="flex-1 overflow-x-auto rounded-xl border border-[#E2E8F0] bg-white p-4 text-left text-xs leading-relaxed text-[#1A1A2E]">
             {embedCode}
           </pre>
           <button
             type="button"
             onClick={handleCopy}
-            className="shrink-0 rounded-xl border border-[#D4AF37]/40 px-4 py-2.5 text-sm font-semibold text-[#F0D060] transition hover:bg-[#D4AF37]/10"
+            className="shrink-0 rounded-xl border border-[#0D7377]/40 px-4 py-2.5 text-sm font-semibold text-[#0D7377] transition hover:bg-[#0D7377]/10"
           >
             {copied ? "Copied!" : "Copy"}
           </button>

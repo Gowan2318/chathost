@@ -27,6 +27,7 @@ import {
   validatePhone,
   validateServicesDescription,
 } from "../../../lib/builder-validation";
+import DashboardSidebar, { Logo, MenuIcon } from "../../../components/dashboard/DashboardSidebar";
 
 function configToForm(config) {
   return {
@@ -162,7 +163,7 @@ function validateForm(form) {
 }
 
 export default function EditBotPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const router = useRouter();
 
   const [fetchLoading, setFetchLoading] = useState(true);
@@ -174,6 +175,12 @@ export default function EditBotPage() {
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  async function handleSignOut() {
+    await signOut();
+    router.push("/");
+  }
 
   useEffect(() => {
     if (!loading && !user) {
@@ -264,25 +271,21 @@ export default function EditBotPage() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
-      {/* Header */}
-      <header className="border-b border-[#E2E8F0] bg-white">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-2.5 transition hover:opacity-90">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#0D7377] to-[#14A3A8] text-lg font-black text-white">
-              V
-            </span>
-            <span className="text-lg font-bold tracking-tight text-[#1A1A2E]">
-              Vesta<span className="text-[#0D7377]">Chat</span>Host
-            </span>
-          </Link>
-          <Link
-            href="/dashboard"
-            className="text-sm font-medium text-[#4A5568] transition hover:text-[#0D7377]"
+      <DashboardSidebar email={user.email} onSignOut={handleSignOut} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      <div className="lg:pl-60">
+        {/* Mobile top bar */}
+        <div className="flex items-center justify-between border-b border-[#E2E8F0] bg-white px-4 py-3 lg:hidden">
+          <Logo />
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="rounded-lg p-2 text-[#1A1A2E] hover:bg-[#F8F9FA]"
+            aria-label="Open menu"
           >
-            ← Back to Dashboard
-          </Link>
+            <MenuIcon className="h-6 w-6" />
+          </button>
         </div>
-      </header>
 
       <main className="mx-auto max-w-4xl px-6 py-10">
         <div className="mb-2 text-sm font-semibold uppercase tracking-widest text-[#0D7377]">
@@ -816,6 +819,7 @@ export default function EditBotPage() {
           )}
         </div>
       </main>
+      </div>
     </div>
   );
 }
