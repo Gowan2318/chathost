@@ -151,6 +151,11 @@ export default function DashboardSidebar({ email, onSignOut, open, onClose }) {
           >
             Sign Out
           </button>
+          <div className="mt-3 flex gap-3 px-3">
+            <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-xs text-[#4A5568] hover:text-white transition">Terms</a>
+            <span className="text-xs text-[#4A5568]">·</span>
+            <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-xs text-[#4A5568] hover:text-white transition">Privacy</a>
+          </div>
         </div>
       </aside>
     </>
