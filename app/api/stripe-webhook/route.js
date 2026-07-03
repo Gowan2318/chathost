@@ -337,6 +337,49 @@ export async function POST(req) {
         break;
       }
 
+      case "invoice.payment_succeeded": {
+        const invoice = event.data.object;
+        if (!invoice.customer) {
+          console.warn("[stripe-webhook] invoice.payment_succeeded missing customer", event.id);
+          break;
+        }
+        resolvedCustomerId = invoice.customer;
+        newStatus = "active";
+
+        const { data: bot } = await db
+          .from("chatbots")
+          .select("client_id, user_id, config, plan")
+          .eq("stripe_customer_id", invoice.customer)
+          .maybeSingle();
+
+        if (!bot) {
+          console.warn("[stripe-webhook] invoice.payment_succeeded — no chatbot found for customer:", invoice.customer);
+          break;
+        }
+
+        resolvedClientId = bot.client_id;
+
+        // Update subscription status to active and sync period dates if available
+        const updateFields = { subscription_status: "active" };
+
+        if (invoice.lines?.data?.[0]?.period) {
+          updateFields.current_period_start = new Date(invoice.lines.data[0].period.start * 1000).toISOString();
+          updateFields.current_period_end = new Date(invoice.lines.data[0].period.end * 1000).toISOString();
+        }
+
+        const { error } = await db
+          .from("chatbots")
+          .update(updateFields)
+          .eq("client_id", bot.client_id);
+
+        if (error) {
+          console.error("[stripe-webhook] DB update failed (invoice.payment_succeeded):", error);
+        }
+
+        console.log("[stripe-webhook] payment succeeded for:", bot.client_id);
+        break;
+      }
+
       default:
         break;
     }
