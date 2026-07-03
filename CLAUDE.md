@@ -27,6 +27,7 @@ The `--use-system-ca` flag is required for dev/start on Windows to resolve SSL c
 ANTHROPIC_API_KEY
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
+RESEND_API_KEY
 ```
 
 Copy `.env.local.example` to `.env.local` and fill in values.

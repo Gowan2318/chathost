@@ -7,6 +7,7 @@ import {
   checkRateLimit,
   autoBlockIfAbusive,
 } from "../../../lib/rateLimit";
+import { sendUsageWarningEmail, sendLimitReachedEmail } from "../../../lib/email";
 
 function adminClient() {
   return createClient(
@@ -27,15 +28,21 @@ function toDateOnly(date) {
   return date.toISOString().slice(0, 10);
 }
 
-// Returns { allowed, nextCount } — nextCount is the value to persist after this
-// message goes through (either "denied" leaves count untouched, or count + 1).
+function formatResetDate(monthStart) {
+  const next = new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 1));
+  return next.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
+}
+
+// Returns { allowed, nextCount, plan, limit, resetDate, businessName, userId } —
+// nextCount is the value to persist after this message goes through
+// (either "denied" leaves count untouched, or count + 1).
 async function checkAndReserveUsage(clientId) {
   if (!clientId) return { allowed: true, nextCount: null };
 
   const db = adminClient();
   const { data: bot } = await db
     .from("chatbots")
-    .select("config, monthly_message_count, usage_reset_date")
+    .select("config, monthly_message_count, usage_reset_date, user_id")
     .eq("client_id", clientId)
     .maybeSingle();
 
@@ -56,12 +63,19 @@ async function checkAndReserveUsage(clientId) {
 
   const plan = bot.config?.plan === "pro" ? "pro" : "basic";
   const limit = PLAN_LIMITS[plan];
+  const shared = {
+    plan,
+    limit,
+    resetDate: formatResetDate(monthStart),
+    businessName: bot.config?.businessName ?? "your business",
+    userId: bot.user_id,
+  };
 
   if (currentCount >= limit) {
-    return { allowed: false, nextCount: currentCount };
+    return { allowed: false, nextCount: currentCount, ...shared };
   }
 
-  return { allowed: true, nextCount: currentCount + 1 };
+  return { allowed: true, nextCount: currentCount + 1, ...shared };
 }
 
 async function incrementUsage(clientId, nextCount) {
@@ -71,6 +85,31 @@ async function incrementUsage(clientId, nextCount) {
     await db.from("chatbots").update({ monthly_message_count: nextCount }).eq("client_id", clientId);
   } catch {
     // Non-fatal — never block the chat response
+  }
+}
+
+// Fire-and-forget — sends at most one email per triggering message, preferring
+// the limit-reached notice over the 80% warning if both thresholds coincide.
+async function sendUsageNotifications({ userId, businessName, plan, limit, nextCount, resetDate }) {
+  if (!userId || nextCount === null) return;
+
+  const limitReached = nextCount >= limit;
+  const warningThreshold = nextCount === Math.floor(limit * 0.8);
+  if (!limitReached && !warningThreshold) return;
+
+  try {
+    const db = adminClient();
+    const { data, error } = await db.auth.admin.getUserById(userId);
+    const ownerEmail = data?.user?.email;
+    if (error || !ownerEmail) return;
+
+    if (limitReached) {
+      await sendLimitReachedEmail({ ownerEmail, businessName, plan, limit, resetDate });
+    } else {
+      await sendUsageWarningEmail({ ownerEmail, businessName, plan, used: nextCount, limit, resetDate });
+    }
+  } catch (err) {
+    console.error("[api/chat] usage notification failed:", err);
   }
 }
 
@@ -281,6 +320,7 @@ export async function POST(request) {
     const lastUserMsg = apiMessages[apiMessages.length - 1]?.content ?? "";
     logConversation(clientId, sessionId, lastUserMsg, message);
     incrementUsage(clientId, usage.nextCount);
+    sendUsageNotifications(usage);
 
     return corsJson({ message });
   } catch (error) {
