@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../lib/AuthContext";
@@ -19,6 +19,14 @@ export default function SetupMfaPage() {
   const [verifying, setVerifying] = useState(false);
   const [ready, setReady] = useState(false);
 
+  // Caches the in-flight/resolved setup work in a ref (not state) so that
+  // React StrictMode's double-invoke — or any re-render of this effect —
+  // reuses the same promise instead of firing listFactors/unenroll/enroll
+  // a second time. A plain boolean guard doesn't work here because the
+  // *second* invocation is usually the one still mounted when the promise
+  // resolves; it needs to still be able to pick up the result.
+  const setupPromiseRef = useRef(null);
+
   useEffect(() => {
     if (authLoading) return;
 
@@ -33,18 +41,43 @@ export default function SetupMfaPage() {
 
     let cancelled = false;
 
-    (async () => {
-      // Already enrolled? Don't start a second, redundant factor — go verify instead.
-      const { data: factorsData } = await supabase.auth.mfa.listFactors();
-      const hasVerifiedTotp = (factorsData?.totp ?? []).some((f) => f.status === "verified");
-      if (hasVerifiedTotp) {
+    if (!setupPromiseRef.current) {
+      setupPromiseRef.current = (async () => {
+        const { data: factorsData } = await supabase.auth.mfa.listFactors();
+        const totpFactors = factorsData?.totp ?? [];
+
+        // Already enrolled? Don't start a second, redundant factor — go verify instead.
+        if (totpFactors.some((f) => f.status === "verified")) {
+          return { redirectToVerify: true };
+        }
+
+        // An unverified factor means a previous enrollment attempt started
+        // but was never confirmed. Supabase won't let us enroll a second
+        // factor with the same friendly name, and there's no API to recover
+        // the QR/secret for an already-created factor, so clear it and
+        // enroll fresh.
+        for (const factor of totpFactors) {
+          if (factor.status === "unverified") {
+            await supabase.auth.mfa.unenroll({ factorId: factor.id });
+          }
+        }
+
+        return supabase.auth.mfa.enroll({
+          factorType: "totp",
+          friendlyName: "VestaChatHost Admin",
+        });
+      })();
+    }
+
+    setupPromiseRef.current.then((result) => {
+      if (cancelled) return;
+
+      if (result.redirectToVerify) {
         router.replace("/admin/verify");
         return;
       }
 
-      const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp" });
-      if (cancelled) return;
-
+      const { data, error } = result;
       if (error || !data) {
         setEnrollError(error?.message || "Could not start 2FA setup. Please try again.");
         return;
@@ -54,7 +87,7 @@ export default function SetupMfaPage() {
       setQrCode(data.totp.qr_code);
       setSecret(data.totp.secret);
       setReady(true);
-    })();
+    });
 
     return () => {
       cancelled = true;
