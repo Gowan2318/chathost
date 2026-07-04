@@ -75,6 +75,15 @@ function ShieldIcon(props) {
   );
 }
 
+function ChartIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} {...props} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 19.25h16.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M7 19.25v-6M12 19.25v-10M17 19.25v-4" />
+    </svg>
+  );
+}
+
 function CloseIcon(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props} aria-hidden>
@@ -98,6 +107,7 @@ export function Logo({ light }) {
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: HomeIcon },
+  { label: "Analytics", href: "/dashboard/analytics", icon: ChartIcon },
   { label: "Edit Bot", href: "/dashboard/edit", icon: SettingsIcon },
   { label: "Subscription", href: "/dashboard#subscription", icon: CardIcon },
   { label: "Support", href: "mailto:support@vestachathost.com", icon: HelpIcon },

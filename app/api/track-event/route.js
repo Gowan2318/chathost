@@ -13,7 +13,7 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-const VALID_EVENT_TYPES = new Set(["booking_clicked", "payment_clicked"]);
+const VALID_EVENT_TYPES = new Set(["opened", "booking_clicked", "payment_clicked"]);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function corsJson(body, init = {}) {
@@ -61,10 +61,14 @@ export async function POST(request) {
 
     const db = adminClient();
 
-    await Promise.all([
-      db.from("widget_events").insert({ client_id, session_id, event_type }),
-      db.from("leads").insert({ client_id, session_id, action_type: event_type }),
-    ]);
+    // leads only tracks actual lead-generating actions — its action_type
+    // check constraint doesn't include "opened", so skip it for that event.
+    const inserts = [db.from("widget_events").insert({ client_id, session_id, event_type })];
+    if (event_type !== "opened") {
+      inserts.push(db.from("leads").insert({ client_id, session_id, action_type: event_type }));
+    }
+
+    await Promise.all(inserts);
 
     return corsJson({ ok: true });
   } catch (err) {

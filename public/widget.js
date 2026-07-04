@@ -735,6 +735,7 @@
       if (state.isOpen) {
         inputEl.focus();
         scrollBottom();
+        trackEvent("opened");
       }
     });
 
