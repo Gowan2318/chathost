@@ -28,9 +28,12 @@ ANTHROPIC_API_KEY
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 RESEND_API_KEY
+CRON_SECRET
 ```
 
 Copy `.env.local.example` to `.env.local` and fill in values.
+
+**`CRON_SECRET` must also be added to Vercel's project environment variables** (Project → Settings → Environment Variables) — Vercel Cron only attaches the `Authorization: Bearer <CRON_SECRET>` header to its invocations of `/api/cron/reconcile` when that variable is set in the deployed environment, not just locally.
 
 ## Architecture
 
