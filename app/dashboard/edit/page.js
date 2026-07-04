@@ -203,7 +203,8 @@ export default function EditBotPage() {
           return;
         }
         setClientId(data[0].client_id);
-        setChatbotPlan(data[0].config?.plan === "basic" ? "basic" : "pro");
+        const resolvedPlan = data[0].plan || data[0].config?.plan || "pro";
+        setChatbotPlan(resolvedPlan === "basic" ? "basic" : "pro");
         setForm(configToForm(data[0].config));
         setFetchLoading(false);
       });

@@ -264,7 +264,7 @@ export async function POST(req) {
   // Fetch the existing row: verify ownership and read the stored plan.
   const { data: chatbot, error: fetchError } = await db
     .from("chatbots")
-    .select("user_id, config")
+    .select("user_id, config, plan")
     .eq("client_id", clientId)
     .maybeSingle();
 
@@ -284,7 +284,11 @@ export async function POST(req) {
 
   // Use the plan and industry stored in the DB row as source of truth — clients
   // cannot upgrade their plan or change industry after initial setup via API.
-  const existingPlan = chatbot.config?.plan === "basic" ? "basic" : "pro";
+  // The top-level plan column is synced by the Stripe webhook on every
+  // upgrade/downgrade and takes priority over config.plan, which only
+  // reflects what was chosen at signup.
+  const resolvedPlan = chatbot.plan || chatbot.config?.plan || "pro";
+  const existingPlan = resolvedPlan === "basic" ? "basic" : "pro";
   const existingIndustry = chatbot.config?.industry ?? sanitizedConfig.industry ?? "other";
 
   const configToSave = applyPlanEnforcement(
