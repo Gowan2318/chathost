@@ -15,7 +15,7 @@ export default function TestWidgetPage() {
 
       <Script
         id="vestachathost-widget"
-        src="http://localhost:3000/widget.js?id=b764b8fa-9576-4325-8553-614ffa254a59"
+        src="http://localhost:3000/widget.js?id=bf8a1fe8-049d-410b-a6a0-e33594a8c510"
         strategy="afterInteractive"
       />
     </main>
