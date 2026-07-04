@@ -16,6 +16,8 @@ function adminClient() {
   );
 }
 
+const ALLOWED_STATUSES = ["active", "trialing"];
+
 function makeSessionId(ip, clientId) {
   // Simple stable-enough session proxy — not cryptographically strong,
   // just needs to group events from the same load within a short window.
@@ -76,7 +78,7 @@ export async function GET(request) {
 
     // null = just created, Stripe webhook not yet fired — allow through so /success works immediately.
     const status = data.subscription_status;
-    if (status !== null && status !== "active" && status !== "trialing") {
+    if (status !== null && !ALLOWED_STATUSES.includes(status)) {
       return NextResponse.json({ error: "Subscription inactive" }, { status: 402, headers: CORS_HEADERS });
     }
 

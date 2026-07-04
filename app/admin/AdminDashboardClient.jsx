@@ -114,10 +114,65 @@ function StatCard({ icon, label, value, sub }) {
   );
 }
 
+function ClientActions({ client, pending, onAction }) {
+  const isPending = pending === client.clientId;
+
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      {client.stripeCustomerId ? (
+        <a
+          href={`https://dashboard.stripe.com/customers/${client.stripeCustomerId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold text-[#0D7377] hover:text-[#0A5D61]"
+        >
+          View in Stripe ↗
+        </a>
+      ) : (
+        <span className="text-[#9CA3AF]">—</span>
+      )}
+
+      {(client.status === "active" || client.status === "trialing") && (
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={() => onAction(client, "pause")}
+          className="font-semibold text-amber-600 hover:text-amber-700 disabled:opacity-50"
+        >
+          Pause
+        </button>
+      )}
+      {client.status === "paused" && (
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={() => onAction(client, "resume")}
+          className="font-semibold text-green-600 hover:text-green-700 disabled:opacity-50"
+        >
+          Resume
+        </button>
+      )}
+      {client.status !== "canceled" && (
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={() => onAction(client, "cancel")}
+          className="font-semibold text-red-600 hover:text-red-700 disabled:opacity-50"
+        >
+          Cancel
+        </button>
+      )}
+      {isPending && <span className="text-xs text-[#9CA3AF]">Working…</span>}
+    </div>
+  );
+}
+
 export default function AdminDashboardClient({ email, stats, fetchError }) {
   const router = useRouter();
   const { signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pendingClientId, setPendingClientId] = useState(null);
+  const [actionError, setActionError] = useState("");
 
   const {
     clients,
@@ -133,6 +188,38 @@ export default function AdminDashboardClient({ email, stats, fetchError }) {
   async function handleSignOut() {
     await signOut();
     router.push("/");
+  }
+
+  async function handleClientAction(client, action) {
+    if (action === "cancel") {
+      const confirmed = window.confirm(
+        `Are you sure you want to cancel ${client.businessName}'s subscription? This will stop their chatbot and attempt to cancel their Stripe subscription.`
+      );
+      if (!confirmed) return;
+    }
+
+    setActionError("");
+    setPendingClientId(client.clientId);
+
+    try {
+      const res = await fetch("/api/admin/manage-client", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientId: client.clientId, action }),
+      });
+      const json = await res.json();
+
+      if (!res.ok) {
+        setActionError(json.error || "Action failed. Please try again.");
+        return;
+      }
+
+      router.refresh();
+    } catch {
+      setActionError("Action failed. Please try again.");
+    } finally {
+      setPendingClientId(null);
+    }
   }
 
   return (
@@ -195,6 +282,12 @@ export default function AdminDashboardClient({ email, stats, fetchError }) {
             <div id="clients" className="rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm">
               <p className="text-sm font-semibold uppercase tracking-widest text-[#0D7377]">Clients</p>
 
+              {actionError && (
+                <p className="mt-4 rounded-xl border border-red-400/30 bg-red-50 px-4 py-3 text-sm text-red-600">
+                  {actionError}
+                </p>
+              )}
+
               {clients.length === 0 ? (
                 <p className="mt-6 text-sm text-[#4A5568]">No chatbots yet.</p>
               ) : (
@@ -236,18 +329,7 @@ export default function AdminDashboardClient({ email, stats, fetchError }) {
                           <td className="py-3 pr-4 text-[#4A5568]">{formatDate(c.currentPeriodEnd)}</td>
                           <td className="py-3 pr-4 text-[#4A5568]">{formatDate(c.createdAt)}</td>
                           <td className="py-3 pr-4">
-                            {c.stripeCustomerId ? (
-                              <a
-                                href={`https://dashboard.stripe.com/customers/${c.stripeCustomerId}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="font-semibold text-[#0D7377] hover:text-[#0A5D61]"
-                              >
-                                View in Stripe ↗
-                              </a>
-                            ) : (
-                              <span className="text-[#9CA3AF]">—</span>
-                            )}
+                            <ClientActions client={c} pending={pendingClientId} onAction={handleClientAction} />
                           </td>
                         </tr>
                       ))}
