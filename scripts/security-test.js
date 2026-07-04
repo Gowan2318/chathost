@@ -10,7 +10,7 @@ const path = require("path");
 
 // ─── Config ────────────────────────────────────────────────────────────────
 const BASE_URL = "http://localhost:3000";
-const TEST_EMAIL = "gowanareb46+vesta3@gmail.com";
+const TEST_EMAIL = process.env.TEST_EMAIL || "gowanareb46+vesta3@gmail.com";
 const TEST_PASSWORD = "VestaTest2026!";
 const TEST_CLIENT_ID = "1c2e7dae-e44b-4864-8af5-1afe483f61cf"; // test user owns this
 const FOREIGN_CLIENT_ID = "bf8a1fe8-049d-410b-a6a0-e33594a8c510"; // null user_id row; test user does NOT own it
