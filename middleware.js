@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 import { getClientIp, isIpBlocked } from "./lib/rateLimit";
 
 export async function middleware(request) {
@@ -8,8 +9,34 @@ export async function middleware(request) {
     return new NextResponse("Access denied", { status: 403 });
   }
 
+  let response = NextResponse.next({ request });
+
+  // Refresh the Supabase auth cookie so Server Components (e.g. /admin) see
+  // a valid, up-to-date session instead of a stale/expired token.
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+            response = NextResponse.next({ request });
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options)
+            );
+          },
+        },
+      }
+    );
+    await supabase.auth.getUser();
+  }
+
   if (process.env.SITE_LIVE === "true") {
-    return NextResponse.next();
+    return response;
   }
 
   const { pathname } = request.nextUrl;
@@ -19,19 +46,19 @@ export async function middleware(request) {
     pathname.startsWith("/success") ||
     pathname.startsWith("/test-widget")
   ) {
-    return NextResponse.next();
+    return response;
   }
 
   if (pathname.startsWith("/api")) {
-    return NextResponse.next();
+    return response;
   }
 
   if (pathname.startsWith("/_next")) {
-    return NextResponse.next();
+    return response;
   }
 
   if (/\.[a-zA-Z0-9]+$/.test(pathname)) {
-    return NextResponse.next();
+    return response;
   }
 
   return NextResponse.redirect(new URL("/coming-soon", request.url));

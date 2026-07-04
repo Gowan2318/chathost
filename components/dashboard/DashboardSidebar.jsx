@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { isFounder } from "../../lib/founder";
 
 function HomeIcon(props) {
   return (
@@ -61,6 +62,19 @@ export function MenuIcon(props) {
   );
 }
 
+function ShieldIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} {...props} aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 3.5l7 2.75v5.25c0 4.5-3 8.25-7 9.5-4-1.25-7-5-7-9.5V6.25L12 3.5z"
+      />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.25l2 2 4-4.5" />
+    </svg>
+  );
+}
+
 function CloseIcon(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props} aria-hidden>
@@ -93,6 +107,10 @@ const NAV_ITEMS = [
 export default function DashboardSidebar({ email, onSignOut, open, onClose }) {
   const pathname = usePathname();
 
+  const navItems = isFounder(email)
+    ? [...NAV_ITEMS, { label: "Admin", href: "/admin", icon: ShieldIcon }]
+    : NAV_ITEMS;
+
   return (
     <>
       {open && (
@@ -120,7 +138,7 @@ export default function DashboardSidebar({ email, onSignOut, open, onClose }) {
         </div>
 
         <nav className="mt-2 flex-1 space-y-1 px-3">
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             // Anchor/mailto links (Subscription, Support) aren't distinct routes,
             // so only real pages participate in active-state matching.
             const isActive = !item.href.includes("#") && !item.href.startsWith("mailto:") && pathname === item.href;
