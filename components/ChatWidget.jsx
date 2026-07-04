@@ -315,10 +315,10 @@ We're happy to assist you!`;
         bookingUrl && !businessInfo.includes(bookingUrl)
           ? `${businessInfo}. To book an appointment online: ${bookingUrl}`
           : businessInfo;
-      const response = await fetch("/api/chat", {
+      const response = await fetch("/api/chat-preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: nextMessages, businessName, businessInfo: effectiveBusinessInfo }),
+        body: JSON.stringify({ messages: nextMessages, businessName, businessInfo: effectiveBusinessInfo, industry }),
       });
       const data = await response.json();
       if (!response.ok) {

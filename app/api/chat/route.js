@@ -1,4 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import {
@@ -9,6 +8,16 @@ import {
 } from "../../../lib/rateLimit";
 import { sendUsageWarningEmail, sendLimitReachedEmail } from "../../../lib/email";
 import { PLAN_LIMITS } from "../../../lib/plans";
+import { composeBusinessInfo } from "../../../lib/builder-form";
+import {
+  anthropicClient,
+  VALID_INDUSTRIES,
+  buildSystemPrompt,
+  toApiMessages,
+  extractText,
+} from "../../../lib/chat-shared";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function adminClient() {
   return createClient(
@@ -34,26 +43,17 @@ function formatResetDate(monthStart) {
 
 // Returns { allowed, nextCount, plan, limit, resetDate, businessName, userId } —
 // nextCount is the value to persist after this message goes through
-// (either "denied" leaves count untouched, or count + 1).
-async function checkAndReserveUsage(clientId) {
-  if (!clientId) return { allowed: true, nextCount: null };
-
-  const db = adminClient();
-  const { data: bot } = await db
-    .from("chatbots")
-    .select("config, monthly_message_count, usage_reset_date, user_id, plan")
-    .eq("client_id", clientId)
-    .maybeSingle();
-
-  if (!bot) return { allowed: true, nextCount: null };
-
+// (either "denied" leaves count untouched, or count + 1). Takes the chatbot
+// row already fetched by the caller — no extra DB read here.
+function computeUsage(clientId, bot) {
   const monthStart = currentMonthStart();
   const resetDate = bot.usage_reset_date ? new Date(bot.usage_reset_date) : null;
   const needsReset = !resetDate || resetDate < monthStart;
   const currentCount = needsReset ? 0 : bot.monthly_message_count ?? 0;
 
   if (needsReset) {
-    db.from("chatbots")
+    adminClient()
+      .from("chatbots")
       .update({ monthly_message_count: 0, usage_reset_date: toDateOnly(monthStart) })
       .eq("client_id", clientId)
       .then(() => {})
@@ -158,98 +158,6 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 200, headers: CORS_HEADERS });
 }
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-const VALID_INDUSTRIES = new Set([
-  "dental", "gym", "salon", "restaurant", "real_estate", "law", "barber", "lawn", "other",
-]);
-
-const INDUSTRY_TONE = {
-  dental:      "professional, warm, and reassuring",
-  gym:         "energetic and encouraging",
-  salon:       "warm, friendly, and personal",
-  restaurant:  "hospitable and enthusiastic",
-  real_estate: "professional and trustworthy",
-  law:         "formal and precise — never give specific legal advice; always recommend speaking with an attorney",
-  barber:      "casual, friendly, and community-focused",
-  lawn:        "practical and down-to-earth",
-  other:       "friendly, professional, and helpful",
-};
-
-const INDUSTRY_LABEL = {
-  dental:      "dental practice",
-  gym:         "fitness center",
-  salon:       "hair salon",
-  restaurant:  "restaurant",
-  real_estate: "real estate agency",
-  law:         "law firm",
-  barber:      "barbershop",
-  lawn:        "lawn care company",
-};
-
-function buildSystemPrompt(businessName, businessInfo, industry) {
-  const tone = INDUSTRY_TONE[industry] || INDUSTRY_TONE.other;
-  const name = businessName ?? "this business";
-  const label = INDUSTRY_LABEL[industry];
-
-  return (
-    `You are the AI assistant for ${name}${label ? `, a ${label}` : ""}.\n\n` +
-    `Your personality: ${tone}. Speak like a helpful staff member who genuinely wants to assist — not a scripted bot. Keep responses concise (2–4 sentences max) and conversational.\n\n` +
-    `Here is everything you know about this business:\n` +
-    `<business_info>${businessInfo ?? ""}</business_info>\n\n` +
-    `Your job:\n` +
-    `- Answer questions accurately using only the business information above\n` +
-    `- If you know the answer — give it directly and confidently\n` +
-    `- If you don't have specific information — be honest and direct the customer to the phone or email in the business info\n` +
-    `- Keep conversations flowing naturally — if you ask a question, always follow through with a helpful answer based on what the customer says\n` +
-    `- Never make up information not found in the business info above\n` +
-    `- At the end of any resolved conversation, make it easy for the customer to take action: book, call, or visit\n\n` +
-    `When customers ask about:\n` +
-    `- Hours or location: answer directly from the business info above\n` +
-    `- Services or pricing: share what you know; offer to connect them with the team for anything you don't have\n` +
-    `- Booking: use the booking link in the business info if one is listed, otherwise provide the phone number or email\n` +
-    `- Insurance: list the accepted plans if available and help them understand their options\n` +
-    `- Promotions or current deals: share exactly what's listed under "Current promotions/specials" in the business info — don't make up discounts\n` +
-    `- Upcoming events or classes: share what's listed under "Upcoming events" — if nothing is listed, say you don't have that info and suggest they call or check the website\n` +
-    `- Social media: share the specific platform URL from the "Social media" section of the business info\n` +
-    `- Anything outside your knowledge: be honest — say you don't have that detail and give them the best way to reach the team\n\n` +
-    `PROACTIVE GUIDANCE — after answering, always guide the customer to their natural next step:\n` +
-    `- After answering hours or location: naturally suggest the next logical step — for example: 'Would you like to book an appointment while you're here?' or 'Is there anything else I can help you with, like booking or our services?'\n` +
-    `- After explaining services: guide toward booking or contact — for example: 'Would you like to schedule a visit?' or 'I can help you book an appointment if you're interested.'\n` +
-    `- After confirming insurance or pricing: always offer the next step — for example: 'Great news! Would you like to go ahead and book an appointment?' or 'Would you like to speak with our team about your options?'\n` +
-    `- After confirming availability or new patient status: immediately offer booking — for example: 'Would you like to schedule your first visit? You can book online or call us.'\n` +
-    `- After explaining payment plans, financing options, or CareCredit: always guide toward booking — for example: 'We'd be happy to walk you through your payment options when you come in. Would you like to go ahead and schedule an appointment?'\n` +
-    `- General rule: after every answer, think about what the customer's natural next step would be and gently guide them there. Services → suggest booking. Insurance → confirm and suggest booking. Location/hours → suggest visiting or booking. Payment/financing → confirm options and suggest booking. Always make it easy for the customer to take action without having to ask.\n\n` +
-    `CONTEXT RULE: Always read the full conversation history before responding. If the customer has already told you specific information (like their insurance provider), DO NOT ask for it again or re-list options. Instead, directly address what they told you. For example: if you asked 'which insurance do you have?' and they replied 'Delta Dental', confirm directly: 'Great news — we do accept Delta Dental! Would you like to book an appointment?'\n\n` +
-    `After fully answering a customer's question, end with ONE natural conversational follow-up — either 'Did that answer your question?', 'Is there anything else I can help you with?', or 'Hope that helps! Anything else?' Vary the phrasing naturally — don't use the same phrase every time. Only add this when you've actually answered something. If the conversation is still mid-flow (you asked a question, customer hasn't answered yet), don't add a follow-up.\n\n` +
-    `Remember: you're having a real conversation, not running a script. Use the business info as your knowledge base and respond naturally.`
-  );
-}
-
-function toApiMessages(messages) {
-  if (!Array.isArray(messages)) return [];
-
-  const normalized = messages
-    .filter((msg) => msg?.role === "user" || msg?.role === "assistant")
-    .map((msg) => ({ role: msg.role, content: String(msg.content ?? "") }))
-    .filter((msg) => msg.content.length > 0);
-
-  let start = 0;
-  while (start < normalized.length && normalized[start].role === "assistant") {
-    start += 1;
-  }
-
-  return normalized.slice(start);
-}
-
-function extractText(content) {
-  if (!Array.isArray(content)) return "";
-  return content
-    .filter((block) => block.type === "text")
-    .map((block) => block.text)
-    .join("");
-}
-
 export async function POST(request) {
   try {
     const clientIp = getClientIp(request);
@@ -272,8 +180,7 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { messages, businessInfo, businessName, industry, clientId, sessionId } = body;
-    console.log("[chat API] received businessInfo:", businessInfo?.substring(0, 500));
+    const { messages, clientId, sessionId } = body;
 
     if (!Array.isArray(messages) || messages.length > 50) {
       return corsJson({ error: "Invalid messages array" }, { status: 400 });
@@ -290,9 +197,37 @@ export async function POST(request) {
       return corsJson({ error: "No messages provided" }, { status: 400 });
     }
 
-    const safeIndustry = VALID_INDUSTRIES.has(industry) ? industry : "other";
+    if (!clientId || !UUID_RE.test(clientId)) {
+      return corsJson({ error: "Invalid clientId" }, { status: 400 });
+    }
 
-    const usage = await checkAndReserveUsage(clientId);
+    // Fetch the chatbot's config server-side — never trust businessInfo/
+    // businessName/industry sent by the client, or anyone could spend our
+    // Anthropic API budget with arbitrary prompts and no paying account behind them.
+    const db = adminClient();
+    const { data: bot, error: botError } = await db
+      .from("chatbots")
+      .select("config, monthly_message_count, usage_reset_date, user_id, plan, subscription_status")
+      .eq("client_id", clientId)
+      .maybeSingle();
+
+    if (botError || !bot) {
+      return corsJson({ error: "Chatbot not found" }, { status: 404 });
+    }
+
+    if (bot.subscription_status !== "active") {
+      return corsJson(
+        { error: "subscription_inactive", message: "This chatbot's subscription is not active." },
+        { status: 403 }
+      );
+    }
+
+    const config = bot.config || {};
+    const businessName = config.businessName || "this business";
+    const safeIndustry = VALID_INDUSTRIES.has(config.industry) ? config.industry : "other";
+    const businessInfo = composeBusinessInfo(config);
+
+    const usage = computeUsage(clientId, bot);
     if (!usage.allowed) {
       return corsJson(
         {
@@ -304,7 +239,7 @@ export async function POST(request) {
       );
     }
 
-    const response = await client.messages.create({
+    const response = await anthropicClient.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 450,
       system: buildSystemPrompt(businessName, businessInfo, safeIndustry),
