@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
+import { isFounder } from "../../lib/founder";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -30,13 +31,28 @@ export default function LoginPage() {
     }
 
     const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
 
     if (authError) {
+      setLoading(false);
       setError("Incorrect email or password. Please try again.");
       return;
     }
 
+    if (isFounder(email)) {
+      const { data: factorsData } = await supabase.auth.mfa.listFactors();
+      const hasVerifiedTotp = (factorsData?.totp ?? []).some((f) => f.status === "verified");
+
+      if (!hasVerifiedTotp) {
+        router.push("/admin/setup-mfa");
+        return;
+      }
+
+      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      router.push(aalData?.currentLevel === "aal2" ? "/admin" : "/admin/verify");
+      return;
+    }
+
+    setLoading(false);
     router.push("/dashboard");
   }
 

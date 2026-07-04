@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
-import { getServerUser } from "../../lib/supabase-server";
+import { getServerAuthState } from "../../lib/supabase-server";
 import { isFounder } from "../../lib/founder";
 import { buildAdminStats } from "../../lib/admin-stats";
 import AdminDashboardClient from "./AdminDashboardClient";
@@ -16,12 +16,18 @@ function adminClient() {
 }
 
 export default async function AdminPage() {
-  const user = await getServerUser();
+  const { user, aalLevel, hasVerifiedTotp } = await getServerAuthState();
 
   // Server-side gate: unauthenticated users and anyone but the founder are
   // redirected before any admin data is fetched or rendered.
   if (!user || !isFounder(user.email)) {
     redirect("/dashboard");
+  }
+
+  // A valid session isn't enough — the founder must have completed a TOTP
+  // challenge this session (aal2), not just be logged in (aal1).
+  if (aalLevel !== "aal2") {
+    redirect(hasVerifiedTotp ? "/admin/verify" : "/admin/setup-mfa");
   }
 
   const db = adminClient();

@@ -10,11 +10,13 @@ export async function middleware(request) {
   }
 
   let response = NextResponse.next({ request });
+  const { pathname } = request.nextUrl;
 
   // Refresh the Supabase auth cookie so Server Components (e.g. /admin) see
   // a valid, up-to-date session instead of a stale/expired token.
+  let supabase = null;
   if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    const supabase = createServerClient(
+    supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       {
@@ -35,11 +37,31 @@ export async function middleware(request) {
     await supabase.auth.getUser();
   }
 
+  // Admin MFA gate — defense in depth on top of the server-side checks in
+  // app/admin/page.js. Runs regardless of SITE_LIVE/coming-soon state, and
+  // excludes the setup/verify pages themselves so the founder can reach them.
+  if (pathname.startsWith("/admin") && pathname !== "/admin/setup-mfa" && pathname !== "/admin/verify") {
+    if (!supabase) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+
+    const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aalData?.currentLevel !== "aal2") {
+      return NextResponse.redirect(new URL("/admin/verify", request.url));
+    }
+  }
+
   if (process.env.SITE_LIVE === "true") {
     return response;
   }
-
-  const { pathname } = request.nextUrl;
 
   if (
     pathname.startsWith("/coming-soon") ||
