@@ -1,5 +1,5 @@
 import { NextResponse, after } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { adminClient } from "../../../lib/supabase-admin";
 import {
   getClientIp,
   isIpBlocked,
@@ -18,14 +18,6 @@ import {
 } from "../../../lib/chat-shared";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function adminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-    { auth: { persistSession: false } }
-  );
-}
 
 function currentMonthStart() {
   const now = new Date();

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { adminClient } from "../../../lib/supabase-admin";
 import { getClientIp, isIpBlocked, checkRateLimit, autoBlockIfAbusive } from "../../../lib/rateLimit";
 
 export const runtime = "nodejs";
@@ -50,14 +50,6 @@ const ALLOWED_CONFIG_KEYS = new Set([
 function applyPlanEnforcement(config, plan) {
   if (plan !== "basic") return config;
   return { ...config, ...BASIC_FIELD_DEFAULTS };
-}
-
-function adminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-    { auth: { persistSession: false } }
-  );
 }
 
 function validateConfig(config) {
