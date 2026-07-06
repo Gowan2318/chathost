@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../lib/AuthContext";
-import { isFounder } from "../../../lib/founder";
 
 export default function SetupMfaPage() {
   const router = useRouter();
@@ -34,15 +33,25 @@ export default function SetupMfaPage() {
       router.replace("/login");
       return;
     }
-    if (!isFounder(user.email)) {
-      router.replace("/dashboard");
-      return;
-    }
 
     let cancelled = false;
 
     if (!setupPromiseRef.current) {
       setupPromiseRef.current = (async () => {
+        // FOUNDER_EMAIL is server-only — ask the server (cookie-authenticated)
+        // whether this is the founder instead of checking it in the browser.
+        // This lives inside the cached promise (not a check before it) so the
+        // synchronous ref-guard above still fires before any await, which is
+        // what protects against StrictMode's double effect invoke.
+        const founderRes = await fetch("/api/is-founder");
+        const { isFounder: userIsFounder } = founderRes.ok
+          ? await founderRes.json()
+          : { isFounder: false };
+
+        if (!userIsFounder) {
+          return { redirectToDashboard: true };
+        }
+
         const { data: factorsData } = await supabase.auth.mfa.listFactors();
         const totpFactors = factorsData?.totp ?? [];
 
@@ -71,6 +80,11 @@ export default function SetupMfaPage() {
 
     setupPromiseRef.current.then((result) => {
       if (cancelled) return;
+
+      if (result.redirectToDashboard) {
+        router.replace("/dashboard");
+        return;
+      }
 
       if (result.redirectToVerify) {
         router.replace("/admin/verify");

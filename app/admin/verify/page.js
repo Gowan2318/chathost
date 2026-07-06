@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 import { useAuth } from "../../../lib/AuthContext";
-import { isFounder } from "../../../lib/founder";
 
 export default function VerifyMfaPage() {
   const router = useRouter();
@@ -25,14 +24,23 @@ export default function VerifyMfaPage() {
       router.replace("/login");
       return;
     }
-    if (!isFounder(user.email)) {
-      router.replace("/dashboard");
-      return;
-    }
 
     let cancelled = false;
 
     (async () => {
+      // FOUNDER_EMAIL is server-only — ask the server (cookie-authenticated)
+      // whether this is the founder instead of checking it in the browser.
+      const founderRes = await fetch("/api/is-founder");
+      const { isFounder: userIsFounder } = founderRes.ok
+        ? await founderRes.json()
+        : { isFounder: false };
+
+      if (cancelled) return;
+      if (!userIsFounder) {
+        router.replace("/dashboard");
+        return;
+      }
+
       const { data: factorsData, error: factorsError } = await supabase.auth.mfa.listFactors();
       const verifiedFactor = (factorsData?.totp ?? []).find((f) => f.status === "verified");
 
