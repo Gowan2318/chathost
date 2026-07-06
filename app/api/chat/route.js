@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import {
   getClientIp,
@@ -41,24 +41,27 @@ function formatResetDate(monthStart) {
   return next.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
 }
 
-// Returns { allowed, nextCount, plan, limit, resetDate, businessName, userId } —
+// Returns { allowed, nextCount, resetPromise, plan, limit, resetDate, businessName, userId } —
 // nextCount is the value to persist after this message goes through
 // (either "denied" leaves count untouched, or count + 1). Takes the chatbot
-// row already fetched by the caller — no extra DB read here.
+// row already fetched by the caller — no extra DB read here. resetPromise is
+// the in-flight monthly-reset write (or null) — the caller is responsible for
+// making sure it's awaited via after() so it isn't dropped if the serverless
+// instance freezes right after the response is sent.
 function computeUsage(clientId, bot) {
   const monthStart = currentMonthStart();
   const resetDate = bot.usage_reset_date ? new Date(bot.usage_reset_date) : null;
   const needsReset = !resetDate || resetDate < monthStart;
   const currentCount = needsReset ? 0 : bot.monthly_message_count ?? 0;
 
-  if (needsReset) {
-    adminClient()
-      .from("chatbots")
-      .update({ monthly_message_count: 0, usage_reset_date: toDateOnly(monthStart) })
-      .eq("client_id", clientId)
-      .then(() => {})
-      .catch(() => {});
-  }
+  const resetPromise = needsReset
+    ? adminClient()
+        .from("chatbots")
+        .update({ monthly_message_count: 0, usage_reset_date: toDateOnly(monthStart) })
+        .eq("client_id", clientId)
+        .then(() => {})
+        .catch(() => {})
+    : null;
 
   // The top-level `plan` column is kept in sync with Stripe (upgrades/downgrades),
   // config.plan only reflects what was chosen at signup — prefer the live value.
@@ -67,6 +70,7 @@ function computeUsage(clientId, bot) {
   const shared = {
     plan,
     limit,
+    resetPromise,
     resetDate: formatResetDate(monthStart),
     businessName: bot.config?.businessName ?? "your business",
     userId: bot.user_id,
@@ -228,6 +232,11 @@ export async function POST(request) {
     const businessInfo = composeBusinessInfo(config);
 
     const usage = computeUsage(clientId, bot);
+    if (usage.resetPromise) {
+      // Guarantee the monthly-reset write completes even if the serverless
+      // instance freezes immediately after the response is sent.
+      after(() => usage.resetPromise);
+    }
     if (!usage.allowed) {
       return corsJson(
         {
@@ -252,11 +261,14 @@ export async function POST(request) {
       return corsJson({ error: "No response from the model" }, { status: 500 });
     }
 
-    // Fire-and-forget — don't await, never slows down response
+    // Best-effort — don't await, never slows down response
     const lastUserMsg = apiMessages[apiMessages.length - 1]?.content ?? "";
     logConversation(clientId, sessionId, lastUserMsg, message);
-    incrementUsage(clientId, usage.nextCount);
     sendUsageNotifications(usage);
+
+    // Usage counting gates billing limits — guarantee it completes via
+    // after() instead of a bare fire-and-forget call.
+    after(() => incrementUsage(clientId, usage.nextCount));
 
     return corsJson({ message });
   } catch (error) {
