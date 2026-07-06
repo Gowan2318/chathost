@@ -1,19 +1,11 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
+import { adminClient } from "../../lib/supabase-admin";
 import { getServerAuthState } from "../../lib/supabase-server";
 import { isFounder } from "../../lib/founder";
 import { buildAdminStats } from "../../lib/admin-stats";
 import AdminDashboardClient from "./AdminDashboardClient";
 
 export const dynamic = "force-dynamic";
-
-function adminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-    { auth: { persistSession: false } }
-  );
-}
 
 export default async function AdminPage() {
   const { user, aalLevel, hasVerifiedTotp } = await getServerAuthState();

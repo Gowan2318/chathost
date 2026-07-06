@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { adminClient } from "../../../lib/supabase-admin";
 import { sendOnboardingEmail, sendNewSignupNotification, sendPaymentFailedNotification } from "../../../lib/email";
 
 // Must run on Node.js runtime — Edge runtime doesn't support the Stripe SDK's
@@ -8,13 +8,6 @@ import { sendOnboardingEmail, sendNewSignupNotification, sendPaymentFailedNotifi
 export const runtime = "nodejs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-function adminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  );
-}
 
 // Fire-and-forget — resolves the owner's email via Supabase auth and sends the
 // welcome email. Never awaited by the caller so it can't slow the webhook response.

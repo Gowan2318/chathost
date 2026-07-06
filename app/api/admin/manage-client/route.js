@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
+import { adminClient } from "../../../../lib/supabase-admin";
 import { getServerAuthState } from "../../../../lib/supabase-server";
 import { isFounder } from "../../../../lib/founder";
 import { getClientIp, isIpBlocked, checkRateLimit, autoBlockIfAbusive } from "../../../../lib/rateLimit";
@@ -11,14 +11,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ACTION_STATUS = { pause: "paused", resume: "active", cancel: "canceled" };
-
-function adminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-    { auth: { persistSession: false } }
-  );
-}
 
 export async function POST(request) {
   const clientIp = getClientIp(request);

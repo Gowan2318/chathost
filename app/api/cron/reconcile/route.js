@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { adminClient } from "../../../../lib/supabase-admin";
 
 // Must run on Node.js runtime — Edge runtime doesn't support the Stripe SDK.
 export const runtime = "nodejs";
@@ -9,14 +9,6 @@ export const runtime = "nodejs";
 // CRON_SECRET is set as a project env var) automatically attaches it as
 // `Authorization: Bearer <CRON_SECRET>` — verified below.
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-function adminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-    { auth: { persistSession: false } }
-  );
-}
 
 function planFromSubscription(subscription) {
   const priceAmount = subscription?.items?.data?.[0]?.price?.unit_amount ?? null;
