@@ -37,15 +37,126 @@ function json(body, init = {}) {
   return NextResponse.json(body, init);
 }
 
-function isInternalHost(hostname) {
-  if (/^(localhost|::1|\[::1\])$/i.test(hostname)) return true;
-  if (/^127\./.test(hostname)) return true;
-  if (/^10\./.test(hostname)) return true;
-  if (/^192\.168\./.test(hostname)) return true;
-  if (/^172\.(1[6-9]|2\d|3[01])\./.test(hostname)) return true;
-  if (/^169\.254\./.test(hostname)) return true;
-  if (/^0\./.test(hostname)) return true;
+// Parses decimal/octal/hex/mixed numeric IPv4 encodings (e.g. "2130706433",
+// "0x7f000001", "0177.0.0.1") into a dotted-quad string, following the same
+// per-part rules as inet_aton. Returns null if the string isn't a plausible
+// numeric IPv4 encoding.
+function ipv4StringToDotted(str) {
+  if (!/^[0-9a-fx.]+$/i.test(str)) return null;
+  const parts = str.split(".");
+  if (parts.length === 0 || parts.length > 4 || parts.some((p) => p === "")) return null;
+
+  const values = [];
+  for (const part of parts) {
+    let value;
+    if (/^0x[0-9a-f]+$/i.test(part)) value = parseInt(part.slice(2), 16);
+    else if (/^0[0-7]+$/.test(part)) value = parseInt(part, 8);
+    else if (/^[0-9]+$/.test(part)) value = parseInt(part, 10);
+    else return null;
+    if (!Number.isFinite(value) || value < 0) return null;
+    values.push(value);
+  }
+  for (let i = 0; i < values.length - 1; i++) {
+    if (values[i] > 255) return null;
+  }
+
+  let ip;
+  if (values.length === 1) ip = values[0];
+  else if (values.length === 2) { if (values[1] > 0xffffff) return null; ip = values[0] * 0x1000000 + values[1]; }
+  else if (values.length === 3) { if (values[2] > 0xffff) return null; ip = values[0] * 0x10000 + values[1] * 0x100 + values[2]; }
+  else { if (values[3] > 255) return null; ip = values[0] * 0x1000000 + values[1] * 0x10000 + values[2] * 0x100 + values[3]; }
+
+  if (!Number.isFinite(ip) || ip < 0 || ip > 0xffffffff) return null;
+  return [
+    Math.floor(ip / 0x1000000) & 255,
+    Math.floor(ip / 0x10000) & 255,
+    Math.floor(ip / 0x100) & 255,
+    ip & 255,
+  ].join(".");
+}
+
+function isPrivateIPv4Dotted(dotted) {
+  if (/^127\./.test(dotted)) return true;
+  if (/^10\./.test(dotted)) return true;
+  if (/^192\.168\./.test(dotted)) return true;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(dotted)) return true;
+  if (/^169\.254\./.test(dotted)) return true;
+  if (/^0\./.test(dotted)) return true;
   return false;
+}
+
+function isInternalHost(hostname) {
+  let h = String(hostname).trim().toLowerCase().replace(/\.$/, "");
+  if (h.startsWith("[") && h.endsWith("]")) h = h.slice(1, -1);
+
+  if (h === "localhost" || h.endsWith(".localhost")) return true;
+
+  // IPv6 loopback / unspecified / unique-local / link-local
+  if (h === "::1" || h === "::") return true;
+  if (/^fe[89ab][0-9a-f]:/i.test(h)) return true; // fe80::/10
+  if (/^f[cd][0-9a-f]{2}:/i.test(h)) return true; // fc00::/7
+
+  // IPv4-mapped IPv6 (::ffff:a.b.c.d or ::ffff:HHHH:HHHH) — check the embedded IPv4
+  const mappedDotted = h.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/i);
+  if (mappedDotted) return isPrivateIPv4Dotted(mappedDotted[1]);
+  const mappedHex = h.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i);
+  if (mappedHex) {
+    const hi = parseInt(mappedHex[1], 16);
+    const lo = parseInt(mappedHex[2], 16);
+    const dotted = [(hi >> 8) & 255, hi & 255, (lo >> 8) & 255, lo & 255].join(".");
+    return isPrivateIPv4Dotted(dotted);
+  }
+
+  // Any other IPv6 literal — not a form we specifically block, allow through.
+  if (h.includes(":")) return false;
+
+  // IPv4 — normalize decimal/octal/hex/mixed encodings to a dotted quad first
+  // so e.g. http://2130706433/ or http://0x7f.0x0.0x0.0x1/ can't slip past.
+  const dotted = ipv4StringToDotted(h) || h;
+  return isPrivateIPv4Dotted(dotted);
+}
+
+const MAX_REDIRECTS = 4;
+
+function isSafeUrl(urlObj) {
+  return (urlObj.protocol === "http:" || urlObj.protocol === "https:") && !isInternalHost(urlObj.hostname);
+}
+
+// Fetches a URL while re-validating the host on every redirect hop, so a
+// public URL can't redirect to an internal host/IP (e.g. cloud metadata at
+// 169.254.169.254) to bypass the isInternalHost check on the original URL.
+async function safeFetch(initialUrl, options = {}) {
+  let currentUrl;
+  try {
+    currentUrl = new URL(initialUrl);
+  } catch {
+    throw new Error("Invalid URL");
+  }
+  if (!isSafeUrl(currentUrl)) {
+    throw new Error("URL resolves to a disallowed host");
+  }
+
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    const res = await fetch(currentUrl.href, { ...options, redirect: "manual" });
+    if (res.status >= 300 && res.status < 400 && res.headers.has("location")) {
+      if (hop === MAX_REDIRECTS) {
+        throw new Error("Too many redirects");
+      }
+      let nextUrl;
+      try {
+        nextUrl = new URL(res.headers.get("location"), currentUrl);
+      } catch {
+        throw new Error("Invalid redirect location");
+      }
+      if (!isSafeUrl(nextUrl)) {
+        throw new Error("Redirect resolves to a disallowed host");
+      }
+      currentUrl = nextUrl;
+      continue;
+    }
+    return res;
+  }
+  throw new Error("Too many redirects");
 }
 
 const BOOKING_DOMAINS = [
@@ -354,7 +465,7 @@ async function fetchSitemap(baseOrigin) {
     try {
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 5000);
-      const res = await fetch(`${baseOrigin}${path}`, { signal: ctrl.signal });
+      const res = await safeFetch(`${baseOrigin}${path}`, { signal: ctrl.signal });
       clearTimeout(timer);
       if (!res.ok) continue;
       const xml = await res.text();
@@ -610,8 +721,8 @@ export async function POST(request) {
           .map(p => `${baseOrigin}${p}`);
 
         const [mainResult, ...contactResults] = await Promise.allSettled([
-          fetch(url, { headers: fetchHeaders, signal: AbortSignal.timeout(10000), redirect: "follow" }),
-          ...contactUrls.map(cu => fetch(cu, { headers: fetchHeaders, signal: AbortSignal.timeout(7000), redirect: "follow" })),
+          safeFetch(url, { headers: fetchHeaders, signal: AbortSignal.timeout(10000) }),
+          ...contactUrls.map(cu => safeFetch(cu, { headers: fetchHeaders, signal: AbortSignal.timeout(7000) })),
         ]);
 
         if (mainResult.status === "rejected" || !mainResult.value.ok) {
