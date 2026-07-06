@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
-import { isFounder } from "../../lib/founder";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -38,7 +37,14 @@ export default function LoginPage() {
       return;
     }
 
-    if (isFounder(email)) {
+    // FOUNDER_EMAIL is server-only — ask the server (cookie-authenticated,
+    // now that signInWithPassword has set the session cookie) whether this is the founder.
+    const founderRes = await fetch("/api/is-founder");
+    const { isFounder: signedInAsFounder } = founderRes.ok
+      ? await founderRes.json()
+      : { isFounder: false };
+
+    if (signedInAsFounder) {
       const { data: factorsData } = await supabase.auth.mfa.listFactors();
       const hasVerifiedTotp = (factorsData?.totp ?? []).some((f) => f.status === "verified");
 

@@ -225,7 +225,7 @@ function NoChatbotState() {
   );
 }
 
-export default function AnalyticsClient({ email, stats }) {
+export default function AnalyticsClient({ email, isFounder, stats }) {
   const router = useRouter();
   const { signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -241,7 +241,7 @@ export default function AnalyticsClient({ email, stats }) {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
-      <DashboardSidebar email={email} onSignOut={handleSignOut} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <DashboardSidebar email={email} isFounder={isFounder} onSignOut={handleSignOut} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="lg:pl-60">
         <div className="flex items-center justify-between border-b border-[#E2E8F0] bg-white px-4 py-3 lg:hidden">

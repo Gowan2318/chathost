@@ -163,7 +163,7 @@ function validateForm(form) {
 }
 
 export default function EditBotPage() {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, isFounder } = useAuth();
   const router = useRouter();
 
   const [fetchLoading, setFetchLoading] = useState(true);
@@ -272,7 +272,7 @@ export default function EditBotPage() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
-      <DashboardSidebar email={user.email} onSignOut={handleSignOut} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <DashboardSidebar email={user.email} isFounder={isFounder} onSignOut={handleSignOut} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="lg:pl-60">
         {/* Mobile top bar */}

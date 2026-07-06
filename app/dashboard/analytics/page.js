@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { adminClient } from "../../../lib/supabase-admin";
 import { getServerUser } from "../../../lib/supabase-server";
+import { isFounder } from "../../../lib/founder";
 import AnalyticsClient from "./AnalyticsClient";
 
 export const dynamic = "force-dynamic";
@@ -54,6 +55,7 @@ export default async function AnalyticsPage() {
   if (!user) {
     redirect("/login");
   }
+  const userIsFounder = isFounder(user.email);
 
   const db = adminClient();
 
@@ -66,7 +68,7 @@ export default async function AnalyticsPage() {
     .maybeSingle();
 
   if (!chatbot) {
-    return <AnalyticsClient email={user.email} stats={null} />;
+    return <AnalyticsClient email={user.email} isFounder={userIsFounder} stats={null} />;
   }
 
   const clientId = chatbot.client_id;
@@ -126,5 +128,5 @@ export default async function AnalyticsPage() {
     chartData,
   };
 
-  return <AnalyticsClient email={user.email} stats={stats} />;
+  return <AnalyticsClient email={user.email} isFounder={userIsFounder} stats={stats} />;
 }

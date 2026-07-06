@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { isFounder } from "../../lib/founder";
 
 function HomeIcon(props) {
   return (
@@ -114,10 +113,10 @@ const NAV_ITEMS = [
   { label: "Install Guide", href: "/dashboard/install", icon: BookIcon },
 ];
 
-export default function DashboardSidebar({ email, onSignOut, open, onClose }) {
+export default function DashboardSidebar({ email, isFounder = false, onSignOut, open, onClose }) {
   const pathname = usePathname();
 
-  const navItems = isFounder(email)
+  const navItems = isFounder
     ? [...NAV_ITEMS, { label: "Admin", href: "/admin", icon: ShieldIcon }]
     : NAV_ITEMS;
 
