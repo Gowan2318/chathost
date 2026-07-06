@@ -11,7 +11,6 @@ const path = require("path");
 // ─── Config ────────────────────────────────────────────────────────────────
 const BASE_URL = "http://localhost:3000";
 const TEST_EMAIL = process.env.TEST_EMAIL || "gowangareb4@gmail.com";
-const TEST_PASSWORD = "VestaTest2026!";
 const TEST_CLIENT_ID = "1c2e7dae-e44b-4864-8af5-1afe483f61cf"; // test user owns this
 const FOREIGN_CLIENT_ID = "bf8a1fe8-049d-410b-a6a0-e33594a8c510"; // null user_id row; test user does NOT own it
 
@@ -136,12 +135,17 @@ async function main() {
     console.error("ERROR: Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
     process.exit(1);
   }
+  const testPassword = process.env.TEST_PASSWORD || env.TEST_PASSWORD;
+  if (!testPassword) {
+    console.error("ERROR: Missing TEST_PASSWORD (set it in .env.local or the environment)");
+    process.exit(1);
+  }
 
   console.log(`Signing in as ${TEST_EMAIL}...`);
   const supabase = createClient(url, anonKey);
   const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
     email: TEST_EMAIL,
-    password: TEST_PASSWORD,
+    password: testPassword,
   });
   if (authError || !authData?.session?.access_token) {
     console.error("ERROR: Sign-in failed:", authError?.message || "no session");
