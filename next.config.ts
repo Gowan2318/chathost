@@ -11,7 +11,7 @@ const cspHeader = [
   `script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ""} js.stripe.com *.vercel-insights.com vercel.live`,
   "style-src 'self' 'unsafe-inline' fonts.googleapis.com",
   "font-src 'self' fonts.gstatic.com",
-  "img-src 'self' data: blob: *.supabase.co",
+  "img-src 'self' data: blob: *.supabase.co images.unsplash.com",
   "connect-src 'self' *.supabase.co api.anthropic.com api.firecrawl.dev api.resend.com *.stripe.com *.vercel-insights.com vercel.live",
   "frame-src 'self' js.stripe.com *.stripe.com calendly.com *.calendly.com",
   "worker-src 'self' blob:",
