@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { Calendar, Clock, CreditCard, Smile, Sparkles, Zap } from "lucide-react";
 import DemoChatSection from "../components/DemoChatSection";
 import ScrollRevealInit from "../components/ScrollRevealInit";
+import AboutMascotGrid from "../components/landing/AboutMascotGrid";
 import ContactSection from "../components/landing/ContactSection";
 import FAQSection from "../components/landing/FAQSection";
 import HeroSection from "../components/landing/HeroSection";
@@ -10,38 +12,34 @@ const FEATURES = [
   {
     title: "AI Powered",
     description:
-      "Claude-powered responses trained on your business info — accurate, friendly, and on-brand every time.",
-    icon: "✦",
+      "Trained on your business info, so answers sound like you — not a script read off a card.",
+    icon: Sparkles,
+    highlight: true,
   },
   {
     title: "24/7 Available",
-    description:
-      "Capture leads and answer questions while you sleep. Your customers never hit a closed sign.",
-    icon: "◷",
+    description: "It answers \"are you open?\" at 11pm so you don't have to.",
+    icon: Clock,
   },
   {
     title: "Easy Setup",
-    description:
-      "Guided builder gets you live in minutes. No developers, no complex integrations required.",
-    icon: "⚡",
+    description: "Answer a few questions and preview your bot — most owners finish in 15 minutes.",
+    icon: Zap,
   },
   {
     title: "Custom Mascots",
-    description:
-      "Industry-specific animated characters that make your chatbot memorable and uniquely yours.",
-    icon: "★",
+    description: "A friendly character with your business's name, not a generic robot avatar.",
+    icon: Smile,
   },
   {
     title: "Appointment Booking",
-    description:
-      "Built-in booking flow collects name, date, and phone — then confirms with a celebration animation.",
-    icon: "📅",
+    description: "Collects a name, date, and phone number, then books the slot before they change their mind.",
+    icon: Calendar,
   },
   {
     title: "Payment Guidance",
-    description:
-      "Direct customers to your payment link with pricing answers and a one-click Pay Now button.",
-    icon: "💳",
+    description: "Answers pricing questions and hands them a Pay Now button instead of \"call for a quote.\"",
+    icon: CreditCard,
   },
 ];
 
@@ -54,12 +52,11 @@ const PLANS = [
     description: "Everything you need to answer customers around the clock.",
     features: [
       "500 customer messages/month",
-      "AI chatbot on their website",
+      "AI chatbot on your website",
       "Answers customer questions 24/7",
+      "Re-engages visitors who go quiet",
       "8 quick reply buttons",
       "Support contact fallback",
-      "Loop back conversation feature",
-      "Self service builder setup in 15 minutes",
       "Email support",
     ],
   },
@@ -73,11 +70,10 @@ const PLANS = [
     features: [
       "Everything in Basic",
       "1,500 customer messages/month",
-      "Custom mascot character with their name",
       "Appointment booking flow",
-      "Payment guidance with Pay Now button",
-      "Custom brand color",
-      "Dark and light theme choice",
+      "Payment guidance with a Pay Now button",
+      "Custom mascot with your business's name",
+      "Custom brand color & theme",
       "Priority support",
     ],
   },
@@ -109,29 +105,45 @@ export default function HomePage() {
       <HeroSection />
 
       {/* Features */}
-      <section id="features" className="bg-[#F8F9FA] px-6 py-24">
+      <section id="features" className="bg-white px-6 py-24">
         <div className="mx-auto max-w-6xl">
-          <div className="mb-14 text-center">
+          <div className="reveal mb-14 max-w-2xl">
             <p className="text-sm font-semibold uppercase tracking-widest text-[#0D7377]">Features</p>
             <h2 className="mt-3 text-3xl font-bold text-[#1A1A2E] sm:text-4xl">
               Everything local businesses need
             </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-[#4A5568]">
-              Enterprise-grade AI tools — packaged for the shop on Main Street.
+            <p className="mt-4 text-[#4A5568]">
+              No call center, no agency contract — just a chatbot that sounds like you and works
+              while you&apos;re busy with customers.
             </p>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f, i) => (
               <div
                 key={f.title}
-                className="reveal group rounded-xl border border-[#E2E8F0] bg-white p-8 transition-all duration-200 hover:border-[#0D7377] hover:-translate-y-0.5 hover:shadow-lg"
+                className={`reveal rounded-xl border p-8 transition-colors duration-200 ${
+                  f.highlight
+                    ? "sm:col-span-2 border-[#0D7377]/20 bg-[#0D7377] text-white"
+                    : "border-[#E2E8F0] bg-white hover:border-[#0D7377] hover:shadow-lg"
+                }`}
                 style={{ transitionDelay: `${i * 75}ms` }}
               >
-                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#E8F4F4] text-xl">
-                  {f.icon}
+                <span
+                  className={`flex h-12 w-12 items-center justify-center rounded-xl ${
+                    f.highlight ? "bg-white/15" : "bg-[#E8F4F4]"
+                  }`}
+                >
+                  <f.icon
+                    className={`h-6 w-6 ${f.highlight ? "text-white" : "text-[#0D7377]"}`}
+                    strokeWidth={1.75}
+                  />
                 </span>
-                <h3 className="mt-5 text-lg font-semibold text-[#1A1A2E]">{f.title}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-[#4A5568]">{f.description}</p>
+                <h3 className={`mt-5 text-lg font-semibold ${f.highlight ? "text-white" : "text-[#1A1A2E]"}`}>
+                  {f.title}
+                </h3>
+                <p className={`mt-3 text-sm leading-relaxed ${f.highlight ? "text-white/80" : "text-[#4A5568]"}`}>
+                  {f.description}
+                </p>
               </div>
             ))}
           </div>
@@ -155,25 +167,28 @@ export default function HomePage() {
       </section>
 
       {/* How It Works */}
-      <section id="how-it-works" className="bg-[#F8F9FA] px-6 py-24">
+      <section id="how-it-works" className="bg-[#1A1A2E] px-6 py-24">
         <div className="mx-auto max-w-6xl">
-          <div className="mb-14 text-center">
-            <p className="text-sm font-semibold uppercase tracking-widest text-[#0D7377]">How It Works</p>
-            <h2 className="mt-3 text-3xl font-bold text-[#1A1A2E] sm:text-4xl">Launch in three steps</h2>
-            <p className="mt-4 text-[#4A5568]">From signup to live chatbot — faster than hiring staff.</p>
+          <div className="reveal mb-14 max-w-xl">
+            <p className="text-sm font-semibold uppercase tracking-widest text-[#14A3A8]">How It Works</p>
+            <h2 className="mt-3 text-3xl font-bold text-white sm:text-4xl">Launch in three steps</h2>
+            <p className="mt-4 text-white/60">From signup to live chatbot — faster than hiring staff.</p>
           </div>
           <div className="grid gap-8 md:grid-cols-3">
             {STEPS.map((item, i) => (
               <div
                 key={item.step}
-                className="reveal rounded-xl border border-[#E2E8F0] bg-white p-8"
+                className="reveal relative rounded-xl border border-white/10 bg-white/5 p-8"
                 style={{ transitionDelay: `${i * 100}ms` }}
               >
+                {i < STEPS.length - 1 && (
+                  <span className="absolute right-0 top-14 hidden h-px w-8 translate-x-full bg-white/15 md:block" />
+                )}
                 <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#0D7377] text-lg font-bold text-white">
                   {item.step}
                 </span>
-                <h3 className="mt-5 text-xl font-semibold text-[#1A1A2E]">{item.title}</h3>
-                <p className="mt-3 leading-relaxed text-[#4A5568]">{item.body}</p>
+                <h3 className="mt-5 text-xl font-semibold text-white">{item.title}</h3>
+                <p className="mt-3 leading-relaxed text-white/60">{item.body}</p>
               </div>
             ))}
           </div>
@@ -200,31 +215,26 @@ export default function HomePage() {
                 price.
               </p>
               <p>
-                Our mission is to help millions of local businesses grow with AI that works as hard as
-                they do — 24 hours a day, 7 days a week.
+                We&apos;re brand new, and that&apos;s the point: you&apos;d be one of our first 100
+                founding businesses, with direct access to the founder, your price locked in forever,
+                and a real say in what we build next.
               </p>
             </div>
             <div className="mt-10 flex flex-wrap gap-10">
               {[
-                { stat: "2,500+", label: "Businesses served" },
-                { stat: "1M+", label: "Conversations handled" },
-                { stat: "98%", label: "Customer satisfaction" },
+                { stat: "First 100", label: "Founding businesses we're onboarding personally" },
+                { stat: "Locked", label: "Your founding price never goes up" },
+                { stat: "Direct", label: "Line to the founder — not a support queue" },
               ].map((item) => (
-                <div key={item.label}>
-                  <p className="text-4xl font-bold text-[#0D7377]">{item.stat}</p>
+                <div key={item.label} className="max-w-[11rem]">
+                  <p className="text-3xl font-bold text-[#0D7377]">{item.stat}</p>
                   <p className="mt-1 text-sm text-[#4A5568]">{item.label}</p>
                 </div>
               ))}
             </div>
           </div>
           <div className="reveal flex justify-center lg:justify-end" style={{ transitionDelay: "120ms" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=800&q=80"
-              alt="Team working together"
-              className="w-full max-w-sm rounded-2xl object-cover shadow-xl lg:max-w-md"
-              style={{ aspectRatio: "4/3" }}
-            />
+            <AboutMascotGrid />
           </div>
         </div>
       </section>
@@ -243,18 +253,18 @@ export default function HomePage() {
           <div className="mb-14 text-center">
             <p className="text-sm font-semibold uppercase tracking-widest text-[#0D7377]">Pricing</p>
             <h2 className="mt-3 text-3xl font-bold text-[#1A1A2E] sm:text-4xl">
-              Invest in growth, not guesswork
+              Less than the cost of one missed customer
             </h2>
-            <p className="mt-4 text-[#4A5568]">Premium tools. Transparent pricing. Cancel anytime.</p>
+            <p className="mt-4 text-[#4A5568]">One flat monthly price. No hidden fees. Cancel anytime.</p>
           </div>
           <div className="mx-auto grid max-w-4xl gap-8 lg:grid-cols-2">
             {PLANS.map((plan, i) => (
               <div
                 key={plan.name}
-                className={`reveal relative flex flex-col overflow-hidden rounded-2xl border p-8 transition-all duration-200 ${
+                className={`reveal relative flex flex-col overflow-hidden rounded-2xl border p-8 transition-colors duration-200 ${
                   plan.popular
-                    ? "border-[#1A1A2E] bg-[#1A1A2E] shadow-2xl lg:scale-[1.03] hover:-translate-y-1"
-                    : "border-[#E2E8F0] bg-white hover:border-[#0D7377] hover:-translate-y-0.5 hover:shadow-lg"
+                    ? "border-[#1A1A2E] bg-[#1A1A2E] shadow-2xl lg:scale-[1.03]"
+                    : "border-[#E2E8F0] bg-white hover:border-[#0D7377]"
                 }`}
                 style={{ transitionDelay: `${i * 100}ms` }}
               >
@@ -284,9 +294,6 @@ export default function HomePage() {
                     </span>
                     <span className={plan.popular ? "text-white/60" : "text-[#4A5568]"}>/mo</span>
                   </p>
-                  <p className={`mt-2 text-sm ${plan.popular ? "text-white/50" : "text-[#4A5568]"}`}>
-                    with code FOUNDING20
-                  </p>
                 </div>
                 <ul className="mt-8 flex-1 space-y-4 text-sm">
                   {plan.features.map((f) => (
@@ -300,14 +307,17 @@ export default function HomePage() {
                 </ul>
                 <Link
                   href={`/builder?plan=${plan.id}`}
-                  className={`mt-10 block rounded-xl py-3.5 text-center text-sm font-bold transition hover:scale-[1.02] ${
+                  className={`mt-10 block rounded-xl py-3.5 text-center text-sm font-bold transition ${
                     plan.popular
-                      ? "border border-white/20 text-white hover:bg-white/10"
+                      ? "bg-white text-[#1A1A2E] hover:bg-white/90"
                       : "bg-[#0D7377] text-white hover:bg-[#0A5D61]"
                   }`}
                 >
                   Get Started
                 </Link>
+                <p className={`mt-3 text-center text-xs ${plan.popular ? "text-white/50" : "text-[#9CA3AF]"}`}>
+                  No setup fee · Cancel anytime
+                </p>
               </div>
             ))}
           </div>

@@ -70,7 +70,7 @@ export default function LandingNav() {
               </Link>
               <Link
                 href="/builder"
-                className="rounded-lg bg-[#0D7377] px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-[#0A5D61] hover:scale-[1.02]"
+                className="rounded-lg bg-[#0D7377] px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-[#0A5D61]"
               >
                 Get Started
               </Link>
