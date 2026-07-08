@@ -53,6 +53,7 @@ const PLANS = [
     discountedPrice: 32,
     description: "Everything you need to answer customers around the clock.",
     features: [
+      "500 customer messages/month",
       "AI chatbot on their website",
       "Answers customer questions 24/7",
       "8 quick reply buttons",
@@ -71,13 +72,13 @@ const PLANS = [
     description: "Full customization, booking, and payments — built for growth.",
     features: [
       "Everything in Basic",
+      "1,500 customer messages/month",
       "Custom mascot character with their name",
       "Appointment booking flow",
       "Payment guidance with Pay Now button",
       "Custom brand color",
       "Dark and light theme choice",
       "Priority support",
-      "Monthly performance report",
     ],
   },
 ];
