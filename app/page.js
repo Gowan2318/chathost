@@ -17,14 +17,14 @@ const FEATURES = [
     highlight: true,
   },
   {
-    title: "24/7 Available",
-    description: "It answers \"are you open?\" at 11pm so you don't have to.",
-    icon: Clock,
-  },
-  {
     title: "Easy Setup",
     description: "Answer a few questions and preview your bot — most owners finish in 15 minutes.",
     icon: Zap,
+  },
+  {
+    title: "24/7 Available",
+    description: "It answers \"are you open?\" at 11pm so you don't have to.",
+    icon: Clock,
   },
   {
     title: "Custom Mascots",
@@ -40,6 +40,7 @@ const FEATURES = [
     title: "Payment Guidance",
     description: "Answers pricing questions and hands them a Pay Now button instead of \"call for a quote.\"",
     icon: CreditCard,
+    fullWidth: true,
   },
 ];
 
@@ -123,9 +124,9 @@ export default function HomePage() {
                 key={f.title}
                 className={`reveal rounded-xl border p-8 transition-colors duration-200 ${
                   f.highlight
-                    ? "sm:col-span-2 border-[#0D7377]/20 bg-[#0D7377] text-white"
+                    ? "flex flex-col items-center text-center sm:col-span-2 border-[#0D7377]/20 bg-[#0D7377] text-white"
                     : "border-[#E2E8F0] bg-white hover:border-[#0D7377] hover:shadow-lg"
-                }`}
+                } ${f.fullWidth ? "flex flex-col items-center text-center sm:col-span-2 lg:col-span-3" : ""}`}
                 style={{ transitionDelay: `${i * 75}ms` }}
               >
                 <span
@@ -141,7 +142,11 @@ export default function HomePage() {
                 <h3 className={`mt-5 text-lg font-semibold ${f.highlight ? "text-white" : "text-[#1A1A2E]"}`}>
                   {f.title}
                 </h3>
-                <p className={`mt-3 text-sm leading-relaxed ${f.highlight ? "text-white/80" : "text-[#4A5568]"}`}>
+                <p
+                  className={`mt-3 text-sm leading-relaxed ${f.fullWidth ? "max-w-md" : ""} ${
+                    f.highlight ? "text-white/80" : "text-[#4A5568]"
+                  }`}
+                >
                   {f.description}
                 </p>
               </div>
