@@ -183,6 +183,14 @@ export default function DashboardSidebar({ email, isFounder = false, onSignOut, 
             <span className="text-xs text-[#4A5568]">·</span>
             <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-xs text-[#4A5568] hover:text-white transition">Privacy</a>
           </div>
+          <div className="mt-1.5 px-3">
+            <a
+              href="mailto:support@vestachathost.com?subject=Data Deletion Request"
+              className="text-xs text-[#4A5568] hover:text-white transition"
+            >
+              Delete my data
+            </a>
+          </div>
         </div>
       </aside>
     </>

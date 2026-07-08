@@ -355,6 +355,9 @@ export default function HomePage() {
             <div className="flex items-center gap-4">
               <Link href="/terms" className="hover:text-white transition">Terms of Service</Link>
               <Link href="/privacy" className="hover:text-white transition">Privacy Policy</Link>
+              <Link href="/privacy#do-not-sell" className="text-xs hover:text-white transition">
+                Do Not Sell My Personal Information
+              </Link>
             </div>
           </div>
         </div>

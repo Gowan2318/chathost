@@ -158,8 +158,22 @@ export default function PrivacyPage() {
             </p>
           </section>
 
+          <section id="do-not-sell">
+            <h2 className="mb-3 text-xl font-semibold text-[#1A1A2E]">
+              9. Do Not Sell My Personal Information
+            </h2>
+            <p>
+              VestaChatHost does not sell personal information to third parties. California residents
+              may request deletion of their data by emailing{" "}
+              <a href="mailto:support@vestachathost.com" className="text-[#0D7377] hover:underline">
+                support@vestachathost.com
+              </a>
+              . We will respond within 30 days.
+            </p>
+          </section>
+
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-[#1A1A2E]">9. Children&apos;s Privacy</h2>
+            <h2 className="mb-3 text-xl font-semibold text-[#1A1A2E]">10. Children&apos;s Privacy</h2>
             <p>
               The Service is intended for use by businesses and is not directed at, or intended for use
               by, anyone under 18 years of age. We do not knowingly collect personal information from
@@ -168,7 +182,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-[#1A1A2E]">10. Changes to This Policy</h2>
+            <h2 className="mb-3 text-xl font-semibold text-[#1A1A2E]">11. Changes to This Policy</h2>
             <p>
               We may update this Privacy Policy from time to time. Continued use of the Service after
               changes constitutes acceptance of the updated Policy.
@@ -176,7 +190,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold text-[#1A1A2E]">11. Contact</h2>
+            <h2 className="mb-3 text-xl font-semibold text-[#1A1A2E]">12. Contact</h2>
             <p>
               Questions about this Privacy Policy can be sent to{" "}
               <a
