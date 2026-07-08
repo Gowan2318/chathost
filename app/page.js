@@ -14,7 +14,7 @@ const FEATURES = [
     description:
       "Trained on your business info, so answers sound like you — not a script read off a card.",
     icon: Sparkles,
-    highlight: true,
+    hero: true,
   },
   {
     title: "Easy Setup",
@@ -40,9 +40,34 @@ const FEATURES = [
     title: "Payment Guidance",
     description: "Answers pricing questions and hands them a Pay Now button instead of \"call for a quote.\"",
     icon: CreditCard,
-    fullWidth: true,
   },
 ];
+
+function FeatureCard({ feature, delay = 0, className = "" }) {
+  const { title, description, icon: Icon, hero } = feature;
+  return (
+    <div
+      className={`reveal rounded-xl border p-8 transition-colors duration-200 ${
+        hero
+          ? "flex flex-col items-center text-center border-[#0D7377]/20 bg-[#0D7377] text-white"
+          : "border-[#E2E8F0] bg-white hover:border-[#0D7377] hover:shadow-lg"
+      } ${className}`}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      <span
+        className={`flex h-12 w-12 items-center justify-center rounded-xl ${
+          hero ? "bg-white/15" : "bg-[#E8F4F4]"
+        }`}
+      >
+        <Icon className={`h-6 w-6 ${hero ? "text-white" : "text-[#0D7377]"}`} strokeWidth={1.75} />
+      </span>
+      <h3 className={`mt-5 text-lg font-semibold ${hero ? "text-white" : "text-[#1A1A2E]"}`}>{title}</h3>
+      <p className={`mt-3 text-sm leading-relaxed ${hero ? "max-w-md text-white/80" : "text-[#4A5568]"}`}>
+        {description}
+      </p>
+    </div>
+  );
+}
 
 const PLANS = [
   {
@@ -118,39 +143,20 @@ export default function HomePage() {
               while you&apos;re busy with customers.
             </p>
           </div>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map((f, i) => (
-              <div
-                key={f.title}
-                className={`reveal rounded-xl border p-8 transition-colors duration-200 ${
-                  f.highlight
-                    ? "flex flex-col items-center text-center sm:col-span-2 border-[#0D7377]/20 bg-[#0D7377] text-white"
-                    : "border-[#E2E8F0] bg-white hover:border-[#0D7377] hover:shadow-lg"
-                } ${f.fullWidth ? "flex flex-col items-center text-center sm:col-span-2 lg:col-span-3" : ""}`}
-                style={{ transitionDelay: `${i * 75}ms` }}
-              >
-                <span
-                  className={`flex h-12 w-12 items-center justify-center rounded-xl ${
-                    f.highlight ? "bg-white/15" : "bg-[#E8F4F4]"
-                  }`}
-                >
-                  <f.icon
-                    className={`h-6 w-6 ${f.highlight ? "text-white" : "text-[#0D7377]"}`}
-                    strokeWidth={1.75}
-                  />
-                </span>
-                <h3 className={`mt-5 text-lg font-semibold ${f.highlight ? "text-white" : "text-[#1A1A2E]"}`}>
-                  {f.title}
-                </h3>
-                <p
-                  className={`mt-3 text-sm leading-relaxed ${f.fullWidth ? "max-w-md" : ""} ${
-                    f.highlight ? "text-white/80" : "text-[#4A5568]"
-                  }`}
-                >
-                  {f.description}
-                </p>
-              </div>
-            ))}
+          <div className="grid grid-cols-3 gap-4">
+            {/* Row 1: AI Powered — full width */}
+            <FeatureCard feature={FEATURES[0]} delay={0} className="col-span-3" />
+
+            {/* Row 2: three equal cards */}
+            <FeatureCard feature={FEATURES[1]} delay={75} className="col-span-1" />
+            <FeatureCard feature={FEATURES[2]} delay={150} className="col-span-1" />
+            <FeatureCard feature={FEATURES[3]} delay={225} className="col-span-1" />
+
+            {/* Row 3: two cards, centered */}
+            <div className="col-span-3 flex justify-center gap-4">
+              <FeatureCard feature={FEATURES[4]} delay={300} className="w-1/3" />
+              <FeatureCard feature={FEATURES[5]} delay={375} className="w-1/3" />
+            </div>
           </div>
         </div>
       </section>
