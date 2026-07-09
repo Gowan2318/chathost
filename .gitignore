@@ -45,3 +45,6 @@ next-env.d.ts
 graphify-out/
 dev-server.log
 dev-server-err.log
+
+# prospect data — contains scraped contact emails, never push to GitHub
+data/*.csv
