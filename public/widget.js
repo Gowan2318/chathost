@@ -145,7 +145,8 @@
       var url = new URL(script.src);
       var id = url.searchParams.get("id");
       if (!id) return null;
-      return { id: id, baseUrl: url.origin };
+      var autoopen = url.searchParams.get("autoopen") === "true";
+      return { id: id, baseUrl: url.origin, autoopen: autoopen };
     } catch (e) {
       return null;
     }
@@ -191,7 +192,7 @@
     return false;
   }
 
-  function createWidget(config, baseUrl, clientId) {
+  function createWidget(config, baseUrl, clientId, autoopen) {
     var businessName = config.businessName || "Your Business";
     var supportPhone = config.supportPhone || "";
     var supportEmail = config.supportEmail || "";
@@ -758,6 +759,18 @@
     });
 
     render();
+
+    if (autoopen) {
+      setTimeout(function () {
+        if (!state.isOpen) {
+          state.isOpen = true;
+          panel.classList.add("open");
+          inputEl.focus();
+          scrollBottom();
+          trackEvent("opened");
+        }
+      }, 2000);
+    }
   }
 
   function boot() {
@@ -773,7 +786,7 @@
         return res.json();
       })
       .then(function (config) {
-        createWidget(config, info.baseUrl, info.id);
+        createWidget(config, info.baseUrl, info.id, info.autoopen);
       })
       .catch(function (err) {
         console.error("[VestaChatHost] Widget failed to load:", err);

@@ -257,7 +257,7 @@ export default async function DemoPage({ params }) {
 
       <Script
         id="vestachathost-widget"
-        src={`https://vestachathost.com/widget.js?id=${clientId}`}
+        src={`https://vestachathost.com/widget.js?id=${clientId}&autoopen=true`}
         strategy="afterInteractive"
       />
     </div>
