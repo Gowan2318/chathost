@@ -66,7 +66,8 @@ export async function middleware(request) {
   if (
     pathname.startsWith("/coming-soon") ||
     pathname.startsWith("/success") ||
-    pathname.startsWith("/test-widget")
+    pathname.startsWith("/test-widget") ||
+    pathname.startsWith("/demo")
   ) {
     return response;
   }
