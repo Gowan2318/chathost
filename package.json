@@ -8,7 +8,8 @@
     "start": "node --use-system-ca ./node_modules/next/dist/bin/next start",
     "lint": "eslint",
     "test:security": "node --use-system-ca scripts/security-test.js",
-    "enrich": "node --use-system-ca scripts/enrich-prospects.js"
+    "enrich": "node --use-system-ca scripts/enrich-prospects.js",
+    "discover": "node --use-system-ca scripts/discover-prospects.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",
