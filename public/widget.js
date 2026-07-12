@@ -262,25 +262,11 @@
       return pool.slice(0, 3);
     }
 
-    var INDUSTRY_EXAMPLES = {
-      restaurant: "'What\u2019s on your menu?' or 'Do you take reservations?'",
-      dental: "'Are you accepting new patients?' or 'What insurance do you accept?'",
-      salon: "'What services do you offer?' or 'Do you accept walk-ins?'",
-      barber: "'What are your prices?' or 'Do you accept walk-ins?'",
-      gym: "'What are your membership options?' or 'Do you offer a free trial?'",
-      lawncare: "'Do you offer free estimates?' or 'What areas do you service?'",
-      lawn: "'Do you offer free estimates?' or 'What areas do you service?'",
-      realestate: "'What areas do you serve?' or 'Are you accepting new clients?'",
-      real_estate: "'What areas do you serve?' or 'Are you accepting new clients?'",
-      law: "'What areas of law do you practice?' or 'Do you offer free consultations?'",
-    };
-    var industryExamples = INDUSTRY_EXAMPLES[industry] || "'What services do you offer?' or 'How do I get in touch?'";
     var welcomeMessage = {
       role: "assistant",
       content:
-        "Hi! I\u2019m " + displayMascotName + ", and I\u2019m here to answer all your questions about " +
-        businessName + ". Feel free to ask me anything \u2014 for example, " +
-        industryExamples + ". What would you like to know? \uD83D\uDE0A",
+        "Hi! I\u2019m " + displayMascotName + " \uD83D\uDC4B Ask me anything about " +
+        businessName + " \u2014 hours, services, booking, and more!",
     };
 
     var state = {
