@@ -161,9 +161,10 @@ export default async function DemoPage({ params }) {
             See what an AI assistant can do for your {phrase} business
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[#4A5568]">
-            This is a live demo built for a {phrase} business. Click the chat bubble in the
-            bottom right and ask it anything — about hours, services, booking, pricing. Yours
-            would be customized with YOUR business&apos;s real info.
+            This is a live demo built for a {phrase}{" "}
+            business. Click the chat bubble in the bottom right and ask it anything — about
+            hours, services, booking, pricing. Yours would be customized with YOUR
+            business&apos;s real info.
           </p>
         </div>
 

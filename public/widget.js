@@ -765,7 +765,7 @@
         if (!state.isOpen) {
           state.isOpen = true;
           panel.classList.add("open");
-          inputEl.focus();
+          inputEl.focus({ preventScroll: true });
           scrollBottom();
           trackEvent("opened");
         }
