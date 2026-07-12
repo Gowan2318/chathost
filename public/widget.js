@@ -766,7 +766,7 @@
           state.isOpen = true;
           panel.classList.add("open");
           inputEl.focus({ preventScroll: true });
-          scrollBottom();
+          messagesEl.scrollTop = 0;
           trackEvent("opened");
         }
       }, 2000);
