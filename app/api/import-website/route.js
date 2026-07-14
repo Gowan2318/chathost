@@ -438,11 +438,13 @@ Return a JSON object with these fields (use null for any field not found):
   "payNowUrl": "string (URL of a payment page visible in content) or null",
   "promotions": "string (any current deals, specials, discounts, or promotions mentioned, max 500 chars) or null",
   "upcomingEvents": "string (any upcoming events, classes, or special dates mentioned, max 500 chars) or null",
+  "servicesPricing": "string (ALL pricing information found on the page — service prices, membership tiers, package deals, menu prices, hourly rates, initiation fees, etc. Capture the actual numbers and what they're for, e.g. 'Haircut $45, Color from $120, Membership: Individual $59/mo + $25 initiation, Couples $79/mo + $50 initiation'. Include pricing from tables, lists, or paragraphs anywhere on the page. Max 1000 chars. Return null ONLY if no pricing information appears anywhere) or null",
   "websiteKnowledge": "string (comprehensive knowledge base summary — services, pricing, policies, specialties, unique offerings, team, FAQ-style info; max 2000 chars) or null"
 }
 
 Address rules: Search EVERYWHERE in the content for a physical street address — check the footer (most business sites put their address there), the contact page, the about page, the header, any Google Maps embed text, schema.org/ld+json markup (look for 'streetAddress', 'addressLocality', 'addressRegion', 'postalCode'), and any text formatted like '123 Main St, City, State ZIP'. Extract street/city/state/zip as separate fields. The street field should contain only the street number and name (e.g. '214 N. Highland Avenue'). City is the city name only. State is the 2-letter abbreviation. Zip is the 5-digit code. If you find an address anywhere in the content, extract it — do not return null just because it is not prominently featured.
 Return null for ANY boolean field that is not relevant to this type of business — for example, hasBeardTrim should always be null for a restaurant, gym, law firm, etc. Only return true or false if the field is directly relevant to this industry AND the page explicitly mentions it.
+Pricing rules: Actively search for pricing anywhere in the content — pricing tables, service menus, membership tiers, package lists, or prices mentioned in paragraphs. Capture the specific dollar amounts and what each price is for. Pricing is one of the most important things customers ask about, so do not skip it. If the page has a pricing table or membership tiers, extract every tier with its price.
 websiteKnowledge: write as a rich paragraph the bot can draw on to answer any customer question. Include all useful details from all pages provided.
 
 Return ONLY valid JSON, no explanation, no markdown.`;
@@ -802,6 +804,9 @@ export async function POST(request) {
     }
     if (typeof extracted.upcomingEvents === "string" && extracted.upcomingEvents.length > 1000) {
       extracted.upcomingEvents = extracted.upcomingEvents.slice(0, 997) + "...";
+    }
+    if (typeof extracted.servicesPricing === "string" && extracted.servicesPricing.length > 1000) {
+      extracted.servicesPricing = extracted.servicesPricing.slice(0, 997) + "...";
     }
     if (typeof extracted.websiteKnowledge === "string" && extracted.websiteKnowledge.length > 2000) {
       extracted.websiteKnowledge = extracted.websiteKnowledge.slice(0, 1997) + "...";

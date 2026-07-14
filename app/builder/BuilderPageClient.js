@@ -489,6 +489,7 @@ export default function BuilderPageClient() {
       if (extracted.socialLinks) patch.socialLinks = extracted.socialLinks;
       if (extracted.promotions) patch.promotions = extracted.promotions;
       if (extracted.upcomingEvents) patch.upcomingEvents = extracted.upcomingEvents;
+      if (extracted.servicesPricing) patch.servicesPricing = extracted.servicesPricing;
       if (extracted.websiteKnowledge) patch.websiteKnowledge = extracted.websiteKnowledge;
 
       // Track which fields were auto-filled for green highlight
@@ -623,6 +624,7 @@ export default function BuilderPageClient() {
       if (extracted.socialLinks) patch.socialLinks = extracted.socialLinks;
       if (extracted.promotions) patch.promotions = extracted.promotions;
       if (extracted.upcomingEvents) patch.upcomingEvents = extracted.upcomingEvents;
+      if (extracted.servicesPricing) patch.servicesPricing = extracted.servicesPricing;
       if (extracted.websiteKnowledge) patch.websiteKnowledge = extracted.websiteKnowledge;
 
       // Track which fields were auto-filled for green highlight
