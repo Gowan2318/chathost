@@ -455,6 +455,9 @@ const SITEMAP_PRIORITY_KEYWORDS = [
   "location", "locations", "find-us", "find_us", "our-location",
   "visit", "directions", "address", "schedule", "open", "opening-hours",
   "where", "map", "get-in-touch", "reach-us",
+  "membership", "memberships", "join", "rates", "plans", "packages",
+  "fees", "cost", "costs", "menu-prices", "price-list", "pricelist",
+  "our-prices",
 ];
 
 const SITEMAP_EXCLUDE_PATTERNS = [
@@ -630,8 +633,8 @@ export async function POST(request) {
           if (cat.linktreeUrl && scrapeQueue.length < 5) {
             scrapeQueue.push(cat.linktreeUrl);
           }
-          // 3. /contact, /about, /location, /hours
-          for (const path of ["/contact", "/contact-us", "/about", "/location", "/hours"]) {
+          // 3. /contact, /about, /location, /hours, /memberships, /pricing, /rates, /plans
+          for (const path of ["/contact", "/contact-us", "/about", "/location", "/hours", "/memberships", "/pricing", "/rates", "/plans"]) {
             if (scrapeQueue.length >= 5) break;
             const pageUrl = `${baseOrigin}${path}`;
             if (path !== currentPath && !scrapeQueue.includes(pageUrl)) {
