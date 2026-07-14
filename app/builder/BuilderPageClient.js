@@ -231,6 +231,7 @@ function StepIndicator({ current, total }) {
 }
 
 const BASIC_FEATURES = [
+  "500 customer messages/month",
   "AI chatbot on your website",
   "Answers customer questions 24/7",
   "8 quick reply buttons",
@@ -241,6 +242,7 @@ const BASIC_FEATURES = [
 
 const PRO_FEATURES = [
   "Everything in Basic",
+  "1,500 customer messages/month",
   "Custom mascot name",
   "Appointment booking flow",
   "Pay Now button",
