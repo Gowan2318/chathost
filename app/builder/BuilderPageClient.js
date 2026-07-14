@@ -245,7 +245,7 @@ const PRO_FEATURES = [
   "1,500 customer messages/month",
   "Custom mascot name",
   "Appointment booking flow",
-  "Pay Now button",
+  "Collect payments right in the chat",
   "Custom brand color",
   "Dark / light / glass theme choice",
   "Priority support",
