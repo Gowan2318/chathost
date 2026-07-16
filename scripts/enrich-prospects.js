@@ -1,6 +1,7 @@
 // scripts/enrich-prospects.js
-// Enriches data/prospects.csv: looks up each TODO website via Google Places,
-// scrapes it with Firecrawl, and fills in chat-widget/contact-email columns.
+// Enriches data/prospects.csv: looks up each TODO website via Firecrawl
+// search, scrapes it with Firecrawl, and fills in chat-widget/contact-email
+// columns.
 // Run: npm run enrich
 
 "use strict";
@@ -34,13 +35,8 @@ loadEnv();
 
 const DRY_RUN = process.argv.includes("--dry-run");
 
-const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
 
-if (!GOOGLE_PLACES_API_KEY) {
-  console.error("ERROR: GOOGLE_PLACES_API_KEY is not set (add it to .env.local)");
-  process.exit(1);
-}
 // Dry run makes zero Firecrawl calls, so it doesn't need this key.
 if (!DRY_RUN && !FIRECRAWL_API_KEY) {
   console.error("ERROR: FIRECRAWL_API_KEY is not set (add it to .env.local)");
@@ -173,38 +169,74 @@ async function throttleFirecrawl() {
   lastFirecrawlCall = Date.now();
 }
 
-// ── Google Places (New) lookup: Text Search → Place Details → websiteUri ───
-async function findWebsite(businessName, address) {
+// ── Website lookup via Firecrawl search ─────────────────────────────────────
+// Directory/social/aggregator domains that can rank for a business-name
+// search but are never the business's own site — skipped when picking a
+// result.
+const EXCLUDED_WEBSITE_DOMAINS = [
+  "yelp.com",
+  "facebook.com",
+  "yellowpages.com",
+  "mapquest.com",
+  "tripadvisor.com",
+  "instagram.com",
+  "google.com",
+  "bing.com",
+  "linkedin.com",
+  "twitter.com",
+  "x.com",
+  "foursquare.com",
+  "bbb.org",
+  "nextdoor.com",
+];
+
+function isExcludedWebsiteDomain(url) {
   try {
-    const searchRes = await fetch("https://places.googleapis.com/v1/places:searchText", {
+    const hostname = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+    return EXCLUDED_WEBSITE_DOMAINS.some((d) => hostname === d || hostname.endsWith(`.${d}`));
+  } catch {
+    return true; // unparsable URL — not usable as a business site
+  }
+}
+
+// Finds the business's own website via Firecrawl search (no scraping — just
+// the result URLs). Distinguishes "genuinely no website" from "the API call
+// itself failed" so callers can tell the two apart: returns { website } on
+// success (website is null when nothing usable was found), throws when the
+// search request/response itself is broken so the row can be marked
+// LOOKUP_FAILED and retried later instead of being poisoned as NO_WEBSITE.
+async function findWebsite(businessName, address) {
+  await throttleFirecrawl();
+  const query = `${businessName} ${address} official website`.trim();
+
+  let res;
+  try {
+    res = await fetch("https://api.firecrawl.dev/v1/search", {
       method: "POST",
       headers: {
+        Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
         "Content-Type": "application/json",
-        "X-Goog-Api-Key": GOOGLE_PLACES_API_KEY,
-        "X-Goog-FieldMask": "places.id",
       },
-      body: JSON.stringify({ textQuery: `${businessName}, ${address}` }),
+      body: JSON.stringify({ query, limit: 5 }),
       signal: AbortSignal.timeout(10000),
     });
-    if (!searchRes.ok) return null;
-    const searchData = await searchRes.json();
-    const placeId = searchData.places && searchData.places[0] && searchData.places[0].id;
-    if (!placeId) return null;
-
-    const detailsRes = await fetch(`https://places.googleapis.com/v1/places/${placeId}`, {
-      method: "GET",
-      headers: {
-        "X-Goog-Api-Key": GOOGLE_PLACES_API_KEY,
-        "X-Goog-FieldMask": "websiteUri",
-      },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!detailsRes.ok) return null;
-    const detailsData = await detailsRes.json();
-    return detailsData.websiteUri || null;
-  } catch {
-    return null;
+  } catch (err) {
+    throw new Error(`Firecrawl search request failed: ${err.message}`);
   }
+
+  if (res.status === 429) throw new Error("Firecrawl search rate limited");
+  if (!res.ok) throw new Error(`Firecrawl search HTTP ${res.status}`);
+
+  let data;
+  try {
+    data = await res.json();
+  } catch (err) {
+    throw new Error(`Firecrawl search returned invalid JSON: ${err.message}`);
+  }
+
+  const results = (data && data.data) || [];
+  const match = results.find((r) => r.url && !isExcludedWebsiteDomain(r.url));
+  return { website: match ? match.url : null };
 }
 
 // ── Firecrawl scrape — same request shape as app/api/import-website/route.js
@@ -243,6 +275,10 @@ function capAvailable() {
 async function scrapeWithCap(url) {
   scrapeCount++;
   return firecrawlScrape(url);
+}
+async function findWebsiteWithCap(businessName, address) {
+  scrapeCount++;
+  return findWebsite(businessName, address);
 }
 
 // ── Chat widget detection (from rawHtml) ────────────────────────────────────
@@ -317,9 +353,11 @@ function normalizeWebsite(raw) {
 }
 
 // ── Row processing ──────────────────────────────────────────────────────────
-// A row "needs processing" whenever scrape_status is still blank — this
-// covers fresh TODO rows and rows a previous --dry-run only resolved a
-// website for (dry run never sets scrape_status).
+// A row "needs processing" whenever scrape_status is still blank, or is
+// LOOKUP_FAILED (the website search itself broke last run — retryable,
+// unlike NO_WEBSITE which means the search succeeded and found nothing).
+// Blank scrape_status also covers fresh TODO rows and rows a previous
+// --dry-run only resolved a website for (dry run never sets scrape_status).
 async function processRow(rec, counters) {
   const businessName = rec.business_name || "(unnamed)";
   const address = rec.address || "";
@@ -327,8 +365,22 @@ async function processRow(rec, counters) {
 
   const needsWebsiteLookup = !trimmedWebsite || trimmedWebsite === "TODO";
   if (needsWebsiteLookup) {
-    const website = await findWebsite(businessName, address);
-    rec.website = website || "NONE";
+    if (DRY_RUN) {
+      counters.lookupPending++;
+      console.log(`[${businessName}] website: needs lookup (dry run — no search)`);
+      return;
+    }
+    if (!capAvailable()) throw new ScrapeCapError();
+    let result;
+    try {
+      result = await findWebsiteWithCap(businessName, address);
+    } catch (err) {
+      rec.scrape_status = "LOOKUP_FAILED";
+      rec.scraped_at = new Date().toISOString();
+      console.log(`[${businessName}] website lookup failed: ${err.message}`);
+      return;
+    }
+    rec.website = result.website || "NONE";
   } else {
     rec.website = normalizeWebsite(trimmedWebsite);
   }
@@ -391,16 +443,17 @@ async function main() {
   }
 
   const records = readRecords();
-  const pendingRows = records.filter((rec) => !rec.scrape_status);
+  const needsEnrichment = (rec) => !rec.scrape_status || rec.scrape_status === "LOOKUP_FAILED";
+  const pendingRows = records.filter(needsEnrichment);
   console.log(
     `${records.length} rows total, ${pendingRows.length} to enrich.${DRY_RUN ? " (dry run)" : ""}`
   );
 
-  const counters = { websiteFound: 0, websiteNone: 0 };
+  const counters = { websiteFound: 0, websiteNone: 0, lookupPending: 0 };
   let capHit = false;
 
   for (const rec of records) {
-    if (rec.scrape_status) continue; // already fully enriched
+    if (!needsEnrichment(rec)) continue; // already fully enriched (or terminally failed)
     try {
       await processRow(rec, counters);
     } catch (err) {
@@ -419,13 +472,13 @@ async function main() {
   writeRecords(records);
 
   if (capHit) {
-    const remaining = records.filter((rec) => !rec.scrape_status).length;
+    const remaining = records.filter(needsEnrichment).length;
     console.log(`MAX_SCRAPES cap (${MAX_SCRAPES}) reached — stopped early. ${remaining} row(s) remain unenriched.`);
   }
 
   if (DRY_RUN) {
     console.log(
-      `Dry run summary: ${counters.websiteFound} row(s) have a website, ${counters.websiteNone} came back NONE.`
+      `Dry run summary: ${counters.websiteFound} row(s) already have a website, ${counters.websiteNone} came back NONE from prior data, ${counters.lookupPending} need a website lookup (skipped — dry run makes no Firecrawl calls).`
     );
   }
 
