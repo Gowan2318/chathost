@@ -48,3 +48,4 @@ dev-server-err.log
 
 # prospect data — contains scraped contact emails, never push to GitHub
 data/*.csv
+data/*.csv.bak
