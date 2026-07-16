@@ -62,6 +62,11 @@ const COLUMNS = [
   "contact_email",
   "scrape_status",
   "scraped_at",
+  "outreach_status",
+  "outreach_sent_date",
+  "follow_up_date",
+  "reply_received",
+  "outreach_notes",
 ];
 
 const INDUSTRIES = [
@@ -177,18 +182,37 @@ function stringifyCsv(rows) {
   return rows.map((r) => r.map(csvField).join(",")).join("\r\n") + "\r\n";
 }
 
+// Detects an old-format CSV (missing the outreach tracking columns) and
+// upgrades it in place: adds the new columns with defaults (not_sent for
+// outreach_status, empty for the rest) on the very first read of this run.
+function migrateOutreachColumns(records, header) {
+  const missing = header.length > 0 && !header.includes("outreach_status");
+  if (!missing) return records;
+  console.log(`Migrating ${CSV_PATH} to add outreach tracking columns...`);
+  for (const rec of records) {
+    rec.outreach_status = "not_sent";
+    rec.outreach_sent_date = "";
+    rec.follow_up_date = "";
+    rec.reply_received = "";
+    rec.outreach_notes = "";
+  }
+  writeRecords(records);
+  return records;
+}
+
 function readRecords() {
   if (!fs.existsSync(CSV_PATH)) return [];
   const text = fs.readFileSync(CSV_PATH, "utf8");
   const table = parseCsv(text);
   const header = table[0] || [];
-  return table.slice(1).map((r) => {
+  const records = table.slice(1).map((r) => {
     const rec = {};
     header.forEach((h, idx) => {
       rec[h] = r[idx] !== undefined ? r[idx] : "";
     });
     return rec;
   });
+  return migrateOutreachColumns(records, header);
 }
 
 function writeRecords(records) {
@@ -422,6 +446,11 @@ async function main() {
           contact_email: "",
           scrape_status: "",
           scraped_at: "",
+          outreach_status: "not_sent",
+          outreach_sent_date: "",
+          follow_up_date: "",
+          reply_received: "",
+          outreach_notes: "",
         };
         newRecords.push(rec);
         console.log(`  + ${listing.name}${listing.address ? ` — ${listing.address}` : ""}`);

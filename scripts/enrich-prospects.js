@@ -69,6 +69,11 @@ const COLUMNS = [
   "contact_email",
   "scrape_status",
   "scraped_at",
+  "outreach_status",
+  "outreach_sent_date",
+  "follow_up_date",
+  "reply_received",
+  "outreach_notes",
 ];
 
 // ── Minimal RFC4180 CSV parse/stringify (no CSV dependency in package.json) ─
@@ -303,6 +308,14 @@ function findContactOrAboutLink(markdown, baseUrl) {
   return null;
 }
 
+// CSV rows are sometimes hand-entered as bare domains ("example.com") rather
+// than full URLs — Firecrawl and the URL parsing below both need a scheme.
+function normalizeWebsite(raw) {
+  const trimmed = (raw || "").trim();
+  if (!trimmed) return "";
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
 // ── Row processing ──────────────────────────────────────────────────────────
 // A row "needs processing" whenever scrape_status is still blank — this
 // covers fresh TODO rows and rows a previous --dry-run only resolved a
@@ -310,11 +323,14 @@ function findContactOrAboutLink(markdown, baseUrl) {
 async function processRow(rec, counters) {
   const businessName = rec.business_name || "(unnamed)";
   const address = rec.address || "";
+  const trimmedWebsite = (rec.website || "").trim();
 
-  const needsWebsiteLookup = !rec.website || rec.website === "TODO";
+  const needsWebsiteLookup = !trimmedWebsite || trimmedWebsite === "TODO";
   if (needsWebsiteLookup) {
     const website = await findWebsite(businessName, address);
     rec.website = website || "NONE";
+  } else {
+    rec.website = normalizeWebsite(trimmedWebsite);
   }
 
   if (rec.website === "NONE") {
