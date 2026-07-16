@@ -48,7 +48,7 @@ const FIRECRAWL_INTERVAL_MS = 2000;
 
 const MAX_SCRAPES = (() => {
   const n = parseInt(process.env.MAX_SCRAPES, 10);
-  return Number.isFinite(n) && n > 0 ? n : 120;
+  return Number.isFinite(n) && n > 0 ? n : 500;
 })();
 
 const COLUMNS = [
