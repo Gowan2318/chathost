@@ -390,7 +390,7 @@ We're happy to assist you!`;
           className={`flex flex-col overflow-hidden rounded-2xl border shadow-2xl ${
             embedded
               ? "h-[480px] w-full shadow-black/20"
-              : "h-[min(520px,calc(100vh-8rem))] w-[min(420px,calc(100vw-3rem))] shadow-black/30"
+              : "h-[min(640px,calc(100vh-6rem))] w-[min(420px,calc(100vw-3rem))] shadow-black/30"
           } ${theme.glass && embedded ? "backdrop-blur-xl" : ""}`}
           style={{
             background: theme.chatBackground,

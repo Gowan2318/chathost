@@ -289,7 +289,7 @@
     style.textContent =
       "*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}" +
       ".vch-root{position:fixed;bottom:24px;right:24px;z-index:2147483647;display:flex;flex-direction:column;align-items:flex-end;gap:16px}" +
-      ".vch-panel{display:none;flex-direction:column;width:min(420px,calc(100vw - 48px));height:min(520px,calc(100vh - 8rem));border-radius:16px;border:1px solid " +
+      ".vch-panel{display:none;flex-direction:column;width:min(420px,calc(100vw - 48px));height:min(640px,calc(100vh - 6rem));border-radius:16px;border:1px solid " +
       theme.panelBorder +
       ";background:" +
       theme.chatBackground +
