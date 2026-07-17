@@ -9,7 +9,9 @@
     "lint": "eslint",
     "test:security": "node --use-system-ca scripts/security-test.js",
     "enrich": "node --use-system-ca scripts/enrich-prospects.js",
-    "discover": "node --use-system-ca scripts/discover-prospects.js"
+    "discover": "node --use-system-ca scripts/discover-prospects.js",
+    "emails": "node scripts/generate-emails.js",
+    "followups": "node scripts/follow-ups.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",
