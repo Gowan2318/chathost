@@ -152,7 +152,7 @@ export default async function DemoPage({ params }) {
       </header>
 
       {/* Hero */}
-      <section className="px-6 py-20">
+      <section className="flex min-h-[calc(100vh-3rem)] flex-col items-center justify-center px-6 py-20">
         <div className="mx-auto max-w-4xl text-center">
           <p className="text-sm font-semibold uppercase tracking-widest text-[#0D7377]">
             Live demo
@@ -170,11 +170,11 @@ export default async function DemoPage({ params }) {
 
         {/* Mockup */}
         <div className="mx-auto mt-14 max-w-2xl">
-          <div className="rounded-2xl border border-[#E2E8F0] bg-white p-10 shadow-xl shadow-[#0D7377]/5">
-            <div className="flex flex-col items-center gap-4 text-center">
-              <MascotCharacter industry={industry} size={140} animation="bounce" />
+          <div className="rounded-2xl border border-[#E2E8F0] bg-white p-14 shadow-xl shadow-[#0D7377]/5">
+            <div className="flex flex-col items-center gap-5 text-center">
+              <MascotCharacter industry={industry} size={200} animation="bounce" />
               <div>
-                <p className="text-xl font-bold text-[#1A1A2E]">{businessName}</p>
+                <p className="text-2xl font-bold text-[#1A1A2E]">{businessName}</p>
                 <p className="text-sm text-[#4A5568]">Powered by VestaChatHost</p>
               </div>
               <div className="mt-2 flex items-center gap-2 rounded-full bg-[#E8F4F4] px-4 py-2 text-sm font-medium text-[#0D7377]">
