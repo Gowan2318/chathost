@@ -146,7 +146,8 @@
       var id = url.searchParams.get("id");
       if (!id) return null;
       var autoopen = url.searchParams.get("autoopen") === "true";
-      return { id: id, baseUrl: url.origin, autoopen: autoopen };
+      var fullheight = url.searchParams.get("fullheight") === "true";
+      return { id: id, baseUrl: url.origin, autoopen: autoopen, fullheight: fullheight };
     } catch (e) {
       return null;
     }
@@ -192,7 +193,7 @@
     return false;
   }
 
-  function createWidget(config, baseUrl, clientId, autoopen) {
+  function createWidget(config, baseUrl, clientId, autoopen, fullheight) {
     var businessName = config.businessName || "Your Business";
     var supportPhone = config.supportPhone || "";
     var supportEmail = config.supportEmail || "";
@@ -289,7 +290,9 @@
     style.textContent =
       "*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}" +
       ".vch-root{position:fixed;bottom:24px;right:24px;z-index:2147483647;display:flex;flex-direction:column;align-items:flex-end;gap:16px}" +
-      ".vch-panel{display:none;flex-direction:column;width:min(420px,calc(100vw - 48px));height:min(640px,calc(100vh - 6rem));border-radius:16px;border:1px solid " +
+      ".vch-panel{display:none;flex-direction:column;width:min(420px,calc(100vw - 48px));height:" +
+      (fullheight ? "calc(100vh - 3rem)" : "min(640px,calc(100vh - 6rem))") +
+      ";border-radius:16px;border:1px solid " +
       theme.panelBorder +
       ";background:" +
       theme.chatBackground +
@@ -772,7 +775,7 @@
         return res.json();
       })
       .then(function (config) {
-        createWidget(config, info.baseUrl, info.id, info.autoopen);
+        createWidget(config, info.baseUrl, info.id, info.autoopen, info.fullheight);
       })
       .catch(function (err) {
         console.error("[VestaChatHost] Widget failed to load:", err);
