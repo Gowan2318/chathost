@@ -291,7 +291,7 @@
       "*{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}" +
       ".vch-root{position:fixed;bottom:24px;right:24px;z-index:2147483647;display:flex;flex-direction:column;align-items:flex-end;gap:16px}" +
       ".vch-panel{display:none;flex-direction:column;width:min(420px,calc(100vw - 48px));height:" +
-      (fullheight ? "calc(100vh - 3rem)" : "min(640px,calc(100vh - 6rem))") +
+      (fullheight ? "calc(100vh - 8rem)" : "min(640px,calc(100vh - 6rem))") +
       ";border-radius:16px;border:1px solid " +
       theme.panelBorder +
       ";background:" +
@@ -310,13 +310,13 @@
       ".vch-subtitle{margin:2px 0 0;font-size:12px;opacity:0.9}" +
       ".vch-close{border:none;background:transparent;color:#fff;cursor:pointer;border-radius:8px;padding:6px;display:flex}" +
       ".vch-close:hover{background:rgba(255,255,255,0.2)}" +
-      ".vch-messages{flex:1;overflow-y:auto;padding:16px;background:" +
+      ".vch-messages{flex:1;overflow-y:auto;overflow-x:hidden;padding:16px;background:" +
       theme.messagesArea +
       "}" +
       ".vch-row{display:flex;margin-bottom:12px}" +
       ".vch-row.user{justify-content:flex-end}" +
       ".vch-row.bot{justify-content:flex-start}" +
-      ".vch-bubble{max-width:85%;padding:10px 16px;border-radius:16px;font-size:14px;line-height:1.5;white-space:pre-line}" +
+      ".vch-bubble{max-width:85%;padding:10px 16px;border-radius:16px;font-size:14px;line-height:1.5;white-space:pre-line;overflow-wrap:break-word;word-break:break-word}" +
       ".vch-bubble.user{background:" +
       theme.userBubble +
       ";color:" +
