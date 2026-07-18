@@ -70,13 +70,13 @@ const COLUMNS = [
 ];
 
 const INDUSTRIES = [
+  { key: "dental", query: "dentist" },
+  { key: "lawn", query: "lawn care service" },
   { key: "salon", query: "hair salon" },
   { key: "barber", query: "barber shop" },
   { key: "restaurant", query: "restaurant" },
   { key: "gym", query: "gym fitness center" },
-  { key: "dental", query: "dentist" },
   { key: "law", query: "personal injury lawyer" },
-  { key: "lawn", query: "lawn care service" },
   { key: "real_estate", query: "real estate agent" },
 ];
 
