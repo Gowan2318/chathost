@@ -80,7 +80,7 @@ const INDUSTRIES = [
   { key: "real_estate", query: "real estate agent" },
 ];
 
-const CITIES = [
+const CITIES_LOCAL = [
   "Pittsburgh PA",
   "Homestead PA",
   "Munhall PA",
@@ -93,6 +93,27 @@ const CITIES = [
   "Monroeville PA",
 ];
 
+// Nationwide metros for the 2026-07-18 dental/lawn discovery run — the
+// product is remote, so geography doesn't matter beyond spreading searches
+// across markets the Pittsburgh-area run (CITIES_LOCAL) never touched.
+const CITIES_NATIONWIDE = [
+  "Columbus OH",
+  "Charlotte NC",
+  "Nashville TN",
+  "Austin TX",
+  "Denver CO",
+  "Raleigh NC",
+  "Tampa FL",
+  "Phoenix AZ",
+  "Kansas City MO",
+  "Indianapolis IN",
+];
+
+// Active city list for this run. To switch back to the original Pittsburgh
+// metro run, use `CITIES_LOCAL`; to run both in one pass, use
+// `[...CITIES_LOCAL, ...CITIES_NATIONWIDE]`.
+const CITIES = CITIES_NATIONWIDE;
+
 // Yelp search result pages generally show more listings than we want per
 // city/industry combo, so this caps how many we keep from each page.
 const MAX_PER_SEARCH = (() => {
@@ -103,7 +124,7 @@ const MAX_PER_SEARCH = (() => {
 // Hard cap on total NEW businesses added this run — bounds CSV growth.
 const MAX_TOTAL = (() => {
   const n = parseInt(process.env.MAX_TOTAL, 10);
-  return Number.isFinite(n) && n > 0 ? n : 200;
+  return Number.isFinite(n) && n > 0 ? n : 400;
 })();
 
 const SEARCH_INTERVAL_MS = 500;
