@@ -34,6 +34,79 @@ loadEnv();
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const VAPI_MODEL = "claude-sonnet-4-5-20250929"; // current working Anthropic model
+const SAVE_BOOKING_TOOL_NAME = "save_booking";
+
+function bookingToolDefinition(webhookUrl, webhookSecret) {
+  return {
+    type: "function",
+    function: {
+      name: SAVE_BOOKING_TOOL_NAME,
+      description:
+        "Save a booking or message after the caller has confirmed the details out loud. Call this once, silently, right after confirmation.",
+      parameters: {
+        type: "object",
+        properties: {
+          caller_name: { type: "string", description: "The caller's full name" },
+          caller_phone: { type: "string", description: "The caller's phone number" },
+          service: {
+            type: "string",
+            description: "The service requested if booking; the reason for the call if leaving a message",
+          },
+          requested_time: { type: "string", description: "The requested appointment time, if booking" },
+          type: {
+            type: "string",
+            enum: ["booking", "message"],
+            description: "\"booking\" if the caller wants an appointment, \"message\" if they just want to leave a message",
+          },
+        },
+        required: ["caller_name", "caller_phone", "type"],
+      },
+    },
+    // Vapi echoes this secret back as the x-vapi-secret header on every call
+    // to this URL — app/api/vapi-webhook/route.js verifies it.
+    server: { url: webhookUrl, secret: webhookSecret },
+  };
+}
+
+// Finds the existing save_booking tool (by function name) and updates it, or
+// creates it if this is the first sync. Returns the tool's id.
+async function ensureBookingTool(vapiHeaders, webhookUrl, webhookSecret) {
+  const listResp = await fetch("https://api.vapi.ai/tool", { headers: vapiHeaders });
+  if (!listResp.ok) {
+    const text = await listResp.text().catch(() => "");
+    throw new Error(`Vapi GET /tool returned ${listResp.status} — ${text}`);
+  }
+  const tools = await listResp.json();
+  const existing = Array.isArray(tools)
+    ? tools.find((t) => t.function?.name === SAVE_BOOKING_TOOL_NAME)
+    : null;
+  const definition = bookingToolDefinition(webhookUrl, webhookSecret);
+
+  if (existing) {
+    const patchResp = await fetch(`https://api.vapi.ai/tool/${existing.id}`, {
+      method: "PATCH",
+      headers: vapiHeaders,
+      body: JSON.stringify(definition),
+    });
+    if (!patchResp.ok) {
+      const text = await patchResp.text().catch(() => "");
+      throw new Error(`Vapi PATCH /tool/${existing.id} returned ${patchResp.status} — ${text}`);
+    }
+    return existing.id;
+  }
+
+  const createResp = await fetch("https://api.vapi.ai/tool", {
+    method: "POST",
+    headers: vapiHeaders,
+    body: JSON.stringify(definition),
+  });
+  if (!createResp.ok) {
+    const text = await createResp.text().catch(() => "");
+    throw new Error(`Vapi POST /tool returned ${createResp.status} — ${text}`);
+  }
+  const created = await createResp.json();
+  return created.id;
+}
 
 // TEMPORARY — read-only lookup to find a client_id to test with. No Vapi calls.
 // Run: node scripts/sync-vapi-assistant.js list
@@ -102,6 +175,10 @@ async function run(clientId) {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return "NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are not set (add them to .env.local)";
   }
+  const VAPI_WEBHOOK_URL = process.env.VAPI_WEBHOOK_URL;
+  const VAPI_WEBHOOK_SECRET = process.env.VAPI_WEBHOOK_SECRET;
+  if (!VAPI_WEBHOOK_URL) return "VAPI_WEBHOOK_URL is not set (add it to .env.local)";
+  if (!VAPI_WEBHOOK_SECRET) return "VAPI_WEBHOOK_SECRET is not set (add it to .env.local)";
 
   // lib/ is ESM ("type": "module") so it can't be require()'d from this
   // CommonJS script — load it via dynamic import instead.
@@ -160,23 +237,40 @@ async function run(clientId) {
     return `request to Vapi failed — ${err.message}`;
   }
 
+  let bookingToolId;
+  try {
+    bookingToolId = await ensureBookingTool(vapiHeaders, VAPI_WEBHOOK_URL, VAPI_WEBHOOK_SECRET);
+  } catch (err) {
+    return `failed to configure save_booking tool — ${err.message}`;
+  }
+  console.log(`save_booking tool id: ${bookingToolId} (server.url=${VAPI_WEBHOOK_URL})`);
+
   // Reuse the live model object for everything (provider, temperature, etc.)
   // except `model.model` — the live value is a dead Anthropic model id that
   // 404s, so it's pinned to VAPI_MODEL instead of being echoed back verbatim.
+  const existingToolIds = Array.isArray(currentModel.toolIds) ? currentModel.toolIds : [];
+  const toolIds = Array.from(new Set([...existingToolIds, bookingToolId]));
   const patchModel = {
     ...currentModel,
     model: VAPI_MODEL,
     messages: [{ role: "system", content: systemPrompt }],
+    toolIds,
   };
   console.log(`Live model id was: ${currentModel.model ?? "?"}`);
   console.log(`PATCH will send — model: provider=${patchModel.provider ?? "?"} model=${patchModel.model}`);
+  console.log(`PATCH will send — toolIds: ${JSON.stringify(toolIds)}`);
 
   const firstMessage = `Thanks for calling ${businessName}! How can I help you today?`;
   console.log(`PATCH will send — firstMessage: ${firstMessage}`);
 
-  // firstMessage is a top-level field on the assistant, a sibling of `model`
-  // — not nested inside it — and Vapi's API spells it exactly "firstMessage".
-  const patchBody = { model: patchModel, firstMessage };
+  // metadata.client_id is how the webhook resolves which client a call
+  // belongs to (see app/api/vapi-webhook/route.js) — this assistant is
+  // shared, so this always reflects whichever client was synced last.
+  console.log(`PATCH will send — metadata.client_id: ${clientId}`);
+
+  // firstMessage/metadata are top-level fields on the assistant, siblings of
+  // `model` — not nested inside it.
+  const patchBody = { model: patchModel, firstMessage, metadata: { client_id: clientId } };
   console.log(`PATCH body: ${JSON.stringify(patchBody)}`);
 
   let response;
