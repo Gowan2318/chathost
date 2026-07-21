@@ -65,6 +65,13 @@ async function notifyBooking(row) {
 
 export async function POST(request) {
   try {
+    // TEMPORARY DEBUG LOGGING — remove once the "Unsupported tool." mismatch
+    // is diagnosed. request.json() can only be consumed once, so read the
+    // raw text here and parse it locally instead of calling request.json()
+    // again below.
+    const rawBody = await request.text();
+    console.log("[vapi-webhook] DEBUG raw request body:", rawBody);
+
     const expectedSecret = process.env.VAPI_WEBHOOK_SECRET;
     if (!expectedSecret) {
       console.error("[vapi-webhook] VAPI_WEBHOOK_SECRET is not configured — rejecting all requests");
@@ -77,7 +84,10 @@ export async function POST(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json().catch(() => null);
+    let body = null;
+    try {
+      body = JSON.parse(rawBody);
+    } catch {}
     const message = body?.message;
 
     // Only tool-calls messages are relevant here (this URL is only wired to
@@ -99,6 +109,18 @@ export async function POST(request) {
 
     const results = [];
     for (const call of toolCalls) {
+      // TEMPORARY DEBUG LOGGING — remove alongside the raw-body log above.
+      // The matching logic below reads call.name; logging both that and
+      // call.function?.name (the alternate/nested shape) to see which one
+      // Vapi is actually sending.
+      console.log(
+        "[vapi-webhook] DEBUG tool call — call.name:",
+        call.name,
+        "| call.function?.name:",
+        call.function?.name,
+        "| full call object:",
+        JSON.stringify(call)
+      );
       if (call.name !== SAVE_BOOKING_TOOL_NAME) {
         results.push({ toolCallId: call.id, result: "Unsupported tool." });
         continue;
