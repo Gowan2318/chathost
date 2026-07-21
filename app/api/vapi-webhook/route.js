@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "crypto";
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { adminClient } from "../../../lib/supabase-admin";
 import { sendNewBookingNotification } from "../../../lib/email";
 
@@ -44,7 +44,11 @@ async function resolveClientId(assistantId) {
   }
 }
 
-// Fire-and-forget — never blocks or fails the Vapi response.
+// Registered via after() at the call site, not awaited inline — runs once
+// the webhook response has already been sent to Vapi (which is waiting on
+// it mid-call), but after() guarantees it still runs to completion instead
+// of racing the serverless instance freezing right after the response
+// flushes, the way a bare fire-and-forget call would.
 async function notifyBooking(row) {
   try {
     let businessName = null;
@@ -124,7 +128,7 @@ export async function POST(request) {
         if (error) throw new Error(error.message);
 
         results.push({ toolCallId: call.id, result: "Saved." });
-        notifyBooking(row).catch(() => {});
+        after(() => notifyBooking(row));
       } catch (err) {
         console.error("[vapi-webhook] failed to save booking:", err);
         results.push({
