@@ -83,6 +83,15 @@ function ChartIcon(props) {
   );
 }
 
+function CalendarIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} {...props} aria-hidden>
+      <rect x="3.25" y="4.75" width="17.5" height="15.5" rx="2" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.25 9.25h17.5M8 3v3M16 3v3" />
+    </svg>
+  );
+}
+
 function CloseIcon(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props} aria-hidden>
@@ -107,6 +116,7 @@ export function Logo({ light }) {
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: HomeIcon },
   { label: "Analytics", href: "/dashboard/analytics", icon: ChartIcon },
+  { label: "Bookings", href: "/dashboard/bookings", icon: CalendarIcon },
   { label: "Edit Bot", href: "/dashboard/edit", icon: SettingsIcon },
   { label: "Subscription", href: "/dashboard#subscription", icon: CardIcon },
   { label: "Support", href: "mailto:support@vestachathost.com", icon: HelpIcon },
