@@ -52,7 +52,7 @@ const SAVE_BOOKING_TOOL_NAME = "save_booking";
 const DEFAULT_VOICE = { provider: "vapi", voiceId: "Elliot" };
 const DEFAULT_TRANSCRIBER = { provider: "deepgram", model: "nova-3", language: "en" };
 
-function bookingToolDefinition(webhookUrl, webhookSecret, vercelBypassSecret) {
+function bookingToolDefinition(webhookUrl, webhookSecret) {
   return {
     type: "function",
     function: {
@@ -81,20 +81,9 @@ function bookingToolDefinition(webhookUrl, webhookSecret, vercelBypassSecret) {
     // Vapi's tool `server` schema has no `secret` field (it's silently
     // dropped if sent) — the x-vapi-secret header has to be set explicitly
     // via `headers`. app/api/vapi-webhook/route.js verifies it.
-    //
-    // x-vercel-protection-bypass is a SEPARATE, second gate in front of that:
-    // VAPI_WEBHOOK_URL currently points at a preview deployment
-    // (*.vercel.app), which Vercel's Deployment Protection (Vercel
-    // Authentication/SSO) blocks for any caller without a Vercel session —
-    // including Vapi. This header carries the Protection Bypass for
-    // Automation secret so Vercel lets the request through to the app at
-    // all, before x-vapi-secret is ever checked. Once VAPI_WEBHOOK_URL is
-    // switched to the production domain (vestachathost.com), which is NOT
-    // behind Deployment Protection, this header becomes unnecessary and can
-    // be dropped.
     server: {
       url: webhookUrl,
-      headers: { "x-vapi-secret": webhookSecret, "x-vercel-protection-bypass": vercelBypassSecret },
+      headers: { "x-vapi-secret": webhookSecret },
     },
   };
 }
@@ -103,7 +92,7 @@ function bookingToolDefinition(webhookUrl, webhookSecret, vercelBypassSecret) {
 // creates it if this is the first sync ever. One tool resource is shared
 // across every client's assistant (via toolIds) — only the assistants
 // themselves are per-client.
-async function ensureBookingTool(vapiHeaders, webhookUrl, webhookSecret, vercelBypassSecret) {
+async function ensureBookingTool(vapiHeaders, webhookUrl, webhookSecret) {
   const listResp = await fetch("https://api.vapi.ai/tool", { headers: vapiHeaders });
   if (!listResp.ok) {
     const text = await listResp.text().catch(() => "");
@@ -113,7 +102,7 @@ async function ensureBookingTool(vapiHeaders, webhookUrl, webhookSecret, vercelB
   const existing = Array.isArray(tools)
     ? tools.find((t) => t.function?.name === SAVE_BOOKING_TOOL_NAME)
     : null;
-  const definition = bookingToolDefinition(webhookUrl, webhookSecret, vercelBypassSecret);
+  const definition = bookingToolDefinition(webhookUrl, webhookSecret);
 
   if (existing) {
     const patchResp = await fetch(`https://api.vapi.ai/tool/${existing.id}`, {
@@ -236,10 +225,6 @@ async function run(clientId) {
   const VAPI_WEBHOOK_SECRET = process.env.VAPI_WEBHOOK_SECRET;
   if (!VAPI_WEBHOOK_URL) return "VAPI_WEBHOOK_URL is not set (add it to .env.local)";
   if (!VAPI_WEBHOOK_SECRET) return "VAPI_WEBHOOK_SECRET is not set (add it to .env.local)";
-  // Only required while VAPI_WEBHOOK_URL points at a Deployment-Protection-gated
-  // preview URL — see the comment on bookingToolDefinition().
-  const VAPI_VERCEL_BYPASS = process.env.VAPI_VERCEL_BYPASS;
-  if (!VAPI_VERCEL_BYPASS) return "VAPI_VERCEL_BYPASS is not set (add it to .env.local)";
 
   // lib/ is ESM ("type": "module") so it can't be require()'d from this
   // CommonJS script — load it via dynamic import instead.
@@ -271,7 +256,7 @@ async function run(clientId) {
 
   let bookingToolId;
   try {
-    bookingToolId = await ensureBookingTool(vapiHeaders, VAPI_WEBHOOK_URL, VAPI_WEBHOOK_SECRET, VAPI_VERCEL_BYPASS);
+    bookingToolId = await ensureBookingTool(vapiHeaders, VAPI_WEBHOOK_URL, VAPI_WEBHOOK_SECRET);
   } catch (err) {
     return `failed to configure save_booking tool — ${err.message}`;
   }

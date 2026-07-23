@@ -7,8 +7,6 @@ import { sendNewBookingNotification } from "../../../lib/email";
 // available on the Edge runtime.
 export const runtime = "nodejs";
 
-const VAPI_ASSISTANT_ID = process.env.VAPI_ASSISTANT_ID;
-const VAPI_PRIVATE_KEY = process.env.VAPI_PRIVATE_KEY;
 const SAVE_BOOKING_TOOL_NAME = "save_booking";
 
 // Vapi echoes back whatever secret was set on the tool's `server.secret`
@@ -23,23 +21,30 @@ function verifySecret(received, expected) {
   return timingSafeEqual(a, b);
 }
 
-// The assistant is a single shared Vapi resource synced for one client at a
-// time (see scripts/sync-vapi-assistant.js) — there's no per-call client_id
-// in the webhook payload itself, so we resolve "whose call is this" by
-// reading back the `metadata.client_id` the sync script stamped on the
-// assistant. This only works because exactly one client is ever live on this
-// assistant at once. See the report for the multi-client rework needed.
+// Each client now has their own dedicated Vapi assistant, tracked in
+// chatbots.vapi_assistant_id (see scripts/sync-vapi-assistant.js). We resolve
+// "whose call is this" with a direct DB lookup on that column rather than
+// calling Vapi's GET /assistant to read back `metadata.client_id` — the DB
+// lookup is faster (no extra external round-trip while a live call is
+// waiting on this response), has one less external dependency (doesn't rely
+// on the Vapi API being reachable/authenticated at call time), and reads the
+// same table already being queried for the booking's business name.
 async function resolveClientId(assistantId) {
-  if (!assistantId || !VAPI_PRIVATE_KEY) return null;
+  if (!assistantId) return null;
   try {
-    const resp = await fetch(`https://api.vapi.ai/assistant/${assistantId}`, {
-      headers: { Authorization: `Bearer ${VAPI_PRIVATE_KEY}` },
-    });
-    if (!resp.ok) return null;
-    const assistant = await resp.json();
-    return assistant?.metadata?.client_id ?? null;
+    const db = adminClient();
+    const { data, error } = await db
+      .from("chatbots")
+      .select("client_id")
+      .eq("vapi_assistant_id", assistantId)
+      .maybeSingle();
+    if (error) {
+      console.error("[vapi-webhook] Supabase error resolving client_id from vapi_assistant_id:", error.message);
+      return null;
+    }
+    return data?.client_id ?? null;
   } catch (err) {
-    console.error("[vapi-webhook] failed to resolve client_id from assistant metadata:", err);
+    console.error("[vapi-webhook] failed to resolve client_id from vapi_assistant_id:", err);
     return null;
   }
 }
@@ -93,11 +98,11 @@ export async function POST(request) {
 
     const toolCalls = Array.isArray(message.toolCallList) ? message.toolCallList : [];
     const callId = message.call?.id ?? null;
-    const assistantId = message.call?.assistantId ?? VAPI_ASSISTANT_ID;
+    const assistantId = message.call?.assistantId ?? null;
     const clientId = await resolveClientId(assistantId);
     if (!clientId) {
       console.error(
-        `[vapi-webhook] could not resolve client_id for assistant ${assistantId} — saving booking with client_id=null`
+        `[vapi-webhook] could not resolve client_id for assistant ${assistantId} — refusing to save booking(s) for call ${callId}`
       );
     }
 
@@ -108,6 +113,18 @@ export async function POST(request) {
       // some Vapi docs showing a flat shape).
       if (call.function?.name !== SAVE_BOOKING_TOOL_NAME) {
         results.push({ toolCallId: call.id, result: "Unsupported tool." });
+        continue;
+      }
+
+      // Never write a booking we can't attribute to a client — that would
+      // silently land in no client's dashboard (or, worse, be ambiguous
+      // about which one). Fail loudly instead of saving with a null/wrong
+      // client_id.
+      if (!clientId) {
+        results.push({
+          toolCallId: call.id,
+          result: "There was a problem saving that — let the caller know the team will follow up directly.",
+        });
         continue;
       }
 
