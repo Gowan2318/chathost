@@ -1,6 +1,12 @@
 -- Bookings/messages captured by the voice receptionist (Vapi).
 -- Run in Supabase Dashboard → SQL Editor → New query, or via CLI:
 --   supabase db push
+--
+-- COST SAFETY: this table and the assistant sync (scripts/sync-vapi-assistant.js)
+-- are FREE — no phone numbers, no standing cost. Phone number provisioning
+-- (the only thing that costs ~$2/mo) is deliberately NOT part of this step —
+-- it will be a separate, manual-only script added later. Nothing here
+-- creates or reserves a phone number.
 
 CREATE TABLE public.bookings (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
