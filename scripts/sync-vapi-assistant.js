@@ -1,7 +1,17 @@
 // scripts/sync-vapi-assistant.js
 // Pushes a client's business info (same chatbots.config row the chat widget
-// reads) into their Vapi voice assistant as a phone-receptionist system prompt.
+// reads) into that client's OWN Vapi voice assistant as a phone-receptionist
+// system prompt. Each client gets a dedicated Vapi assistant, tracked via
+// chatbots.vapi_assistant_id — this script creates that assistant the first
+// time it's synced, then patches it (prompt/greeting/tool) on every sync
+// after that.
 // Run: node scripts/sync-vapi-assistant.js <client_id>
+//
+// COST SAFETY: this script is FREE — it only ever calls Vapi's /assistant and
+// /tool endpoints, which cost nothing. Phone numbers (~$2/mo each) are NOT
+// provisioned here — that's a separate, manual-only script added in a later
+// step. Nothing in this file calls Vapi's /phone-number API or otherwise
+// creates or reserves a phone number.
 "use strict";
 
 const fs = require("fs");
@@ -36,7 +46,13 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const VAPI_MODEL = "claude-sonnet-4-5-20250929"; // current working Anthropic model
 const SAVE_BOOKING_TOOL_NAME = "save_booking";
 
-function bookingToolDefinition(webhookUrl, webhookSecret, vercelBypassSecret) {
+// Defaults for a brand-new assistant, which has no "live" voice/transcriber
+// to preserve yet. Matches the config the original shared assistant was
+// already running (voice: Vapi's "Elliot", transcriber: Deepgram nova-3).
+const DEFAULT_VOICE = { provider: "vapi", voiceId: "Elliot" };
+const DEFAULT_TRANSCRIBER = { provider: "deepgram", model: "nova-3", language: "en" };
+
+function bookingToolDefinition(webhookUrl, webhookSecret) {
   return {
     type: "function",
     function: {
@@ -65,27 +81,18 @@ function bookingToolDefinition(webhookUrl, webhookSecret, vercelBypassSecret) {
     // Vapi's tool `server` schema has no `secret` field (it's silently
     // dropped if sent) — the x-vapi-secret header has to be set explicitly
     // via `headers`. app/api/vapi-webhook/route.js verifies it.
-    //
-    // x-vercel-protection-bypass is a SEPARATE, second gate in front of that:
-    // VAPI_WEBHOOK_URL currently points at a preview deployment
-    // (*.vercel.app), which Vercel's Deployment Protection (Vercel
-    // Authentication/SSO) blocks for any caller without a Vercel session —
-    // including Vapi. This header carries the Protection Bypass for
-    // Automation secret so Vercel lets the request through to the app at
-    // all, before x-vapi-secret is ever checked. Once VAPI_WEBHOOK_URL is
-    // switched to the production domain (vestachathost.com), which is NOT
-    // behind Deployment Protection, this header becomes unnecessary and can
-    // be dropped.
     server: {
       url: webhookUrl,
-      headers: { "x-vapi-secret": webhookSecret, "x-vercel-protection-bypass": vercelBypassSecret },
+      headers: { "x-vapi-secret": webhookSecret },
     },
   };
 }
 
 // Finds the existing save_booking tool (by function name) and updates it, or
-// creates it if this is the first sync. Returns the tool's id.
-async function ensureBookingTool(vapiHeaders, webhookUrl, webhookSecret, vercelBypassSecret) {
+// creates it if this is the first sync ever. One tool resource is shared
+// across every client's assistant (via toolIds) — only the assistants
+// themselves are per-client.
+async function ensureBookingTool(vapiHeaders, webhookUrl, webhookSecret) {
   const listResp = await fetch("https://api.vapi.ai/tool", { headers: vapiHeaders });
   if (!listResp.ok) {
     const text = await listResp.text().catch(() => "");
@@ -95,7 +102,7 @@ async function ensureBookingTool(vapiHeaders, webhookUrl, webhookSecret, vercelB
   const existing = Array.isArray(tools)
     ? tools.find((t) => t.function?.name === SAVE_BOOKING_TOOL_NAME)
     : null;
-  const definition = bookingToolDefinition(webhookUrl, webhookSecret, vercelBypassSecret);
+  const definition = bookingToolDefinition(webhookUrl, webhookSecret);
 
   if (existing) {
     const patchResp = await fetch(`https://api.vapi.ai/tool/${existing.id}`, {
@@ -132,7 +139,7 @@ async function listChatbots() {
 
   const { adminClient } = await import("../lib/supabase-admin.js");
   const db = adminClient();
-  const { data: bots, error } = await db.from("chatbots").select("client_id, config");
+  const { data: bots, error } = await db.from("chatbots").select("client_id, config, vapi_assistant_id");
 
   if (error) return `Supabase query error — ${error.message}`;
   if (!bots?.length) {
@@ -142,21 +149,42 @@ async function listChatbots() {
 
   for (const bot of bots) {
     const businessName = bot.config?.businessName || "(no businessName set)";
-    console.log(`${bot.client_id}  ${businessName}`);
+    const voiceStatus = bot.vapi_assistant_id
+      ? `vapi_assistant_id=${bot.vapi_assistant_id}`
+      : "no vapi assistant yet";
+    console.log(`${bot.client_id}  ${businessName}  [${voiceStatus}]`);
   }
   return null;
 }
 
-// TEMPORARY — read-only GET on the assistant, no PATCH. Lets you check what
-// Vapi actually has stored vs what the dashboard UI shows.
-// Run: node scripts/sync-vapi-assistant.js get
-async function getAssistant() {
+// TEMPORARY — read-only GET on a client's assistant, no PATCH. Lets you check
+// what Vapi actually has stored vs what the dashboard UI shows.
+// Run: node scripts/sync-vapi-assistant.js get <client_id>
+async function getAssistant(clientId) {
   const VAPI_PRIVATE_KEY = process.env.VAPI_PRIVATE_KEY;
-  const VAPI_ASSISTANT_ID = process.env.VAPI_ASSISTANT_ID;
   if (!VAPI_PRIVATE_KEY) return "VAPI_PRIVATE_KEY is not set (add it to .env.local)";
-  if (!VAPI_ASSISTANT_ID) return "VAPI_ASSISTANT_ID is not set (add it to .env.local)";
+  if (!clientId || !UUID_RE.test(clientId)) {
+    return "Usage: node scripts/sync-vapi-assistant.js get <client_id>";
+  }
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return "NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are not set (add them to .env.local)";
+  }
 
-  const assistantUrl = `https://api.vapi.ai/assistant/${VAPI_ASSISTANT_ID}`;
+  const { adminClient } = await import("../lib/supabase-admin.js");
+  const db = adminClient();
+  const { data: bot, error } = await db
+    .from("chatbots")
+    .select("vapi_assistant_id, config")
+    .eq("client_id", clientId)
+    .maybeSingle();
+
+  if (error) return `Supabase query error — ${error.message}`;
+  if (!bot) return `no chatbot found for client_id ${clientId}`;
+  if (!bot.vapi_assistant_id) {
+    return `client_id ${clientId} (${bot.config?.businessName ?? "?"}) has no vapi_assistant_id yet — run a sync first`;
+  }
+
+  const assistantUrl = `https://api.vapi.ai/assistant/${bot.vapi_assistant_id}`;
   let assistant;
   try {
     const getResp = await fetch(assistantUrl, {
@@ -171,9 +199,14 @@ async function getAssistant() {
     return `request to Vapi failed — ${err.message}`;
   }
 
+  console.log(`assistant id: ${bot.vapi_assistant_id}`);
+  console.log(`businessName (Supabase): ${bot.config?.businessName ?? "?"}`);
   console.log(`firstMessage: ${assistant.firstMessage ?? "?"}`);
   console.log(`model.provider: ${assistant.model?.provider ?? "?"}`);
   console.log(`model.model: ${assistant.model?.model ?? "?"}`);
+  console.log(`voice: provider=${assistant.voice?.provider ?? "?"} voiceId=${assistant.voice?.voiceId ?? "?"}`);
+  console.log(`transcriber: provider=${assistant.transcriber?.provider ?? "?"} model=${assistant.transcriber?.model ?? "?"}`);
+  console.log(`metadata.client_id: ${assistant.metadata?.client_id ?? "?"}`);
   return null;
 }
 
@@ -184,9 +217,7 @@ async function getAssistant() {
 // process.exitCode and letting main() return lets Node exit on its own.
 async function run(clientId) {
   const VAPI_PRIVATE_KEY = process.env.VAPI_PRIVATE_KEY;
-  const VAPI_ASSISTANT_ID = process.env.VAPI_ASSISTANT_ID;
   if (!VAPI_PRIVATE_KEY) return "VAPI_PRIVATE_KEY is not set (add it to .env.local)";
-  if (!VAPI_ASSISTANT_ID) return "VAPI_ASSISTANT_ID is not set (add it to .env.local)";
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return "NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are not set (add them to .env.local)";
   }
@@ -194,21 +225,18 @@ async function run(clientId) {
   const VAPI_WEBHOOK_SECRET = process.env.VAPI_WEBHOOK_SECRET;
   if (!VAPI_WEBHOOK_URL) return "VAPI_WEBHOOK_URL is not set (add it to .env.local)";
   if (!VAPI_WEBHOOK_SECRET) return "VAPI_WEBHOOK_SECRET is not set (add it to .env.local)";
-  // Only required while VAPI_WEBHOOK_URL points at a Deployment-Protection-gated
-  // preview URL — see the comment on bookingToolDefinition().
-  const VAPI_VERCEL_BYPASS = process.env.VAPI_VERCEL_BYPASS;
-  if (!VAPI_VERCEL_BYPASS) return "VAPI_VERCEL_BYPASS is not set (add it to .env.local)";
 
   // lib/ is ESM ("type": "module") so it can't be require()'d from this
   // CommonJS script — load it via dynamic import instead.
   const { adminClient } = await import("../lib/supabase-admin.js");
   const { buildVoiceSystemPrompt } = await import("../lib/voice/build-system-prompt.js");
 
-  // Same table/columns the chat widget reads for a client (app/api/chat/route.js).
+  // Same table/columns the chat widget reads for a client (app/api/chat/route.js),
+  // plus this client's own Vapi assistant id (null until the first sync).
   const db = adminClient();
   const { data: bot, error } = await db
     .from("chatbots")
-    .select("config")
+    .select("config, vapi_assistant_id")
     .eq("client_id", clientId)
     .maybeSingle();
 
@@ -218,18 +246,90 @@ async function run(clientId) {
   const config = bot.config;
   const businessName = config.businessName || "this business";
   const systemPrompt = buildVoiceSystemPrompt(config);
+  const firstMessage = `Thanks for calling ${businessName}! How can I help you today?`;
+  const metadata = { client_id: clientId };
 
   const vapiHeaders = {
     Authorization: `Bearer ${VAPI_PRIVATE_KEY}`,
     "Content-Type": "application/json",
   };
-  const assistantUrl = `https://api.vapi.ai/assistant/${VAPI_ASSISTANT_ID}`;
+
+  let bookingToolId;
+  try {
+    bookingToolId = await ensureBookingTool(vapiHeaders, VAPI_WEBHOOK_URL, VAPI_WEBHOOK_SECRET);
+  } catch (err) {
+    return `failed to configure save_booking tool — ${err.message}`;
+  }
+  console.log(`save_booking tool id: ${bookingToolId} (server.url=${VAPI_WEBHOOK_URL})`);
+
+  // ── No assistant yet for this client — create one from scratch ───────────
+  if (!bot.vapi_assistant_id) {
+    console.log(`No vapi_assistant_id on file for ${clientId} — creating a new Vapi assistant.`);
+
+    const createBody = {
+      name: `${businessName} — Voice Receptionist`,
+      model: {
+        provider: "anthropic",
+        model: VAPI_MODEL,
+        messages: [{ role: "system", content: systemPrompt }],
+        toolIds: [bookingToolId],
+      },
+      voice: DEFAULT_VOICE,
+      transcriber: DEFAULT_TRANSCRIBER,
+      firstMessage,
+      metadata,
+    };
+    console.log(`POST /assistant body: ${JSON.stringify(createBody)}`);
+
+    let createResp;
+    let createText;
+    try {
+      createResp = await fetch("https://api.vapi.ai/assistant", {
+        method: "POST",
+        headers: vapiHeaders,
+        body: JSON.stringify(createBody),
+      });
+      createText = await createResp.text().catch(() => "");
+    } catch (err) {
+      return `request to Vapi failed — ${err.message}`;
+    }
+    console.log(`POST response: ${createResp.status} ${createResp.statusText} — ${createText}`);
+    if (!createResp.ok) {
+      return `Vapi returned ${createResp.status} ${createResp.statusText} — ${createText}`;
+    }
+
+    const created = JSON.parse(createText);
+    const newAssistantId = created.id;
+    if (!newAssistantId) return "Vapi POST /assistant succeeded but returned no id";
+
+    const { error: updateError } = await db
+      .from("chatbots")
+      .update({ vapi_assistant_id: newAssistantId })
+      .eq("client_id", clientId);
+    if (updateError) {
+      return (
+        `created Vapi assistant ${newAssistantId} but failed to save it to chatbots — ${updateError.message}. ` +
+        `Save it to chatbots.vapi_assistant_id manually before syncing again, to avoid creating a duplicate.`
+      );
+    }
+
+    console.log(
+      `SUCCESS: created Vapi assistant ${newAssistantId} for "${businessName}" (client_id ${clientId}) ` +
+        `and saved it to chatbots.vapi_assistant_id`
+    );
+    return null;
+  }
+
+  // ── This client already has a dedicated assistant — patch it in place ────
+  const assistantId = bot.vapi_assistant_id;
+  const assistantUrl = `https://api.vapi.ai/assistant/${assistantId}`;
+  console.log(`Existing vapi_assistant_id on file for ${clientId}: ${assistantId} — updating it.`);
 
   // Vapi rejects a PATCH whose model object omits `provider` (it validates
   // the model as a whole, not just the fields being changed) — fetch the
   // assistant's current, live model config first and reuse it verbatim,
-  // swapping out only `messages`. Never hardcode a model id here — whatever
-  // Vapi's GET returns right now is what gets echoed back on the PATCH.
+  // swapping out only `messages`/`model`/`toolIds`. Never hardcode a model id
+  // here beyond VAPI_MODEL — voice/transcriber are left untouched entirely.
   let currentModel;
   try {
     const getResp = await fetch(assistantUrl, { headers: vapiHeaders });
@@ -256,17 +356,6 @@ async function run(clientId) {
     return `request to Vapi failed — ${err.message}`;
   }
 
-  let bookingToolId;
-  try {
-    bookingToolId = await ensureBookingTool(vapiHeaders, VAPI_WEBHOOK_URL, VAPI_WEBHOOK_SECRET, VAPI_VERCEL_BYPASS);
-  } catch (err) {
-    return `failed to configure save_booking tool — ${err.message}`;
-  }
-  console.log(`save_booking tool id: ${bookingToolId} (server.url=${VAPI_WEBHOOK_URL})`);
-
-  // Reuse the live model object for everything (provider, temperature, etc.)
-  // except `model.model` — the live value is a dead Anthropic model id that
-  // 404s, so it's pinned to VAPI_MODEL instead of being echoed back verbatim.
   const existingToolIds = Array.isArray(currentModel.toolIds) ? currentModel.toolIds : [];
   const toolIds = Array.from(new Set([...existingToolIds, bookingToolId]));
   const patchModel = {
@@ -278,18 +367,12 @@ async function run(clientId) {
   console.log(`Live model id was: ${currentModel.model ?? "?"}`);
   console.log(`PATCH will send — model: provider=${patchModel.provider ?? "?"} model=${patchModel.model}`);
   console.log(`PATCH will send — toolIds: ${JSON.stringify(toolIds)}`);
-
-  const firstMessage = `Thanks for calling ${businessName}! How can I help you today?`;
   console.log(`PATCH will send — firstMessage: ${firstMessage}`);
-
-  // metadata.client_id is how the webhook resolves which client a call
-  // belongs to (see app/api/vapi-webhook/route.js) — this assistant is
-  // shared, so this always reflects whichever client was synced last.
   console.log(`PATCH will send — metadata.client_id: ${clientId}`);
 
   // firstMessage/metadata are top-level fields on the assistant, siblings of
   // `model` — not nested inside it.
-  const patchBody = { model: patchModel, firstMessage, metadata: { client_id: clientId } };
+  const patchBody = { model: patchModel, firstMessage, metadata };
   console.log(`PATCH body: ${JSON.stringify(patchBody)}`);
 
   let response;
@@ -311,7 +394,7 @@ async function run(clientId) {
     return `Vapi returned ${response.status} ${response.statusText} — ${responseText}`;
   }
 
-  console.log(`SUCCESS: synced Vapi assistant ${VAPI_ASSISTANT_ID} for "${businessName}" (client_id ${clientId})`);
+  console.log(`SUCCESS: synced Vapi assistant ${assistantId} for "${businessName}" (client_id ${clientId})`);
   return null;
 }
 
@@ -328,7 +411,7 @@ async function main() {
   }
 
   if (arg === "get") {
-    const err = await getAssistant().catch((e) => `unexpected error — ${e.message}`);
+    const err = await getAssistant(process.argv[3]).catch((e) => `unexpected error — ${e.message}`);
     if (err) {
       console.error(`FAILED: ${err}`);
       process.exitCode = 1;
@@ -340,7 +423,7 @@ async function main() {
   if (!clientId || !UUID_RE.test(clientId)) {
     console.error("Usage: node scripts/sync-vapi-assistant.js <client_id>");
     console.error("       node scripts/sync-vapi-assistant.js list");
-    console.error("       node scripts/sync-vapi-assistant.js get");
+    console.error("       node scripts/sync-vapi-assistant.js get <client_id>");
     process.exitCode = 1;
     return;
   }
