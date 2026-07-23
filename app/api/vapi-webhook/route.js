@@ -1,7 +1,11 @@
 import { timingSafeEqual } from "crypto";
 import { NextResponse, after } from "next/server";
 import { adminClient } from "../../../lib/supabase-admin";
-import { sendNewBookingNotification } from "../../../lib/email";
+import {
+  sendNewBookingNotification,
+  sendVoiceMinutesWarningEmail,
+  sendVoiceMinutesLimitReachedEmail,
+} from "../../../lib/email";
 
 // Needs Node crypto (timingSafeEqual) and outbound fetch to api.vapi.ai — not
 // available on the Edge runtime.
@@ -72,6 +76,97 @@ async function notifyBooking(row) {
   }
 }
 
+// Vapi's end-of-call-report message has no duration field — confirmed
+// against the SDK's ServerMessageEndOfCallReport type, which carries
+// `startedAt`/`endedAt` ISO timestamps but nothing named duration*. Every
+// other Vapi cost/timing field (Call.startedAt/endedAt) follows the same
+// pattern, so this is the documented way to derive it, not a guess.
+function durationMinutesFromReport(message) {
+  const startedAt = message.startedAt ?? message.call?.startedAt;
+  const endedAt = message.endedAt ?? message.call?.endedAt;
+  if (!startedAt || !endedAt) return null;
+  const ms = new Date(endedAt).getTime() - new Date(startedAt).getTime();
+  if (!Number.isFinite(ms) || ms <= 0) return null;
+  return ms / 60000;
+}
+
+// Voice minutes reset monthly. "New month" is judged in UTC against the
+// stored voice_minutes_reset_at, matching the migration's UTC
+// date_trunc('month', now()) default rather than any per-row local timezone.
+function startOfUtcMonthIso(date) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1)).toISOString();
+}
+
+function isNewUtcMonth(resetAt, now) {
+  if (!resetAt) return true;
+  const reset = new Date(resetAt);
+  return reset.getUTCFullYear() !== now.getUTCFullYear() || reset.getUTCMonth() !== now.getUTCMonth();
+}
+
+// Tracks per-client voice usage for cost control (Vapi runs ~$0.20/min
+// all-in) and fires founder alerts at 80%/100% of the client's monthly cap —
+// alerting only, this never pauses the assistant. Never throws: errors are
+// logged and swallowed so a tracking hiccup can't affect the (already-ended)
+// call or crash the webhook.
+async function handleEndOfCallReport(message) {
+  try {
+    const assistantId = message.call?.assistantId ?? null;
+    const clientId = await resolveClientId(assistantId);
+    if (!clientId) {
+      console.error(`[vapi-webhook] end-of-call-report: could not resolve client_id for assistant ${assistantId}`);
+      return;
+    }
+
+    const durationMinutes = durationMinutesFromReport(message);
+    if (durationMinutes === null) {
+      console.error(
+        `[vapi-webhook] end-of-call-report: missing/invalid startedAt or endedAt for call ${message.call?.id ?? "?"} — skipping minute tracking`
+      );
+      return;
+    }
+
+    const db = adminClient();
+    const { data: bot, error: fetchError } = await db
+      .from("chatbots")
+      .select("config, voice_minutes_limit, voice_minutes_used, voice_minutes_reset_at")
+      .eq("client_id", clientId)
+      .maybeSingle();
+    if (fetchError || !bot) {
+      console.error(`[vapi-webhook] end-of-call-report: failed to load chatbots row for ${clientId}:`, fetchError?.message);
+      return;
+    }
+
+    const now = new Date();
+    const newMonth = isNewUtcMonth(bot.voice_minutes_reset_at, now);
+    const usedBefore = newMonth ? 0 : Number(bot.voice_minutes_used) || 0;
+    const usedAfter = usedBefore + durationMinutes;
+    const resetAt = newMonth ? startOfUtcMonthIso(now) : bot.voice_minutes_reset_at;
+
+    const { error: updateError } = await db
+      .from("chatbots")
+      .update({ voice_minutes_used: usedAfter, voice_minutes_reset_at: resetAt })
+      .eq("client_id", clientId);
+    if (updateError) {
+      console.error(`[vapi-webhook] end-of-call-report: failed to update voice_minutes_used for ${clientId}:`, updateError.message);
+      return;
+    }
+
+    const businessName = bot.config?.businessName || null;
+    const limit = bot.voice_minutes_limit;
+    if (typeof limit === "number" && limit > 0) {
+      const eightyPct = limit * 0.8;
+      if (usedBefore < eightyPct && usedAfter >= eightyPct) {
+        await sendVoiceMinutesWarningEmail({ businessName, clientId, used: usedAfter, limit });
+      }
+      if (usedBefore < limit && usedAfter >= limit) {
+        await sendVoiceMinutesLimitReachedEmail({ businessName, clientId, used: usedAfter, limit });
+      }
+    }
+  } catch (err) {
+    console.error("[vapi-webhook] end-of-call-report handling failed:", err);
+  }
+}
+
 export async function POST(request) {
   try {
     const expectedSecret = process.env.VAPI_WEBHOOK_SECRET;
@@ -89,10 +184,26 @@ export async function POST(request) {
     const body = await request.json().catch(() => null);
     const message = body?.message;
 
-    // Only tool-calls messages are relevant here (this URL is only wired to
-    // the save_booking tool's own server.url, not the assistant-level server
-    // URL) — anything else is a no-op, never an error.
-    if (!message || message.type !== "tool-calls") {
+    // This URL is wired two ways: the save_booking tool's own server.url
+    // (delivers "tool-calls") and, since step 5, the assistant's own
+    // server.url scoped via serverMessages to ONLY "end-of-call-report" (see
+    // sync-vapi-assistant.js) — deliberately not overlapping, so no tool-call
+    // is ever delivered twice. Anything else is a no-op, never an error.
+    if (!message) {
+      return NextResponse.json({ results: [] });
+    }
+
+    if (message.type === "end-of-call-report") {
+      // The call has already ended by the time this fires — no live caller
+      // is waiting on this response, so just await it inline (no need for
+      // after(), unlike the mid-call tool-calls path below). Per Vapi's own
+      // docs only assistant-request/tool-calls/transfer-destination-request
+      // expect a meaningful response body; an empty object is a valid ack.
+      await handleEndOfCallReport(message);
+      return NextResponse.json({});
+    }
+
+    if (message.type !== "tool-calls") {
       return NextResponse.json({ results: [] });
     }
 

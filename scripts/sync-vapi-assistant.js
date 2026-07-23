@@ -254,6 +254,19 @@ async function run(clientId) {
     "Content-Type": "application/json",
   };
 
+  // Wires the assistant itself (not just the save_booking tool) to our
+  // webhook, scoped to ONLY end-of-call-report via serverMessages — Vapi's
+  // default serverMessages list also includes "tool-calls", and leaving that
+  // in would mean tool-calls get delivered to us twice (once via this
+  // assistant-level server, once via the tool's own server.url below),
+  // risking a duplicate booking insert. app/api/vapi-webhook/route.js uses
+  // end-of-call-report to track voice_minutes_used for cost control.
+  const assistantServer = {
+    url: VAPI_WEBHOOK_URL,
+    headers: { "x-vapi-secret": VAPI_WEBHOOK_SECRET },
+  };
+  const assistantServerMessages = ["end-of-call-report"];
+
   let bookingToolId;
   try {
     bookingToolId = await ensureBookingTool(vapiHeaders, VAPI_WEBHOOK_URL, VAPI_WEBHOOK_SECRET);
@@ -278,6 +291,8 @@ async function run(clientId) {
       transcriber: DEFAULT_TRANSCRIBER,
       firstMessage,
       metadata,
+      server: assistantServer,
+      serverMessages: assistantServerMessages,
     };
     console.log(`POST /assistant body: ${JSON.stringify(createBody)}`);
 
@@ -369,10 +384,17 @@ async function run(clientId) {
   console.log(`PATCH will send — toolIds: ${JSON.stringify(toolIds)}`);
   console.log(`PATCH will send — firstMessage: ${firstMessage}`);
   console.log(`PATCH will send — metadata.client_id: ${clientId}`);
+  console.log(`PATCH will send — server.url: ${assistantServer.url}, serverMessages: ${JSON.stringify(assistantServerMessages)}`);
 
-  // firstMessage/metadata are top-level fields on the assistant, siblings of
-  // `model` — not nested inside it.
-  const patchBody = { model: patchModel, firstMessage, metadata };
+  // firstMessage/metadata/server/serverMessages are top-level fields on the
+  // assistant, siblings of `model` — not nested inside it.
+  const patchBody = {
+    model: patchModel,
+    firstMessage,
+    metadata,
+    server: assistantServer,
+    serverMessages: assistantServerMessages,
+  };
   console.log(`PATCH body: ${JSON.stringify(patchBody)}`);
 
   let response;

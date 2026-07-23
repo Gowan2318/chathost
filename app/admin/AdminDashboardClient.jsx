@@ -300,6 +300,7 @@ export default function AdminDashboardClient({ email, stats, fetchError }) {
                         <th className="py-2 pr-4">Plan</th>
                         <th className="py-2 pr-4">Status</th>
                         <th className="py-2 pr-4">Messages</th>
+                        <th className="py-2 pr-4">Voice Min</th>
                         <th className="py-2 pr-4">Billing Date</th>
                         <th className="py-2 pr-4">Joined</th>
                         <th className="py-2 pr-4">Actions</th>
@@ -325,6 +326,13 @@ export default function AdminDashboardClient({ email, stats, fetchError }) {
                           </td>
                           <td className="py-3 pr-4 text-[#4A5568]">
                             {c.messagesUsed.toLocaleString()} / {c.messageLimit.toLocaleString()}
+                          </td>
+                          <td className="py-3 pr-4 text-[#4A5568]">
+                            {c.hasVoice
+                              ? `${Math.round(c.voiceMinutesUsed).toLocaleString()} / ${
+                                  c.voiceMinutesLimit != null ? c.voiceMinutesLimit.toLocaleString() : "∞"
+                                }`
+                              : "—"}
                           </td>
                           <td className="py-3 pr-4 text-[#4A5568]">{formatDate(c.currentPeriodEnd)}</td>
                           <td className="py-3 pr-4 text-[#4A5568]">{formatDate(c.createdAt)}</td>
