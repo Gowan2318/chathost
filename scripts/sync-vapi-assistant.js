@@ -435,4 +435,12 @@ async function main() {
   }
 }
 
-main();
+// Exported so scripts/setup-voice.js can reuse the same create/patch-assistant
+// logic instead of duplicating it. Only auto-runs main() when this file is
+// executed directly (`node scripts/sync-vapi-assistant.js ...`), not when
+// required as a module.
+module.exports = { run };
+
+if (require.main === module) {
+  main();
+}
