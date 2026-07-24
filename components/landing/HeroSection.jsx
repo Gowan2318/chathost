@@ -26,14 +26,20 @@ export default function HeroSection() {
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row lg:justify-start">
             <Link
-              href="/builder"
+              href="/demo-request"
               className="inline-flex items-center justify-center rounded-lg bg-[#0D7377] px-8 py-4 text-base font-bold text-white shadow-md transition hover:bg-[#0A5D61]"
+            >
+              Get Your Free AI Receptionist Demo
+            </Link>
+            <Link
+              href="/builder"
+              className="inline-flex items-center justify-center rounded-lg border border-[#0D7377] bg-white px-8 py-4 text-base font-semibold text-[#0D7377] transition hover:bg-[#E8F4F4]"
             >
               Start Building Free
             </Link>
             <a
               href="#demo"
-              className="inline-flex items-center justify-center rounded-lg border border-[#0D7377] bg-white px-8 py-4 text-base font-semibold text-[#0D7377] transition hover:bg-[#E8F4F4]"
+              className="inline-flex items-center justify-center rounded-lg border border-[#E2E8F0] bg-white px-8 py-4 text-base font-semibold text-[#4A5568] transition hover:border-[#0D7377] hover:text-[#0D7377]"
             >
               Try the Live Demo
             </a>

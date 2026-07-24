@@ -44,6 +44,12 @@ export default function LandingNav() {
           <a href="#demo" className="text-sm font-medium text-[#4A5568] transition hover:text-[#0D7377]">
             Live Demo
           </a>
+          <Link
+            href="/demo-request"
+            className="rounded-lg border border-[#0D7377] px-5 py-2.5 text-sm font-bold text-[#0D7377] transition hover:bg-[#E8F4F4]"
+          >
+            Free Demo
+          </Link>
           {!loading && user ? (
             <>
               <Link
@@ -107,6 +113,13 @@ export default function LandingNav() {
                 {link.label}
               </a>
             ))}
+            <Link
+              href="/demo-request"
+              onClick={() => setOpen(false)}
+              className="rounded-lg border border-[#0D7377] py-3 text-center text-sm font-bold text-[#0D7377]"
+            >
+              Free Demo
+            </Link>
             {!loading && user ? (
               <>
                 <Link
