@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/AuthContext";
 import { INDUSTRY_LABELS } from "../../lib/industries";
 import { PLAN_PRICE } from "../../lib/admin-stats";
+import { VOICE_PLANS } from "../../lib/plans";
 import AdminSidebar, { MenuIcon } from "../../components/admin/AdminSidebar";
 import { Logo } from "../../components/dashboard/DashboardSidebar";
 
@@ -292,7 +293,7 @@ export default function AdminDashboardClient({ email, stats, fetchError }) {
                 <p className="mt-6 text-sm text-[#4A5568]">No chatbots yet.</p>
               ) : (
                 <div className="mt-4 overflow-x-auto">
-                  <table className="w-full min-w-[840px] text-left text-sm">
+                  <table className="w-full min-w-[980px] text-left text-sm">
                     <thead>
                       <tr className="border-b border-[#E2E8F0] text-xs font-semibold uppercase tracking-wide text-[#9CA3AF]">
                         <th className="py-2 pr-4">Business</th>
@@ -300,6 +301,7 @@ export default function AdminDashboardClient({ email, stats, fetchError }) {
                         <th className="py-2 pr-4">Plan</th>
                         <th className="py-2 pr-4">Status</th>
                         <th className="py-2 pr-4">Messages</th>
+                        <th className="py-2 pr-4">Voice Plan</th>
                         <th className="py-2 pr-4">Voice Min</th>
                         <th className="py-2 pr-4">Billing Date</th>
                         <th className="py-2 pr-4">Joined</th>
@@ -326,6 +328,22 @@ export default function AdminDashboardClient({ email, stats, fetchError }) {
                           </td>
                           <td className="py-3 pr-4 text-[#4A5568]">
                             {c.messagesUsed.toLocaleString()} / {c.messageLimit.toLocaleString()}
+                          </td>
+                          <td className="py-3 pr-4">
+                            {c.hasVoice ? (
+                              <span className="inline-flex items-center gap-1.5">
+                                <span className="text-[#4A5568]">
+                                  {c.voicePlan ? VOICE_PLANS[c.voicePlan]?.label ?? c.voicePlan : "No plan set"}
+                                </span>
+                                {c.voicePaused && (
+                                  <span className="inline-block rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-600">
+                                    Paused
+                                  </span>
+                                )}
+                              </span>
+                            ) : (
+                              "—"
+                            )}
                           </td>
                           <td className="py-3 pr-4 text-[#4A5568]">
                             {c.hasVoice

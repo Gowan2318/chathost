@@ -5,7 +5,9 @@ import {
   sendNewBookingNotification,
   sendVoiceMinutesWarningEmail,
   sendVoiceMinutesLimitReachedEmail,
+  sendVoiceMinutesClientLimitReachedEmail,
 } from "../../../lib/email";
+import { pauseVapiAssistant, resumeVapiAssistant } from "../../../lib/vapi-control";
 
 // Needs Node crypto (timingSafeEqual) and outbound fetch to api.vapi.ai — not
 // available on the Edge runtime.
@@ -49,6 +51,21 @@ async function resolveClientId(assistantId) {
     return data?.client_id ?? null;
   } catch (err) {
     console.error("[vapi-webhook] failed to resolve client_id from vapi_assistant_id:", err);
+    return null;
+  }
+}
+
+// Same lookup pattern as app/api/stripe-webhook/route.js — the client's real
+// account email is their Supabase auth email (resolved via chatbots.user_id),
+// not config.supportEmail, which is the customer-facing contact address shown
+// to THEIR customers and not necessarily monitored by the account owner.
+async function resolveOwnerEmail(db, userId) {
+  if (!userId) return null;
+  try {
+    const { data, error } = await db.auth.admin.getUserById(userId);
+    if (error) return null;
+    return data?.user?.email ?? null;
+  } catch {
     return null;
   }
 }
@@ -104,10 +121,13 @@ function isNewUtcMonth(resetAt, now) {
 }
 
 // Tracks per-client voice usage for cost control (Vapi runs ~$0.20/min
-// all-in) and fires founder alerts at 80%/100% of the client's monthly cap —
-// alerting only, this never pauses the assistant. Never throws: errors are
-// logged and swallowed so a tracking hiccup can't affect the (already-ended)
-// call or crash the webhook.
+// all-in), fires founder alerts at 80%/100% of the client's monthly cap, and
+// auto-pauses the assistant (voice_paused=true + detached from its phone
+// number, see lib/vapi-control.js) the moment usage crosses the cap — no
+// overage billing. On a new billing month, a previously-paused assistant is
+// automatically re-enabled and the pause flag cleared. Never throws: errors
+// are logged and swallowed so a tracking hiccup can't affect the
+// (already-ended) call or crash the webhook.
 async function handleEndOfCallReport(message) {
   try {
     const assistantId = message.call?.assistantId ?? null;
@@ -128,7 +148,9 @@ async function handleEndOfCallReport(message) {
     const db = adminClient();
     const { data: bot, error: fetchError } = await db
       .from("chatbots")
-      .select("config, voice_minutes_limit, voice_minutes_used, voice_minutes_reset_at")
+      .select(
+        "config, user_id, vapi_assistant_id, vapi_phone_number, voice_plan, voice_paused, voice_minutes_limit, voice_minutes_used, voice_minutes_reset_at"
+      )
       .eq("client_id", clientId)
       .maybeSingle();
     if (fetchError || !bot) {
@@ -141,10 +163,25 @@ async function handleEndOfCallReport(message) {
     const usedBefore = newMonth ? 0 : Number(bot.voice_minutes_used) || 0;
     const usedAfter = usedBefore + durationMinutes;
     const resetAt = newMonth ? startOfUtcMonthIso(now) : bot.voice_minutes_reset_at;
+    const limit = bot.voice_minutes_limit;
+
+    // Crossing-based gates (fire exactly once, on the call that takes usage
+    // over the line) — mirrors the pre-existing 80% warning pattern just
+    // below. A monthly reset always clears the pause; a cap-crossing always
+    // sets it. Both can't really happen on the same call in practice (a
+    // reset zeroes usedBefore first), but if they somehow did, the pause
+    // takes precedence since it reflects usedAfter, the truth as of now.
+    const shouldResume = newMonth && bot.voice_paused;
+    const shouldPause =
+      typeof limit === "number" && limit > 0 && usedBefore < limit && usedAfter >= limit;
+
+    const updatePayload = { voice_minutes_used: usedAfter, voice_minutes_reset_at: resetAt };
+    if (shouldResume) updatePayload.voice_paused = false;
+    if (shouldPause) updatePayload.voice_paused = true;
 
     const { error: updateError } = await db
       .from("chatbots")
-      .update({ voice_minutes_used: usedAfter, voice_minutes_reset_at: resetAt })
+      .update(updatePayload)
       .eq("client_id", clientId);
     if (updateError) {
       console.error(`[vapi-webhook] end-of-call-report: failed to update voice_minutes_used for ${clientId}:`, updateError.message);
@@ -152,14 +189,40 @@ async function handleEndOfCallReport(message) {
     }
 
     const businessName = bot.config?.businessName || null;
-    const limit = bot.voice_minutes_limit;
+
+    if (shouldResume) {
+      console.log(`[vapi-webhook] new billing month for ${clientId} — re-enabling previously paused voice assistant`);
+      const summary = await resumeVapiAssistant({
+        clientId,
+        assistantId: bot.vapi_assistant_id,
+        phoneNumber: bot.vapi_phone_number,
+      });
+      console.log(`[vapi-webhook] resumeVapiAssistant summary for ${clientId}:`, JSON.stringify(summary));
+    }
+
     if (typeof limit === "number" && limit > 0) {
       const eightyPct = limit * 0.8;
       if (usedBefore < eightyPct && usedAfter >= eightyPct) {
-        await sendVoiceMinutesWarningEmail({ businessName, clientId, used: usedAfter, limit });
+        after(() => sendVoiceMinutesWarningEmail({ businessName, clientId, used: usedAfter, limit }));
       }
-      if (usedBefore < limit && usedAfter >= limit) {
-        await sendVoiceMinutesLimitReachedEmail({ businessName, clientId, used: usedAfter, limit });
+      if (shouldPause) {
+        console.log(`[vapi-webhook] ${clientId} hit voice minute cap (${usedAfter}/${limit}) — pausing voice assistant`);
+        const summary = await pauseVapiAssistant({
+          clientId,
+          assistantId: bot.vapi_assistant_id,
+          phoneNumber: bot.vapi_phone_number,
+        });
+        console.log(`[vapi-webhook] pauseVapiAssistant summary for ${clientId}:`, JSON.stringify(summary));
+
+        after(() => sendVoiceMinutesLimitReachedEmail({ businessName, clientId, used: usedAfter, limit }));
+        after(async () => {
+          const ownerEmail = await resolveOwnerEmail(db, bot.user_id);
+          if (!ownerEmail) {
+            console.error(`[vapi-webhook] could not resolve owner email for ${clientId} — client-facing cap-reached email not sent`);
+            return;
+          }
+          await sendVoiceMinutesClientLimitReachedEmail({ ownerEmail, businessName, voicePlan: bot.voice_plan });
+        });
       }
     }
   } catch (err) {

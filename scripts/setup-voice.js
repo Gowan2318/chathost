@@ -1,6 +1,8 @@
 // scripts/setup-voice.js
-// Provisions a client's Vapi phone number and attaches it to their assistant.
-// Usage: node scripts/setup-voice.js --client <client_id> [--confirm]
+// Provisions a client's Vapi phone number, attaches it to their assistant,
+// and sets their voice_plan + the matching voice_minutes_limit (from
+// lib/plans.js — the single source of truth for plan limits).
+// Usage: node scripts/setup-voice.js --client <client_id> --plan <starter|growth|pro> [--confirm]
 "use strict";
 
 // Requiring sync-vapi-assistant.js also runs its env loader (loadEnv()) as a
@@ -22,27 +24,37 @@ const PHONE_NUMBER_MONTHLY_COST = "~$2/month";
 
 function parseArgs(argv) {
   let client = null;
+  let plan = null;
   let confirm = false;
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--client") {
       client = argv[i + 1] ?? null;
       i++;
+    } else if (argv[i] === "--plan") {
+      plan = argv[i + 1] ?? null;
+      i++;
     } else if (argv[i] === "--confirm") {
       confirm = true;
     }
   }
-  return { client, confirm };
+  return { client, plan, confirm };
 }
 
 // Returns null on success, or an error message string on failure — same
 // convention as sync-vapi-assistant.js's run(). Never calls process.exit()
 // itself, for the same Windows/libuv reason documented there.
-async function run(clientId, confirm) {
+async function run(clientId, plan, confirm) {
   const VAPI_PRIVATE_KEY = process.env.VAPI_PRIVATE_KEY;
   if (!VAPI_PRIVATE_KEY) return "VAPI_PRIVATE_KEY is not set (add it to .env.local)";
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return "NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are not set (add them to .env.local)";
   }
+
+  const { isValidVoicePlan, voiceMinutesLimitFor, VOICE_PLAN_IDS } = await import("../lib/plans.js");
+  if (!isValidVoicePlan(plan)) {
+    return `Invalid --plan "${plan}" — must be one of: ${VOICE_PLAN_IDS.join(", ")}`;
+  }
+  const voiceMinutesLimit = voiceMinutesLimitFor(plan);
 
   const { adminClient } = await import("../lib/supabase-admin.js");
   const db = adminClient();
@@ -86,6 +98,7 @@ async function run(clientId, confirm) {
   console.log(`\n── Phone number provisioning for ${clientId} (${businessName}) ──`);
   console.log(`Assistant to attach to: ${assistantId}`);
   console.log(`Would POST https://api.vapi.ai/phone-number with body: ${JSON.stringify(createBody)}`);
+  console.log(`Would also set chatbots.voice_plan="${plan}" and voice_minutes_limit=${voiceMinutesLimit}`);
 
   if (!confirm) {
     console.log("\nDRY RUN — no phone number was created, and no request was sent to Vapi's /phone-number endpoint.");
@@ -119,31 +132,36 @@ async function run(clientId, confirm) {
 
   const { error: updateError } = await db
     .from("chatbots")
-    .update({ vapi_phone_number: number })
+    .update({
+      vapi_phone_number: number,
+      voice_plan: plan,
+      voice_minutes_limit: voiceMinutesLimit,
+    })
     .eq("client_id", clientId);
   if (updateError) {
     return (
-      `provisioned Vapi phone number ${number} (id ${created.id}) but failed to save it to chatbots — ${updateError.message}. ` +
+      `provisioned Vapi phone number ${number} (id ${created.id}) but failed to save it (and voice_plan/voice_minutes_limit) to chatbots — ${updateError.message}. ` +
       `Save it to chatbots.vapi_phone_number manually — do NOT run this script again for this client, it would provision a duplicate number.`
     );
   }
 
   console.log(
     `SUCCESS: provisioned Vapi phone number ${number} (id ${created.id}, status ${created.status ?? "?"}) ` +
-      `for "${businessName}" (client_id ${clientId}) and saved it to chatbots.vapi_phone_number`
+      `for "${businessName}" (client_id ${clientId}), set voice_plan="${plan}" (${voiceMinutesLimit} min/mo), ` +
+      `and saved it all to chatbots`
   );
   return null;
 }
 
 async function main() {
-  const { client: clientId, confirm } = parseArgs(process.argv.slice(2));
-  if (!clientId || !UUID_RE.test(clientId)) {
-    console.error("Usage: node scripts/setup-voice.js --client <client_id> [--confirm]");
+  const { client: clientId, plan, confirm } = parseArgs(process.argv.slice(2));
+  if (!clientId || !UUID_RE.test(clientId) || !plan) {
+    console.error("Usage: node scripts/setup-voice.js --client <client_id> --plan <starter|growth|pro> [--confirm]");
     process.exitCode = 1;
     return;
   }
 
-  const err = await run(clientId, confirm).catch((e) => `unexpected error — ${e.message}`);
+  const err = await run(clientId, plan, confirm).catch((e) => `unexpected error — ${e.message}`);
   if (err) {
     console.error(`FAILED: ${err}`);
     process.exitCode = 1;
