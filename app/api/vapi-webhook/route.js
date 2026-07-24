@@ -3,6 +3,7 @@ import { NextResponse, after } from "next/server";
 import { adminClient } from "../../../lib/supabase-admin";
 import {
   sendNewBookingNotification,
+  sendClientBookingNotification,
   sendVoiceMinutesWarningEmail,
   sendVoiceMinutesLimitReachedEmail,
   sendVoiceMinutesClientLimitReachedEmail,
@@ -59,15 +60,27 @@ async function resolveClientId(assistantId) {
 // account email is their Supabase auth email (resolved via chatbots.user_id),
 // not config.supportEmail, which is the customer-facing contact address shown
 // to THEIR customers and not necessarily monitored by the account owner.
+//
+// Retries: confirmed empirically (6-call loop against this project, both
+// in-app and in a bare script) that Supabase's admin auth endpoint rejects
+// this project's service-role key with a transient "bad_jwt" on roughly 1 in
+// 6 calls — unrelated to the userId or to this code, and gone on retry every
+// time observed. Losing the client notification to that would defeat the
+// point of this function, so retry a couple of times before giving up.
 async function resolveOwnerEmail(db, userId) {
   if (!userId) return null;
-  try {
-    const { data, error } = await db.auth.admin.getUserById(userId);
-    if (error) return null;
-    return data?.user?.email ?? null;
-  } catch {
-    return null;
+  const attempts = 3;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const { data, error } = await db.auth.admin.getUserById(userId);
+      if (!error) return data?.user?.email ?? null;
+      console.error(`[vapi-webhook] resolveOwnerEmail attempt ${i + 1}/${attempts} failed:`, error.message);
+    } catch (err) {
+      console.error(`[vapi-webhook] resolveOwnerEmail attempt ${i + 1}/${attempts} threw:`, err);
+    }
+    if (i < attempts - 1) await new Promise((resolve) => setTimeout(resolve, 300 * (i + 1)));
   }
+  return null;
 }
 
 // Registered via after() at the call site, not awaited inline — runs once
@@ -76,20 +89,46 @@ async function resolveOwnerEmail(db, userId) {
 // of racing the serverless instance freezing right after the response
 // flushes, the way a bare fire-and-forget call would.
 async function notifyBooking(row) {
-  try {
-    let businessName = null;
-    if (row.client_id) {
+  let businessName = null;
+  let userId = null;
+  if (row.client_id) {
+    try {
       const db = adminClient();
       const { data } = await db
         .from("chatbots")
-        .select("config")
+        .select("config, user_id")
         .eq("client_id", row.client_id)
         .maybeSingle();
       businessName = data?.config?.businessName || null;
+      userId = data?.user_id || null;
+    } catch (err) {
+      console.error(`[vapi-webhook] booking notification: failed to load chatbots row for ${row.client_id}:`, err);
     }
+  }
+
+  // Founder copy always sends, independent of whether the client copy below
+  // succeeds — the founder notification must never be lost because of a
+  // client-email lookup problem.
+  try {
     await sendNewBookingNotification({ businessName, clientId: row.client_id, ...row });
   } catch (err) {
-    console.error("[vapi-webhook] booking notification failed:", err);
+    console.error("[vapi-webhook] founder booking notification failed:", err);
+  }
+
+  // Client's real account email is their Supabase auth email (resolved via
+  // chatbots.user_id), not config.supportEmail — see resolveOwnerEmail above.
+  try {
+    const db = adminClient();
+    const ownerEmail = await resolveOwnerEmail(db, userId);
+    if (ownerEmail) {
+      await sendClientBookingNotification({ ownerEmail, businessName, ...row });
+    } else {
+      console.error(
+        `[vapi-webhook] could not resolve client owner email for ${row.client_id} — client booking notification NOT sent (founder copy still sent)`
+      );
+    }
+  } catch (err) {
+    console.error("[vapi-webhook] client booking notification failed:", err);
   }
 }
 
