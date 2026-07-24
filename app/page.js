@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Calendar, Clock, CreditCard, Smile, Sparkles, Zap } from "lucide-react";
+import { Calendar, Clock, Mail, MessageCircle, Phone, Zap } from "lucide-react";
 import DemoChatSection from "../components/DemoChatSection";
 import ScrollRevealInit from "../components/ScrollRevealInit";
 import AboutMascotGrid from "../components/landing/AboutMascotGrid";
@@ -7,39 +7,40 @@ import ContactSection from "../components/landing/ContactSection";
 import FAQSection from "../components/landing/FAQSection";
 import HeroSection from "../components/landing/HeroSection";
 import LandingNav from "../components/landing/LandingNav";
+import { VOICE_PLANS } from "../lib/plans";
 
 const FEATURES = [
   {
-    title: "AI Powered",
+    title: "Answers Every Call",
     description:
-      "Trained on your business info, so answers sound like you — not a script read off a card.",
-    icon: Sparkles,
+      "Your AI receptionist picks up when you can't — after hours, mid-appointment, or three calls deep — and sounds like a real person, not a phone tree.",
+    icon: Phone,
     hero: true,
   },
   {
-    title: "Easy Setup",
-    description: "Answer a few questions and preview your bot — most owners finish in 15 minutes.",
-    icon: Zap,
-  },
-  {
-    title: "24/7 Available",
-    description: "It answers \"are you open?\" at 11pm so you don't have to.",
+    title: "24/7 Availability",
+    description: "\"Are you open?\" gets answered at 11pm, on a holiday, or during your lunch break.",
     icon: Clock,
   },
   {
-    title: "Custom Mascots",
-    description: "A friendly character with your business's name, not a generic robot avatar.",
-    icon: Smile,
-  },
-  {
     title: "Appointment Booking",
-    description: "Collects a name, date, and phone number, then books the slot before they change their mind.",
+    description: "Books the slot right there on the call, then confirms the details before hanging up.",
     icon: Calendar,
   },
   {
-    title: "Payment Guidance",
-    description: "Answers pricing questions and hands them a Pay Now button instead of \"call for a quote.\"",
-    icon: CreditCard,
+    title: "Every Lead Delivered",
+    description: "Get an email the moment a call comes in — who called, what they needed, and what happened.",
+    icon: Mail,
+  },
+  {
+    title: "Chat Widget Included",
+    description: "A branded chatbot for your website comes free with every plan — no extra charge.",
+    icon: MessageCircle,
+  },
+  {
+    title: "White-Glove Setup",
+    description: "We configure call forwarding and your AI's script for you. You don't touch a line of code.",
+    icon: Zap,
   },
 ];
 
@@ -69,57 +70,61 @@ function FeatureCard({ feature, delay = 0, className = "" }) {
   );
 }
 
-const PLANS = [
-  {
-    id: "basic",
-    name: "Basic Plan",
-    price: 40,
-    discountedPrice: 32,
-    description: "Everything you need to answer customers around the clock.",
-    features: [
-      "500 customer messages/month",
-      "AI chatbot on your website",
-      "Answers customer questions 24/7",
-      "Re-engages visitors who go quiet",
-      "8 quick reply buttons",
-      "Support contact fallback",
-      "Email support",
-    ],
+function chatMessagesLabel(plan) {
+  return plan.unlimitedChat ? "Unlimited chat messages" : `${plan.chatMessages.toLocaleString()} chat messages/month`;
+}
+
+const PLAN_COPY = {
+  starter: {
+    description: "Never miss a call — the essentials for a solo operation or small shop.",
+    extraFeatures: [],
   },
-  {
-    id: "pro",
-    name: "Pro Plan",
-    price: 60,
-    discountedPrice: 48,
+  growth: {
+    description: "More coverage for busier lines and higher call volume.",
     popular: true,
-    description: "Full customization, booking, and payments — built for growth.",
-    features: [
-      "Everything in Basic",
-      "1,500 customer messages/month",
-      "Appointment booking flow",
-      "Payment guidance with a Pay Now button",
-      "Custom mascot with your business's name",
-      "Custom brand color & theme",
-      "Priority support",
-    ],
+    extraFeatures: ["Everything in Starter"],
   },
-];
+  pro: {
+    description: "Highest call volume, unlimited chat — built for multi-line businesses.",
+    extraFeatures: ["Everything in Growth"],
+  },
+};
+
+const PLANS = Object.entries(VOICE_PLANS).map(([id, plan]) => {
+  const copy = PLAN_COPY[id];
+  return {
+    id,
+    name: `${plan.label} Plan`,
+    price: plan.price,
+    popular: Boolean(copy.popular),
+    description: copy.description,
+    features: [
+      ...copy.extraFeatures,
+      `${plan.voiceMinutes} voice minutes/month`,
+      chatMessagesLabel(plan),
+      "AI phone receptionist, answers 24/7",
+      "Chat widget for your website, included",
+      "Bookings dashboard",
+      "Email notification on every lead",
+    ],
+  };
+});
 
 const STEPS = [
   {
     step: "1",
-    title: "Build your bot",
-    body: "Answer a few questions about your business, brand, and mascot in our guided builder.",
+    title: "Request your free demo",
+    body: "Tell us about your business — services, hours, and the phone number customers call.",
   },
   {
     step: "2",
-    title: "Embed on your site",
-    body: "Drop one line of code on your website. Your AI assistant goes live in minutes.",
+    title: "We set it up for you",
+    body: "We build your AI receptionist and walk you through forwarding your business line — no code, nothing to install.",
   },
   {
     step: "3",
-    title: "Delight customers 24/7",
-    body: "Book appointments, answer FAQs, and route urgent requests — even after hours.",
+    title: "Never miss a call again",
+    body: "Your AI answers, books appointments, and emails you every lead — even after hours.",
   },
 ];
 
@@ -139,8 +144,8 @@ export default function HomePage() {
               Everything local businesses need
             </h2>
             <p className="mt-4 text-[#4A5568]">
-              No call center, no agency contract — just a chatbot that sounds like you and works
-              while you&apos;re busy with customers.
+              No call center, no answering service contract — just an AI receptionist that sounds
+              like you and picks up every call you&apos;d otherwise miss.
             </p>
           </div>
           <div className="grid grid-cols-3 gap-4">
@@ -166,11 +171,18 @@ export default function HomePage() {
         <div className="mx-auto max-w-6xl">
           <div className="reveal mb-12 text-center">
             <p className="text-sm font-semibold uppercase tracking-widest text-[#0D7377]">Live Demo</p>
-            <h2 className="mt-3 text-3xl font-bold text-[#1A1A2E] sm:text-4xl">See it in action</h2>
+            <h2 className="mt-3 text-3xl font-bold text-[#1A1A2E] sm:text-4xl">
+              Try the included chat widget
+            </h2>
             <p className="mx-auto mt-4 max-w-2xl text-[#4A5568]">
-              Chat with our sample bot for{" "}
-              <strong className="text-[#0D7377]">GreenLeaf Lawn Care</strong>. Try booking an
-              appointment, asking about prices, or clicking a quick reply.
+              Every plan includes this chat widget on your website, free. Chat with our sample bot
+              for <strong className="text-[#0D7377]">GreenLeaf Lawn Care</strong> — try booking an
+              appointment, asking about prices, or clicking a quick reply. Want to hear the AI
+              receptionist instead?{" "}
+              <Link href="/demo-request" className="font-semibold text-[#0D7377] underline hover:text-[#0A5D61]">
+                Request a free demo
+              </Link>
+              .
             </p>
           </div>
           <DemoChatSection />
@@ -182,8 +194,8 @@ export default function HomePage() {
         <div className="mx-auto max-w-6xl">
           <div className="reveal mb-14 max-w-xl">
             <p className="text-sm font-semibold uppercase tracking-widest text-[#14A3A8]">How It Works</p>
-            <h2 className="mt-3 text-3xl font-bold text-white sm:text-4xl">Launch in three steps</h2>
-            <p className="mt-4 text-white/60">From signup to live chatbot — faster than hiring staff.</p>
+            <h2 className="mt-3 text-3xl font-bold text-white sm:text-4xl">Live in three steps</h2>
+            <p className="mt-4 text-white/60">From demo request to answered calls — no hardware, no hires.</p>
           </div>
           <div className="grid gap-8 md:grid-cols-3">
             {STEPS.map((item, i) => (
@@ -221,9 +233,9 @@ export default function HomePage() {
                 Fortune 500 budget.
               </p>
               <p>
-                We build white-label AI chatbots that feel personal, not robotic. With custom mascots,
-                appointment booking, and payment guidance baked in, you compete on service — not just
-                price.
+                We build white-label AI receptionists that answer your phone, feel personal instead
+                of robotic, and never put a customer on hold. A branded chat widget for your website
+                is included free — appointment booking and lead delivery are baked into both.
               </p>
               <p>
                 We&apos;re brand new, and that&apos;s the point: you&apos;d be one of our first 100
@@ -257,8 +269,8 @@ export default function HomePage() {
         <div className="mx-auto max-w-6xl">
           <div className="mb-10 rounded-xl bg-[#E8F4F4] border border-[#0D7377]/20 px-6 py-4 text-center">
             <p className="text-sm font-bold text-[#0D7377] sm:text-base">
-              🎉 Founding Member Offer — First 100 spots get 20% off forever! Discount automatically
-              applied at checkout.
+              🎉 Founding Member Offer — join as one of our first 100 businesses and your price is
+              locked in forever.
             </p>
           </div>
           <div className="mb-14 text-center">
@@ -266,9 +278,12 @@ export default function HomePage() {
             <h2 className="mt-3 text-3xl font-bold text-[#1A1A2E] sm:text-4xl">
               Less than the cost of one missed customer
             </h2>
-            <p className="mt-4 text-[#4A5568]">One flat monthly price. No hidden fees. Cancel anytime.</p>
+            <p className="mt-4 text-[#4A5568]">
+              Every plan includes the AI phone receptionist, the chat widget, a bookings dashboard,
+              and an email the moment a lead comes in. Cancel anytime.
+            </p>
           </div>
-          <div className="mx-auto grid max-w-4xl gap-8 lg:grid-cols-2">
+          <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-3">
             {PLANS.map((plan, i) => (
               <div
                 key={plan.name}
@@ -291,17 +306,9 @@ export default function HomePage() {
                   {plan.description}
                 </p>
                 <div className="mt-8">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={`text-lg line-through ${plan.popular ? "text-white/40" : "text-[#9CA3AF]"}`}>
-                      ${plan.price}/mo
-                    </span>
-                    <span className="rounded-full bg-[#0D7377] px-2.5 py-0.5 text-xs font-bold text-white">
-                      20% OFF
-                    </span>
-                  </div>
-                  <p className="mt-2">
+                  <p>
                     <span className={`text-5xl font-bold ${plan.popular ? "text-white" : "text-[#0D7377]"}`}>
-                      ${plan.discountedPrice}
+                      ${plan.price}
                     </span>
                     <span className={plan.popular ? "text-white/60" : "text-[#4A5568]"}>/mo</span>
                   </p>
@@ -317,20 +324,37 @@ export default function HomePage() {
                   ))}
                 </ul>
                 <Link
-                  href={`/builder?plan=${plan.id}`}
+                  href="/demo-request"
                   className={`mt-10 block rounded-xl py-3.5 text-center text-sm font-bold transition ${
                     plan.popular
                       ? "bg-white text-[#1A1A2E] hover:bg-white/90"
                       : "bg-[#0D7377] text-white hover:bg-[#0A5D61]"
                   }`}
                 >
-                  Get Started
+                  Get Your Free Demo
                 </Link>
                 <p className={`mt-3 text-center text-xs ${plan.popular ? "text-white/50" : "text-[#9CA3AF]"}`}>
-                  No setup fee · Cancel anytime
+                  No setup fee · Cancel anytime · White-glove onboarding
                 </p>
               </div>
             ))}
+          </div>
+          <div className="mx-auto mt-12 max-w-3xl rounded-xl border border-[#E2E8F0] bg-[#F8F9FA] p-6 text-sm leading-relaxed text-[#4A5568]">
+            <p className="font-semibold text-[#1A1A2E]">What&apos;s a voice minute?</p>
+            <p className="mt-2">
+              A voice minute is one minute of your AI receptionist talking with a caller — from
+              pickup to hangup. Unused minutes don&apos;t roll over to the next month. If you run
+              out before your plan resets, calls fall through to normal voicemail until you upgrade
+              or the next billing cycle starts. We&apos;ll always tell you upfront how close you are
+              to your limit.
+            </p>
+            <p className="mt-3">
+              Only want the chat widget?{" "}
+              <Link href="/builder" className="font-semibold text-[#0D7377] underline hover:text-[#0A5D61]">
+                Build a chat-only bot
+              </Link>{" "}
+              instead.
+            </p>
           </div>
         </div>
       </section>
@@ -349,8 +373,8 @@ export default function HomePage() {
                 <span className="text-lg font-bold text-white">VestaChatHost</span>
               </Link>
               <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/50">
-                White-label AI chatbots for local businesses. Compete with the big brands — on your
-                terms.
+                White-label AI phone receptionist and chat widget for local businesses. Compete
+                with the big brands — on your terms.
               </p>
             </div>
             <div>

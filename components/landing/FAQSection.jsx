@@ -4,12 +4,28 @@ import { useState } from "react";
 
 const FAQS = [
   {
-    q: "How long does it take to set up my chatbot?",
-    a: "Most businesses launch in under 15 minutes using our guided builder. Enter your business details, pick your mascot, preview your bot, and embed one line of code on your site.",
+    q: "What is a voice minute?",
+    a: "A voice minute is one minute of your AI receptionist actively talking with a caller, from pickup to hangup. Your plan includes a set number of minutes each month, and unused minutes don't roll over.",
+  },
+  {
+    q: "How does it connect to my phone?",
+    a: "You forward your existing business number to your AI receptionist — the same way you'd forward calls to voicemail or a call center. Your number doesn't change, and we walk you through the forwarding steps during setup.",
+  },
+  {
+    q: "What happens when I run out of minutes?",
+    a: "Once you hit your plan's monthly limit, new calls fall through to normal voicemail instead of the AI — until you upgrade your plan or the next billing cycle starts and your minutes reset. We'll let you know as you get close so it's never a surprise.",
+  },
+  {
+    q: "Do I need to install anything?",
+    a: "No. There's no hardware, no app, and no software to install. Setup is white-glove — request a demo and we configure the AI receptionist and call forwarding for you.",
+  },
+  {
+    q: "What if I don't have a website?",
+    a: "That's fine — the AI phone receptionist works over your business phone line and doesn't require a website. The chat widget (included free) is optional and only goes live if you build and embed it.",
   },
   {
     q: "Do I need technical skills?",
-    a: "No coding required. VestaChatHost handles AI conversations, appointment booking flows, and payment guidance out of the box. We provide copy-and-paste embed instructions.",
+    a: "No coding required. We handle the AI receptionist setup, appointment booking, and lead delivery. If you also build the included chat widget, our guided builder walks you through it with copy-and-paste embed instructions.",
   },
   {
     q: "Can I customize the chatbot to match my brand?",
@@ -17,7 +33,7 @@ const FAQS = [
   },
   {
     q: "What happens when the AI doesn't know an answer?",
-    a: "Your chatbot automatically shares your support phone and email so customers always reach a real person. You stay in control of escalations.",
+    a: "Your AI receptionist and chat widget both automatically share your support phone and email so customers always reach a real person. You stay in control of escalations.",
   },
   {
     q: "Is there a contract or long-term commitment?",

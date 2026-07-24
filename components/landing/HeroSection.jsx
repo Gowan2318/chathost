@@ -14,15 +14,16 @@ export default function HeroSection() {
         <div className="text-center lg:text-left">
           <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#0D7377]/30 bg-[#E8F4F4] px-4 py-1.5 text-sm font-medium text-[#0D7377]">
             <span className="h-2 w-2 rounded-full bg-[#0D7377]" />
-            White-label AI for local businesses
+            AI voice receptionist for local businesses
           </p>
           <h1 className="text-4xl font-bold leading-tight tracking-tight text-[#1A1A2E] sm:text-5xl lg:text-6xl">
-            Give Your Business a{" "}
-            <span className="text-[#0D7377]">24/7 AI Assistant</span>
+            Never miss another{" "}
+            <span className="text-[#0D7377]">call</span>
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[#4A5568] lg:mx-0">
-            Never miss another lead. Salons, dentists, gyms, and local shops use VestaChatHost to
-            answer questions and book appointments — day or night, in your own voice.
+            Your AI receptionist answers 24/7, books appointments, and sends you every lead the
+            moment it comes in. A branded chat widget for your website is included free with every
+            plan.
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row lg:justify-start">
             <Link
@@ -35,7 +36,7 @@ export default function HeroSection() {
               href="/builder"
               className="inline-flex items-center justify-center rounded-lg border border-[#0D7377] bg-white px-8 py-4 text-base font-semibold text-[#0D7377] transition hover:bg-[#E8F4F4]"
             >
-              Start Building Free
+              Just Want the Chat Widget?
             </Link>
             <a
               href="#demo"
@@ -45,13 +46,13 @@ export default function HeroSection() {
             </a>
           </div>
           <p className="mt-4 text-sm text-[#4A5568]">
-            Free to build and preview — pay only when you publish.
+            No account or payment to request a demo — we build it and send it to you.
           </p>
           <div className="mt-12 flex flex-wrap items-center justify-center gap-8 lg:justify-start">
             {[
-              { value: "24/7", label: "Always on" },
-              { value: "15 min", label: "Setup time" },
-              { value: "8+", label: "Industries" },
+              { value: "24/7", label: "Always answering" },
+              { value: "Every call", label: "Booked or logged as a lead" },
+              { value: "White-glove", label: "We set it up for you" },
             ].map((stat) => (
               <div key={stat.label} className="text-center lg:text-left">
                 <p className="text-2xl font-bold text-[#0D7377]">{stat.value}</p>
