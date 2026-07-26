@@ -203,8 +203,11 @@ export default function EditBotPage() {
           return;
         }
         setClientId(data[0].client_id);
-        const resolvedPlan = data[0].plan || data[0].config?.plan || "pro";
-        setChatbotPlan(resolvedPlan === "basic" ? "basic" : "pro");
+        // This is the builder's config-complexity toggle (which fields/steps
+        // were shown), read from config.plan only — chatbots.plan is now the
+        // Stripe billing plan (starter/growth/pro), a different axis that
+        // happens to share the string "pro" and is not relevant here.
+        setChatbotPlan(data[0].config?.plan === "basic" ? "basic" : "pro");
         setForm(configToForm(data[0].config));
         setFetchLoading(false);
       });

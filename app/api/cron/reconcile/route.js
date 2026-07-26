@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { adminClient } from "../../../../lib/supabase-admin";
+import { voicePlanFromAmount } from "../../../../lib/plans";
 
 // Must run on Node.js runtime — Edge runtime doesn't support the Stripe SDK.
 export const runtime = "nodejs";
@@ -10,9 +11,12 @@ export const runtime = "nodejs";
 // `Authorization: Bearer <CRON_SECRET>` — verified below.
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+// Matched against lib/plans.js VOICE_PLANS (single source of truth for plan
+// pricing) rather than a hardcoded amount threshold — returns null for an
+// unrecognized amount, which the caller treats as "no update, don't guess."
 function planFromSubscription(subscription) {
   const priceAmount = subscription?.items?.data?.[0]?.price?.unit_amount ?? null;
-  return priceAmount === null ? null : priceAmount < 4500 ? "basic" : "pro";
+  return voicePlanFromAmount(priceAmount);
 }
 
 // Finds the current Stripe subscription for a chatbot row. Prefers the
@@ -47,7 +51,7 @@ export async function GET(request) {
   const db = adminClient();
   const { data: chatbots, error: fetchError } = await db
     .from("chatbots")
-    .select("client_id, stripe_customer_id, stripe_subscription_id, subscription_status, plan, config")
+    .select("client_id, stripe_customer_id, stripe_subscription_id, subscription_status, plan")
     .not("stripe_customer_id", "is", null);
 
   if (fetchError) {
@@ -79,8 +83,11 @@ export async function GET(request) {
           updateFields.current_period_end = new Date(subscription.current_period_end * 1000).toISOString();
         }
 
+        // Compared against bot.plan only — not bot.config?.plan, which is the
+        // builder's "basic"/"pro" config-complexity toggle, a different axis
+        // that happens to share the string "pro" with a real billing plan.
         const plan = planFromSubscription(subscription);
-        if (plan && plan !== (bot.plan ?? bot.config?.plan)) {
+        if (plan && plan !== bot.plan) {
           updateFields.plan = plan;
         }
 

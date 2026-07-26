@@ -207,8 +207,6 @@ ${demoLink}
 
 Click the chat bubble and ask it anything — it's a real working demo for a ${industryNoun}. If you like what you see, we'll build one specifically for ${business} so you can test it yourself. No payment and no commitment unless you're happy with it.
 
-We're also running a founding member discount right now — 20% off for life, but only for our first 100 customers.
-
 Would love to hear what you think.
 
 Best,

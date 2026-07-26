@@ -4,12 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/AuthContext";
 import { INDUSTRY_LABELS } from "../../lib/industries";
-import { PLAN_PRICE } from "../../lib/admin-stats";
-import { VOICE_PLANS } from "../../lib/plans";
+import { VOICE_PLANS, VOICE_PLAN_IDS } from "../../lib/plans";
 import AdminSidebar, { MenuIcon } from "../../components/admin/AdminSidebar";
 import { Logo } from "../../components/dashboard/DashboardSidebar";
-
-const PLAN_LABELS = { basic: "Basic", pro: "Pro" };
 
 const STATUS_LABELS = {
   active: "Active",
@@ -181,8 +178,7 @@ export default function AdminDashboardClient({ email, stats, fetchError }) {
     monthlyRevenue,
     totalMessages,
     avgMessages,
-    basicActive,
-    proActive,
+    planCounts,
     alerts,
   } = stats;
 
@@ -315,7 +311,7 @@ export default function AdminDashboardClient({ email, stats, fetchError }) {
                           <td className="py-3 pr-4 text-[#4A5568]">{INDUSTRY_LABELS[c.industry] || "Other"}</td>
                           <td className="py-3 pr-4">
                             <span className="inline-block rounded-full bg-[#0D7377]/10 px-2.5 py-0.5 text-xs font-bold text-[#0D7377]">
-                              {PLAN_LABELS[c.plan]}
+                              {c.plan ? VOICE_PLANS[c.plan]?.label ?? c.plan : "No plan set"}
                             </span>
                           </td>
                           <td className="py-3 pr-4">
@@ -327,7 +323,7 @@ export default function AdminDashboardClient({ email, stats, fetchError }) {
                             </span>
                           </td>
                           <td className="py-3 pr-4 text-[#4A5568]">
-                            {c.messagesUsed.toLocaleString()} / {c.messageLimit.toLocaleString()}
+                            {c.messagesUsed.toLocaleString()} / {c.messageLimit != null ? c.messageLimit.toLocaleString() : "—"}
                           </td>
                           <td className="py-3 pr-4">
                             {c.hasVoice ? (
@@ -370,20 +366,15 @@ export default function AdminDashboardClient({ email, stats, fetchError }) {
               <p className="text-sm font-semibold uppercase tracking-widest text-[#0D7377]">Revenue Breakdown</p>
 
               <div className="mt-4 space-y-3">
-                <div className="flex items-center justify-between rounded-xl bg-[#F8F9FA] px-4 py-3">
-                  <p className="text-sm text-[#4A5568]">
-                    Basic plan: <span className="font-semibold text-[#1A1A2E]">{basicActive}</span> clients ×{" "}
-                    <span className="font-semibold text-[#1A1A2E]">${PLAN_PRICE.basic}</span>
-                  </p>
-                  <p className="font-bold text-[#1A1A2E]">${(basicActive * PLAN_PRICE.basic).toLocaleString()}/mo</p>
-                </div>
-                <div className="flex items-center justify-between rounded-xl bg-[#F8F9FA] px-4 py-3">
-                  <p className="text-sm text-[#4A5568]">
-                    Pro plan: <span className="font-semibold text-[#1A1A2E]">{proActive}</span> clients ×{" "}
-                    <span className="font-semibold text-[#1A1A2E]">${PLAN_PRICE.pro}</span>
-                  </p>
-                  <p className="font-bold text-[#1A1A2E]">${(proActive * PLAN_PRICE.pro).toLocaleString()}/mo</p>
-                </div>
+                {VOICE_PLAN_IDS.map((id) => (
+                  <div key={id} className="flex items-center justify-between rounded-xl bg-[#F8F9FA] px-4 py-3">
+                    <p className="text-sm text-[#4A5568]">
+                      {VOICE_PLANS[id].label} plan: <span className="font-semibold text-[#1A1A2E]">{planCounts[id]}</span> clients ×{" "}
+                      <span className="font-semibold text-[#1A1A2E]">${VOICE_PLANS[id].price}</span>
+                    </p>
+                    <p className="font-bold text-[#1A1A2E]">${(planCounts[id] * VOICE_PLANS[id].price).toLocaleString()}/mo</p>
+                  </div>
+                ))}
                 <div className="flex items-center justify-between rounded-xl bg-[#0D7377]/10 px-4 py-3">
                   <p className="text-sm font-semibold text-[#0D7377]">Total MRR</p>
                   <p className="text-lg font-bold text-[#0D7377]">${monthlyRevenue.toLocaleString()}/mo</p>
@@ -391,8 +382,8 @@ export default function AdminDashboardClient({ email, stats, fetchError }) {
               </div>
 
               <p className="mt-3 text-xs text-[#9CA3AF]">
-                Note: figures above use list price — some clients may be on a FOUNDING20 20% discount, so actual
-                billed revenue may be lower.
+                Note: figures above use list price — actual billed revenue may differ for any client on a
+                manually-negotiated rate.
               </p>
             </div>
 
@@ -415,7 +406,7 @@ export default function AdminDashboardClient({ email, stats, fetchError }) {
                       >
                         <p className="text-sm font-semibold text-[#1A1A2E]">{c.businessName}</p>
                         <p className={`text-sm font-bold ${atLimit ? "text-red-600" : "text-amber-600"}`}>
-                          {c.messagesUsed.toLocaleString()} / {c.messageLimit.toLocaleString()}
+                          {c.messagesUsed.toLocaleString()} / {c.messageLimit != null ? c.messageLimit.toLocaleString() : "—"}
                         </p>
                       </div>
                     );

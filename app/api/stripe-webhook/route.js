@@ -1,7 +1,15 @@
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { adminClient } from "../../../lib/supabase-admin";
-import { sendOnboardingEmail, sendNewSignupNotification, sendPaymentFailedNotification } from "../../../lib/email";
+import {
+  sendOnboardingEmail,
+  sendNewSignupNotification,
+  sendPaymentFailedNotification,
+  sendVoicePausedForBillingEmail,
+  sendVoicePausedFounderAlert,
+} from "../../../lib/email";
+import { voicePlanFromAmount } from "../../../lib/plans";
+import { pauseVapiAssistant, resumeVapiAssistant } from "../../../lib/vapi-control";
 
 // Must run on Node.js runtime — Edge runtime doesn't support the Stripe SDK's
 // crypto primitives needed for webhook signature verification.
@@ -27,17 +35,81 @@ async function sendOnboardingNotification(db, userId, businessName, plan, client
 }
 
 // Fire-and-forget — mirrors sendOnboardingNotification but for a failed-payment alert to the founder.
-async function sendPaymentFailedNotificationTask(db, userId, businessName, plan, clientId, failureReason) {
+async function sendPaymentFailedNotificationTask(db, userId, businessName, plan, clientId, failureReason, voicePaused) {
   if (!userId) return;
   try {
     const { data, error } = await db.auth.admin.getUserById(userId);
     const ownerEmail = data?.user?.email;
     if (error || !ownerEmail) return;
 
-    await sendPaymentFailedNotification({ ownerEmail, businessName, plan, clientId, failureReason });
+    await sendPaymentFailedNotification({ ownerEmail, businessName, plan, clientId, failureReason, voicePaused });
   } catch (err) {
     console.error("[stripe-webhook] payment failed notification error:", err);
   }
+}
+
+// Fire-and-forget — resolves the owner's email and sends the client-facing
+// "your voice assistant was paused" notice. Used for both subscription
+// cancellation and (alongside the founder-facing payment-failed email) a
+// failed invoice payment.
+async function sendVoicePausedClientNotificationTask(db, userId, businessName, reason) {
+  if (!userId) return;
+  try {
+    const { data, error } = await db.auth.admin.getUserById(userId);
+    const ownerEmail = data?.user?.email;
+    if (error || !ownerEmail) return;
+
+    await sendVoicePausedForBillingEmail({ ownerEmail, businessName, reason });
+  } catch (err) {
+    console.error("[stripe-webhook] voice-paused client notification error:", err);
+  }
+}
+
+// Pauses a client's Vapi voice assistant (detaches phone number) and marks
+// chatbots.voice_paused=true, but only if it isn't already paused — Stripe
+// can redeliver/retry these events, and repeated identical Vapi PATCH calls
+// and duplicate emails should be avoided. Returns true if this call actually
+// performed the pause (so the caller knows whether to notify).
+async function pauseVoiceForBilling(db, bot) {
+  if (!bot || bot.voice_paused || !bot.vapi_assistant_id) return false;
+
+  const { error: dbError } = await db
+    .from("chatbots")
+    .update({ voice_paused: true })
+    .eq("client_id", bot.client_id);
+  if (dbError) {
+    console.error(`[stripe-webhook] failed to set voice_paused=true for ${bot.client_id}:`, dbError.message);
+  }
+
+  const summary = await pauseVapiAssistant({
+    clientId: bot.client_id,
+    assistantId: bot.vapi_assistant_id,
+    phoneNumber: bot.vapi_phone_number,
+  });
+  console.log(`[stripe-webhook] pauseVapiAssistant summary for ${bot.client_id}:`, JSON.stringify(summary));
+  return true;
+}
+
+// Mirrors pauseVoiceForBilling — resumes only if currently paused and an
+// assistant is on file.
+async function resumeVoiceForBilling(db, bot) {
+  if (!bot || !bot.voice_paused || !bot.vapi_assistant_id) return false;
+
+  const { error: dbError } = await db
+    .from("chatbots")
+    .update({ voice_paused: false })
+    .eq("client_id", bot.client_id);
+  if (dbError) {
+    console.error(`[stripe-webhook] failed to set voice_paused=false for ${bot.client_id}:`, dbError.message);
+  }
+
+  const summary = await resumeVapiAssistant({
+    clientId: bot.client_id,
+    assistantId: bot.vapi_assistant_id,
+    phoneNumber: bot.vapi_phone_number,
+  });
+  console.log(`[stripe-webhook] resumeVapiAssistant summary for ${bot.client_id}:`, JSON.stringify(summary));
+  return true;
 }
 
 export async function POST(req) {
@@ -98,9 +170,16 @@ export async function POST(req) {
           );
         }
 
-        // Determine plan from amount_total: Basic ~$32-$40 (<4500 cents), Pro ~$48-$60 (>=4500 cents)
+        // Determine plan from amount_total, matched against lib/plans.js VOICE_PLANS
+        // (the single source of truth for plan pricing: $100 starter / $200 growth / $300 pro).
         const amountTotal = session.amount_total ?? null;
-        const plan = amountTotal === null ? null : amountTotal < 4500 ? "basic" : "pro";
+        const plan = voicePlanFromAmount(amountTotal);
+        if (amountTotal !== null && plan === null) {
+          console.warn(
+            `[stripe-webhook] checkout.session.completed — amount_total ${amountTotal} cents did not match any known plan price; leaving plan unset. Session ID:`,
+            session.id
+          );
+        }
 
         const subscriptionId = session.subscription;
         let periodStart = null;
@@ -116,7 +195,9 @@ export async function POST(req) {
           }
         }
 
-        updateFields.plan = plan;
+        // Only overwrite plan when it resolved — an unknown amount shouldn't
+        // clobber a previously-known plan value with null.
+        if (plan !== null) updateFields.plan = plan;
         updateFields.stripe_subscription_id = subscriptionId ?? null;
         updateFields.current_period_start = periodStart;
         updateFields.current_period_end = periodEnd;
@@ -233,8 +314,15 @@ export async function POST(req) {
 
         // Plan may have changed (upgrade/downgrade) — re-derive it from the current price.
         const priceAmount = sub.items?.data?.[0]?.price?.unit_amount ?? null;
-        if (priceAmount !== null) {
-          subUpdateFields.plan = priceAmount < 4500 ? "basic" : "pro";
+        const updatedPlan = voicePlanFromAmount(priceAmount);
+        if (priceAmount !== null && updatedPlan === null) {
+          console.warn(
+            `[stripe-webhook] customer.subscription.updated — price ${priceAmount} cents did not match any known plan price; leaving plan unset. Subscription ID:`,
+            sub.id
+          );
+        }
+        if (updatedPlan !== null) {
+          subUpdateFields.plan = updatedPlan;
         }
 
         const { error } = await db
@@ -259,7 +347,7 @@ export async function POST(req) {
 
         const { data: bot } = await db
           .from("chatbots")
-          .select("client_id")
+          .select("client_id, user_id, config, vapi_assistant_id, vapi_phone_number, voice_paused")
           .eq("stripe_customer_id", sub.customer)
           .maybeSingle();
         resolvedClientId = bot?.client_id ?? null;
@@ -271,6 +359,16 @@ export async function POST(req) {
 
         if (error) {
           console.error("[stripe-webhook] DB update failed (subscription.deleted):", error);
+        }
+
+        // Pause the voice assistant — subscription is gone, so it shouldn't
+        // keep answering calls. pauseVoiceForBilling no-ops (and returns
+        // false) if it's already paused or there's no assistant on file.
+        const businessName = bot?.config?.businessName ?? "your business";
+        if (await pauseVoiceForBilling(db, bot)) {
+          sendVoicePausedClientNotificationTask(db, bot.user_id, businessName, "your subscription ending");
+          sendVoicePausedFounderAlert({ businessName, clientId: bot.client_id, reason: "Subscription canceled" })
+            .catch((err) => console.error("[stripe-webhook] voice-paused founder alert failed:", err));
         }
 
         // Mark payment as refunded only when we can confirm a refund was issued.
@@ -309,7 +407,7 @@ export async function POST(req) {
 
         const { data: bot } = await db
           .from("chatbots")
-          .select("client_id, user_id, config, plan")
+          .select("client_id, user_id, config, plan, vapi_assistant_id, vapi_phone_number, voice_paused")
           .eq("stripe_customer_id", stripeCustomerId)
           .maybeSingle();
         resolvedClientId = bot?.client_id ?? null;
@@ -317,15 +415,26 @@ export async function POST(req) {
         console.log("[stripe-webhook] payment failed for customer:", stripeCustomerId);
 
         if (bot) {
+          const businessName = bot.config?.businessName ?? "your business";
+          const justPaused = await pauseVoiceForBilling(db, bot);
+
           const failureReason = invoice.last_finalization_error?.message ?? null;
+          // bot.plan only — not bot.config?.plan, which is the builder's
+          // "basic"/"pro" config-complexity toggle, a different axis that
+          // happens to share the string "pro" with a real billing plan.
           sendPaymentFailedNotificationTask(
             db,
             bot.user_id,
-            bot.config?.businessName ?? "your business",
-            bot.plan ?? bot.config?.plan ?? null,
+            businessName,
+            bot.plan ?? null,
             bot.client_id,
-            failureReason
+            failureReason,
+            justPaused
           );
+
+          if (justPaused) {
+            sendVoicePausedClientNotificationTask(db, bot.user_id, businessName, "a failed payment");
+          }
         }
         break;
       }
@@ -341,7 +450,7 @@ export async function POST(req) {
 
         const { data: bot } = await db
           .from("chatbots")
-          .select("client_id, user_id, config, plan")
+          .select("client_id, user_id, config, plan, vapi_assistant_id, vapi_phone_number, voice_paused")
           .eq("stripe_customer_id", invoice.customer)
           .maybeSingle();
 
@@ -368,6 +477,16 @@ export async function POST(req) {
         if (error) {
           console.error("[stripe-webhook] DB update failed (invoice.payment_succeeded):", error);
         }
+
+        // A successful payment means any billing-driven pause (failed
+        // payment or the subscription having lapsed) is no longer valid —
+        // resumeVoiceForBilling no-ops if it wasn't paused or has no
+        // assistant on file. Note: this doesn't distinguish "paused for
+        // billing" from "paused for hitting the voice-minutes cap" (no
+        // separate reason is tracked, matching the existing convention in
+        // app/api/vapi-webhook/route.js, which resumes on new-billing-month
+        // the same way) — a successful payment always clears the flag.
+        await resumeVoiceForBilling(db, bot);
 
         console.log("[stripe-webhook] payment succeeded for:", bot.client_id);
         break;

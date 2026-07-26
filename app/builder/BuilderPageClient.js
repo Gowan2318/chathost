@@ -34,24 +34,6 @@ import { INDUSTRY_LABELS } from "../../lib/industries";
 import { getSupabaseClient } from "../../lib/supabase";
 import { useAuth } from "../../lib/AuthContext";
 
-const STRIPE_CHECKOUT_LINKS = {
-  basic: "https://buy.stripe.com/eVq8wO5g06j56rU73BdfG00",
-  pro: "https://buy.stripe.com/00w28qcIsbDp4jMgEbdfG01",
-};
-
-const PLAN_META = {
-  basic: { label: "Basic Plan", price: "$40/mo" },
-  pro:   { label: "Pro Plan",   price: "$60/mo" },
-};
-
-function buildStripeCheckoutUrl(baseLink, clientReferenceId, email) {
-  const url = new URL(baseLink);
-  url.searchParams.set("client_reference_id", clientReferenceId);
-  url.searchParams.set("prefilled_email", email);
-  url.searchParams.set("prefilled_promo_code", "FOUNDING20");
-  return url.toString();
-}
-
 const INITIAL = {
   businessName: "",
   industry: "",
@@ -720,7 +702,11 @@ export default function BuilderPageClient() {
     // On success, onAuthStateChange in AuthContext updates `user` automatically.
   };
 
-  const handleStripeCheckout = async () => {
+  // Standalone chat isn't self-serve-sold — the builder still saves the
+  // account + config (so the client_id/row exists for the founder to send a
+  // manual Stripe Payment Link against after a demo), but ends by routing to
+  // the demo-request funnel instead of a self-serve Stripe checkout.
+  const handleFinish = async () => {
     const result = validateStep(6, form, { plan: selectedPlan });
     if (!result.valid) {
       setAttemptedStep(6);
@@ -757,12 +743,7 @@ export default function BuilderPageClient() {
         throw new Error(err.error || "Could not save your chatbot configuration.");
       }
 
-      const checkoutUrl = buildStripeCheckoutUrl(
-        STRIPE_CHECKOUT_LINKS[selectedPlan],
-        newClientId,
-        form.supportEmail
-      );
-      window.location.assign(checkoutUrl);
+      router.push("/demo-request");
     } catch (err) {
       console.error("Failed to save chatbot config:", err);
       setSaveError(
@@ -801,11 +782,11 @@ export default function BuilderPageClient() {
             {step === 3 && "Mascot & branding"}
             {step === 4 && "Quick replies"}
             {step === 5 && "Preview your chatbot"}
-            {step === 6 && "Launch your chatbot"}
+            {step === 6 && "Preview complete"}
           </h1>
           {step === 0 ? (
             <p className="mt-2 text-[#4A5568]">
-              No payment until the final step — select the right plan to get started
+              Pick a starting point — you can request a demo once you&apos;re done configuring
             </p>
           ) : (
             <p className="mt-2 text-[#4A5568]">
@@ -823,16 +804,7 @@ export default function BuilderPageClient() {
               {/* Basic */}
               <div className="flex flex-col rounded-2xl border border-[#E2E8F0] bg-white p-8 transition-all hover:border-[#0D7377] hover:-translate-y-0.5 hover:shadow-lg">
                 <h3 className="text-xl font-bold text-[#1A1A2E]">Basic Plan</h3>
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="text-sm text-[#9CA3AF] line-through">$40/mo</span>
-                  <span className="rounded-full bg-[#0D7377]/15 px-2 py-0.5 text-xs font-bold text-[#0D7377]">
-                    20% OFF
-                  </span>
-                </div>
-                <p className="mt-1 text-3xl font-bold text-[#0D7377]">
-                  $32<span className="text-base font-normal text-[#4A5568]">/mo</span>
-                </p>
-                <p className="mt-1 text-xs text-[#0D7377]">with code FOUNDING20</p>
+                <p className="mt-2 text-sm text-[#4A5568]">Fewer fields, faster setup</p>
                 <ul className="mt-6 flex-1 space-y-3 text-sm text-[#4A5568]">
                   {BASIC_FEATURES.map((f) => (
                     <li key={f} className="flex items-start gap-3">
@@ -858,16 +830,7 @@ export default function BuilderPageClient() {
                   MOST POPULAR
                 </span>
                 <h3 className="text-xl font-bold text-white">Pro Plan</h3>
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="text-sm text-white/40 line-through">$60/mo</span>
-                  <span className="rounded-full bg-[#0D7377] px-2.5 py-0.5 text-xs font-bold text-white">
-                    20% OFF
-                  </span>
-                </div>
-                <p className="mt-1 text-3xl font-bold text-white">
-                  $48<span className="text-base font-normal text-white/60">/mo</span>
-                </p>
-                <p className="mt-1 text-xs text-white/50">with code FOUNDING20</p>
+                <p className="mt-2 text-sm text-white/60">Full customization</p>
                 <ul className="mt-6 flex-1 space-y-3 text-sm text-white/80">
                   {PRO_FEATURES.map((f) => (
                     <li key={f} className="flex items-start gap-3">
@@ -889,7 +852,7 @@ export default function BuilderPageClient() {
             </div>
 
             <p className="mt-6 text-center text-sm text-[#4A5568]">
-              🎉 First 100 founding members get 20% off forever — discount auto-applied at checkout
+              Pricing is discussed after a quick demo call — no payment required to try the builder
             </p>
           </div>
         )}
@@ -1525,24 +1488,13 @@ export default function BuilderPageClient() {
 
             {step === 6 && (
               <div className="mx-auto max-w-md space-y-6 text-center">
-                {/* Plan summary */}
-                <div className="rounded-xl border border-[#E2E8F0] bg-[#F8F9FA] px-5 py-4 text-left">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[#4A5568]">
-                    Your chosen plan
-                  </p>
-                  <p className="mt-1 text-lg font-bold text-[#1A1A2E]">
-                    {PLAN_META[selectedPlan].label} —{" "}
-                    <span className="text-[#0D7377]">{PLAN_META[selectedPlan].price}</span>
-                  </p>
-                </div>
-
                 <div className="rounded-2xl border border-[#E2E8F0] bg-[#F8F9FA] p-6">
                   <MascotCharacter industry={form.industry || "other"} animation="celebrate" size={80} />
                   <h2 className="mt-4 text-xl font-bold text-[#1A1A2E]">
-                    Almost there{form.mascotName ? `, ${form.mascotName} is ready to go` : ""}!
+                    Nice{form.mascotName ? `, ${form.mascotName} is ready to go` : ""}!
                   </h2>
                   <p className="mt-2 text-sm text-[#4A5568]">
-                    Enter your website URL, then complete payment to activate your VestaChatHost chatbot.
+                    Enter your website URL, then request a demo and we&apos;ll get your chatbot live.
                   </p>
                 </div>
 
@@ -1574,7 +1526,7 @@ export default function BuilderPageClient() {
                 {!user && (
                   <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6 text-left shadow-sm">
                     <p className="mb-4 text-sm font-semibold text-[#1A1A2E]">
-                      Create an account or log in to save your chatbot and continue to payment
+                      Create an account or log in to save your chatbot
                     </p>
 
                     <div className="mb-5 flex rounded-xl border border-[#E2E8F0] bg-[#F8F9FA] p-1">
@@ -1668,24 +1620,21 @@ export default function BuilderPageClient() {
 
                 <button
                   type="button"
-                  onClick={handleStripeCheckout}
+                  onClick={handleFinish}
                   disabled={isSaving || !user}
-                  className="w-full rounded-xl bg-[#635bff] px-6 py-4 text-base font-semibold text-white shadow-lg transition hover:bg-[#5851e0] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full rounded-xl bg-[#0D7377] px-6 py-4 text-base font-semibold text-white shadow-lg transition hover:bg-[#0A5D61] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isSaving ? "Saving..." : "Subscribe with Stripe"}
+                  {isSaving ? "Saving..." : "Request a Demo"}
                 </button>
                 {!user && (
                   <p className="text-xs text-[#4A5568]">Sign in or create an account above to continue.</p>
                 )}
                 {saveError && <p className="text-sm text-red-600">{saveError}</p>}
                 <p className="text-xs text-[#4A5568]">
-                  By subscribing, you agree to our{" "}
+                  By continuing, you agree to our{" "}
                   <Link href="/terms" className="text-[#0D7377] hover:underline">Terms of Service</Link>
                   {" "}and{" "}
                   <Link href="/privacy" className="text-[#0D7377] hover:underline">Privacy Policy</Link>.
-                </p>
-                <p className="text-xs text-[#4A5568]">
-                  Your FOUNDING20 discount is applied automatically at checkout.
                 </p>
               </div>
             )}

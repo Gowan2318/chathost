@@ -7,7 +7,7 @@ import {
   autoBlockIfAbusive,
 } from "../../../lib/rateLimit";
 import { sendUsageWarningEmail, sendLimitReachedEmail } from "../../../lib/email";
-import { PLAN_LIMITS } from "../../../lib/plans";
+import { isValidVoicePlan, chatMessageLimitFor } from "../../../lib/plans";
 import { composeBusinessInfo } from "../../../lib/builder-form";
 import {
   anthropicClient,
@@ -18,6 +18,12 @@ import {
 } from "../../../lib/chat-shared";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Fallback plan when a chatbot row has no recognized plan yet (e.g. a
+// builder-created row before its first Stripe payment resolves a plan) —
+// the smallest tier's cap, never unlimited, so a misconfigured row can't
+// accidentally get free unlimited messages.
+const FALLBACK_PLAN = "starter";
 
 function currentMonthStart() {
   const now = new Date();
@@ -55,10 +61,20 @@ function computeUsage(clientId, bot) {
         .catch(() => {})
     : null;
 
-  // The top-level `plan` column is kept in sync with Stripe (upgrades/downgrades),
-  // config.plan only reflects what was chosen at signup — prefer the live value.
-  const plan = (bot.plan ?? bot.config?.plan) === "pro" ? "pro" : "basic";
-  const limit = PLAN_LIMITS[plan];
+  // The top-level `plan` column is the billing plan synced from Stripe
+  // (starter/growth/pro — see lib/plans.js VOICE_PLANS). Deliberately NOT
+  // falling back to bot.config?.plan here: that field is the builder's
+  // "basic"/"pro" config-complexity toggle (which fields it walked the
+  // customer through), a completely different axis that happens to share
+  // the string "pro" — treating it as a billing plan would wrongly grant
+  // unlimited chat to someone who picked the "Pro" builder flow but hasn't
+  // actually paid for the $300 Pro voice plan yet.
+  const rawPlan = bot.plan;
+  const plan = isValidVoicePlan(rawPlan) ? rawPlan : FALLBACK_PLAN;
+  if (rawPlan && !isValidVoicePlan(rawPlan)) {
+    console.warn(`[api/chat] unrecognized plan "${rawPlan}" for client ${clientId} — falling back to ${FALLBACK_PLAN} limits`);
+  }
+  const limit = chatMessageLimitFor(plan);
   const shared = {
     plan,
     limit,

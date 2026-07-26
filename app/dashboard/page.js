@@ -6,14 +6,10 @@ import Link from "next/link";
 import { useAuth } from "../../lib/AuthContext";
 import { getSupabaseClient } from "../../lib/supabase";
 import { INDUSTRY_LABELS } from "../../lib/industries";
-import { PLAN_LIMITS } from "../../lib/plans";
+import { VOICE_PLANS, isValidVoicePlan, chatMessageLimitFor, nextPlanUp } from "../../lib/plans";
 import EmbedCodeCard from "../../components/EmbedCodeCard";
 import MascotCharacter from "../../components/mascots/MascotCharacter";
 import DashboardSidebar, { Logo, MenuIcon, CardIcon, HelpIcon } from "../../components/dashboard/DashboardSidebar";
-
-const PRO_CHECKOUT_URL = "https://buy.stripe.com/00w28qcIsbDp4jMgEbdfG01";
-
-const PLAN_LABELS = { basic: "Basic", pro: "Pro" };
 
 function formatBillingDate(isoString) {
   if (!isoString) return null;
@@ -246,11 +242,20 @@ export default function DashboardPage() {
 
   const config = chatbot?.config ?? null;
 
-  const plan = (chatbot?.plan ?? config?.plan) === "pro" ? "pro" : "basic";
-  const messageLimit = PLAN_LIMITS[plan];
+  // Deliberately not falling back to config?.plan — that's the builder's
+  // "basic"/"pro" config-complexity toggle, a different axis from the
+  // billing plan that happens to share the string "pro" (see the same note
+  // in app/api/chat/route.js).
+  const rawPlan = chatbot?.plan;
+  const plan = isValidVoicePlan(rawPlan) ? rawPlan : null;
+  // 0 (not null) when unresolved — keeps every arithmetic/.toLocaleString()
+  // use below crash-safe while a chatbot row waits on its first Stripe payment.
+  const messageLimit = plan ? chatMessageLimitFor(plan) : 0;
   const messagesUsed = chatbot?.monthly_message_count ?? 0;
   const messagesRemaining = Math.max(0, messageLimit - messagesUsed);
   const usagePct = messageLimit > 0 ? (messagesUsed / messageLimit) * 100 : 0;
+  const planLabel = plan ? VOICE_PLANS[plan].label : "Pending";
+  const upgradeTo = plan ? nextPlanUp(plan) : null;
 
   // Always show a reset date — fall back to the first of next month until
   // Stripe's webhook has populated current_period_end.
@@ -261,13 +266,6 @@ export default function DashboardPage() {
   const statusLabel = STATUS_LABELS[chatbot?.subscription_status] ?? chatbot?.subscription_status ?? "—";
   const statusColor = STATUS_COLORS[chatbot?.subscription_status] ?? "text-[#9CA3AF]";
   const statusDotColor = STATUS_DOT_COLORS[chatbot?.subscription_status] ?? "bg-gray-400";
-
-  const upgradeUrl = (() => {
-    const url = new URL(PRO_CHECKOUT_URL);
-    if (chatbot?.client_id) url.searchParams.set("client_reference_id", chatbot.client_id);
-    if (user?.email) url.searchParams.set("prefilled_email", user.email);
-    return url.toString();
-  })();
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
@@ -318,7 +316,7 @@ export default function DashboardPage() {
                   label="Plan"
                   value={
                     <span className="inline-block rounded-full bg-[#0D7377]/10 px-3 py-0.5 text-lg font-bold text-[#0D7377]">
-                      {PLAN_LABELS[plan]}
+                      {planLabel}
                     </span>
                   }
                   sub={resetShortLabel ? `Resets ${resetShortLabel}` : null}
@@ -432,7 +430,7 @@ export default function DashboardPage() {
                     <p className="text-xs font-semibold uppercase tracking-widest text-[#9CA3AF]">
                       Current Plan
                     </p>
-                    <p className="mt-1 text-lg font-bold text-[#1A1A2E]">{PLAN_LABELS[plan]}</p>
+                    <p className="mt-1 text-lg font-bold text-[#1A1A2E]">{planLabel}</p>
                   </div>
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-widest text-[#9CA3AF]">
@@ -473,14 +471,13 @@ export default function DashboardPage() {
                     </div>
                   )}
 
-                  {plan === "basic" && (
-                    <a
-                      href={upgradeUrl}
+                  {upgradeTo && (
+                    <Link
+                      href="/demo-request"
                       className="inline-flex items-center gap-2 rounded-xl bg-[#0D7377] px-5 py-2.5 text-center text-sm font-semibold text-white shadow-lg shadow-[#0D7377]/20 transition hover:bg-[#0A5D61]"
                     >
-                      Upgrade to Pro
-                      <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs">3x more messages</span>
-                    </a>
+                      Contact us to upgrade to {VOICE_PLANS[upgradeTo].label}
+                    </Link>
                   )}
                 </div>
               </div>
