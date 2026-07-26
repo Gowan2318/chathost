@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { adminClient } from "../../../lib/supabase-admin";
-import { getSupabaseClient } from "../../../lib/supabase";
 import {
   getClientIp,
   isIpBlocked,
@@ -52,8 +51,12 @@ export async function GET(request) {
   }
 
   try {
-    const supabase = getSupabaseClient();
-    const { data, error } = await supabase
+    // Service role, not the anon client — the anon key is public by design
+    // (it ships in every page load), so RLS's anon policy can't be trusted
+    // to restrict this to just `config`/`subscription_status`: RLS filters
+    // rows, not columns. See migration 017 for the corresponding anon
+    // SELECT policy removal on chatbots.
+    const { data, error } = await adminClient()
       .from("chatbots")
       .select("config, subscription_status")
       .eq("client_id", id.trim())

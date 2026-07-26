@@ -1,15 +1,29 @@
+import { timingSafeEqual } from "crypto";
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { adminClient } from "../../../../lib/supabase-admin";
 import { voicePlanFromAmount } from "../../../../lib/plans";
 
-// Must run on Node.js runtime — Edge runtime doesn't support the Stripe SDK.
+// Must run on Node.js runtime — Edge runtime doesn't support the Stripe SDK
+// (and, below, Node's crypto.timingSafeEqual).
 export const runtime = "nodejs";
 
 // Vercel Cron always invokes the configured path with GET, and (when
 // CRON_SECRET is set as a project env var) automatically attaches it as
 // `Authorization: Bearer <CRON_SECRET>` — verified below.
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Same constant-time comparison pattern as app/api/vapi-webhook/route.js's
+// verifySecret — a plain !== comparison short-circuits on the first
+// mismatched byte, which leaks a timing signal an attacker could use to
+// guess CRON_SECRET one byte at a time.
+function verifySecret(received, expected) {
+  if (!received || !expected) return false;
+  const a = Buffer.from(received);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
 
 // Matched against lib/plans.js VOICE_PLANS (single source of truth for plan
 // pricing) rather than a hardcoded amount threshold — returns null for an
@@ -43,8 +57,9 @@ async function findSubscription(bot) {
 
 export async function GET(request) {
   const authHeader = request.headers.get("authorization") ?? "";
+  const receivedSecret = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
-  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!verifySecret(receivedSecret, process.env.CRON_SECRET)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

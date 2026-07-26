@@ -263,6 +263,8 @@ export async function POST(req) {
 
   const configToSave = applyPlanEnforcement({ ...sanitizedConfig, plan: validPlan }, validPlan);
 
+  // TODO(security audit #7): debug leftover, not sensitive but clutters prod
+  // logs — remove.
   console.log("[save-chatbot] booking_url:", configToSave.booking_url);
 
   const { error } = await db.from("chatbots").insert(

@@ -2,7 +2,7 @@ import Link from "next/link";
 import Script from "next/script";
 import { CalendarCheck, Clock, Code2, Globe, MessageCircleQuestion, Palette } from "lucide-react";
 import MascotCharacter from "../../../components/mascots/MascotCharacter";
-import { getSupabaseClient } from "../../../lib/supabase";
+import { adminClient } from "../../../lib/supabase-admin";
 import { INDUSTRY_LABELS } from "../../../lib/industries";
 
 // Demo config can change any time a business owner edits their bot in the
@@ -16,8 +16,11 @@ async function getChatbotConfig(rawClientId) {
   if (!clientId || !UUID_RE.test(clientId)) return null;
 
   try {
-    const supabase = getSupabaseClient();
-    const { data, error } = await supabase
+    // Service role, not the anon client — this page is public/unauthenticated
+    // by design (shared demo links), and RLS's anon SELECT policy on
+    // chatbots was removed (migration 017) since it exposed every column,
+    // not just `config`, to anyone with the (necessarily public) anon key.
+    const { data, error } = await adminClient()
       .from("chatbots")
       .select("config")
       .eq("client_id", clientId)
