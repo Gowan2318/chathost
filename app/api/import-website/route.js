@@ -496,6 +496,14 @@ async function fetchSitemap(baseOrigin) {
   return [];
 }
 
+// TODO(security audit #4): per-IP rate limiting below is solid, but a single
+// allowed request can still fan out to ~10 Firecrawl calls (main page + up to
+// 5 linked pages + booking page + Facebook + 2 search queries + a Yelp
+// scrape) plus several Anthropic calls. There's no cap on AGGREGATE spend
+// across IPs — a distributed abuser could still run up real third-party
+// costs. Add a daily spend/call counter (table + hard ceiling) independent
+// of the per-IP limits before relying on this at scale. Deferred, not fixed
+// in this pass.
 export async function POST(request) {
   try {
     const clientIp = getClientIp(request);
