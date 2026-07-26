@@ -121,17 +121,6 @@ const limit = (() => {
 })();
 
 // ── Reference data ───────────────────────────────────────────────────────
-const DEMO_LINKS = {
-  salon: "https://vestachathost.com/demo/accddb1c-9739-4666-bdc9-8c5653862eeb",
-  barber: "https://vestachathost.com/demo/6fc6cd3c-ccb5-4251-8db7-9768837c0e8e",
-  restaurant: "https://vestachathost.com/demo/758b0eca-b4dc-4d9f-a47c-27bffd1b98fb",
-  gym: "https://vestachathost.com/demo/6aa95f07-dfc3-411d-8d61-444be9425a4e",
-  dental: "https://vestachathost.com/demo/47b776b5-cc31-4ec2-badd-3ad55ba43916",
-  law: "https://vestachathost.com/demo/61375488-d0d8-4818-bcc9-422cb958f060",
-  lawn: "https://vestachathost.com/demo/68339ada-2c15-488a-a75b-e638d12f671a",
-  real_estate: "https://vestachathost.com/demo/130112eb-9c7f-4db9-9408-bbb6a36bc9ca",
-};
-
 const INDUSTRY_NOUN = {
   salon: "salon",
   barber: "barber shop",
@@ -154,6 +143,21 @@ const INDUSTRY_PLURAL = {
   lawn: "lawn care businesses",
   real_estate: "real estate businesses",
   other: "businesses",
+};
+
+// What's usually happening when a call to this kind of business goes
+// unanswered — used to make the pain point feel specific to their day, not
+// like a generic mail-merge line.
+const BUSY_MOMENT = {
+  salon: "with a client in the chair",
+  barber: "mid-cut",
+  restaurant: "slammed during a rush",
+  gym: "in the middle of training someone",
+  dental: "with a patient in the chair",
+  law: "in with a client",
+  lawn: "out on a job site",
+  real_estate: "out showing a property",
+  other: "with a customer",
 };
 
 // ── Eligibility ──────────────────────────────────────────────────────────
@@ -184,35 +188,60 @@ function greeting(ownerName) {
   return `Hi ${firstName}`;
 }
 
+// Address data is inconsistent — a bare neighborhood ("Mount Lebanon"), a
+// "City ST" or "City ST 12345" with no comma at all ("Pittsburgh PA",
+// "Glenshaw PA 15116"), or a full street address ("879 Forest Ave, West
+// Homestead PA 15120"). Pull out something nameable to reference, or null
+// if there's nothing clean to say.
+function cityFromAddress(address) {
+  const trimmed = (address || "").trim();
+  if (!trimmed) return null;
+
+  const afterComma = trimmed.includes(",") ? trimmed.split(",").pop().trim() : trimmed;
+  const stripped = afterComma.replace(/\s+[A-Z]{2}(\s+\d{5}(-\d{4})?)?$/, "").trim();
+  return stripped || afterComma || null;
+}
+
+// The opener has to read like we actually looked at them, not a mail merge.
+// Prefer their real rating/review count (concrete, true, flattering) over a
+// generic city reference, and fall back further if neither is available.
+function personalizedObservation(rec, industryNoun, industryPlural, city) {
+  const rating = parseFloat(rec.rating);
+  const reviewCount = parseInt(rec.review_count, 10);
+  if (Number.isFinite(rating) && rating > 0 && Number.isFinite(reviewCount) && reviewCount > 0) {
+    return `noticed you've got a ${rating.toFixed(1)}★ rating across ${reviewCount} reviews — that doesn't happen by accident`;
+  }
+  if (city) {
+    return `noticed you're one of the ${industryPlural} keeping ${city} running`;
+  }
+  return `noticed you run a solid, well-established ${industryNoun}`;
+}
+
 function buildEmail(rec) {
   const industry = (rec.industry || "other").trim();
-  const demoLink = DEMO_LINKS[industry];
-  if (!demoLink) return null; // no demo to show — skip rather than send a broken link
-
   const business = rec.business_name || "your business";
   const industryNoun = INDUSTRY_NOUN[industry] || INDUSTRY_NOUN.other;
   const industryPlural = INDUSTRY_PLURAL[industry] || INDUSTRY_PLURAL.other;
+  const busyMoment = BUSY_MOMENT[industry] || BUSY_MOMENT.other;
+  const city = cityFromAddress(rec.address);
   const greetingLine = greeting(rec.owner_or_contact_name_from_public_reviews);
+  const observation = personalizedObservation(rec, industryNoun, industryPlural, city);
 
-  const subject = `A quick idea for ${business}'s website`;
+  const subject = `A quick solution for ${business}`;
 
   const body = `${greetingLine},
 
-I came across ${business} and noticed you've built a strong presence — but I also noticed something that quietly costs a lot of local ${industryPlural} customers: people visit the website, have a question about services or pricing, and can't find the answer fast enough. So they leave.
+I came across ${business} and ${observation}.
 
-That's where we come in. We build a custom AI assistant for your ${industryNoun} that answers your customers' questions instantly — hours, services, pricing, booking — 24 hours a day, even when you're closed. It keeps customers engaged, makes them feel taken care of, and makes your business look more professional.
+Here's the thing that quietly costs ${industryPlural} customers: when the phone rings while you're ${busyMoment} and nobody picks up, that caller doesn't leave a voicemail — they just hang up and call the next ${industryNoun} on Google.
 
-Here's a live example of what we can build:
-${demoLink}
+We set up an AI voice receptionist that answers your calls, catches every caller's name and what they need, and can answer questions about your services using info straight from your own website — a free chat widget for your site is included too.
 
-Click the chat bubble and ask it anything — it's a real working demo for a ${industryNoun}. If you like what you see, we'll build one specifically for ${business} so you can test it yourself. No payment and no commitment unless you're happy with it.
+It's a small thing that ends up being a real edge over other ${industryPlural} in the area who are still missing those calls.
 
-Would love to hear what you think.
+Want me to build you a free demo? No commitment — you hear it answer as your business, then decide. The decision's completely yours.
 
-Best,
-Gowan
-VestaChatHost
-vestachathost.com`;
+— Gowan, VestaChatHost (vestachathost.com)`;
 
   return { to: rec.contact_email, subject, body };
 }
@@ -234,18 +263,7 @@ function main() {
   }
 
   const batch = candidates.slice(0, limit);
-
-  const emails = [];
-  let skippedNoDemo = 0;
-  for (const rec of batch) {
-    const email = buildEmail(rec);
-    if (!email) {
-      skippedNoDemo++;
-      console.log(`[skip] ${rec.business_name || "(unnamed)"} — no demo link for industry "${rec.industry}"`);
-      continue;
-    }
-    emails.push({ rec, email });
-  }
+  const emails = batch.map((rec) => ({ rec, email: buildEmail(rec) }));
 
   const fileLines = [];
   for (const { rec, email } of emails) {
@@ -275,7 +293,6 @@ function main() {
   Object.entries(byIndustry)
     .sort((a, b) => b[1] - a[1])
     .forEach(([ind, count]) => console.log(`  ${ind}: ${count}`));
-  if (skippedNoDemo) console.log(`Skipped (no demo link for industry): ${skippedNoDemo}`);
   console.log(`Wrote ${emails.length} email(s) to ${path.relative(process.cwd(), OUT_PATH)}`);
 }
 
