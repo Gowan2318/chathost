@@ -40,11 +40,20 @@ export default function VoiceDemoClient({ assistantId, businessName }) {
     if (vapiRef.current) return vapiRef.current;
 
     const { default: Vapi } = await import("@vapi-ai/web");
-    // avoidEval: true tells Daily's underlying call engine to skip eval()-based
-    // code paths, so our CSP can grant it 'wasm-unsafe-eval' (WebAssembly only)
-    // instead of the much broader 'unsafe-eval' — see the comment on cspHeader
-    // in next.config.ts.
-    const vapi = new Vapi(publicKey, undefined, { avoidEval: true });
+    // Plain default init (no avoidEval) — avoidEval was added in the previous CSP
+    // pass to keep 'unsafe-eval' out of prod, but Daily's own docs describe it as
+    // "an optional workaround...not a general recommendation," validated only for
+    // their video virtual-background feature. Every call since it was added showed
+    // zero user speech reaching Vapi despite the assistant's own audio working fine
+    // — a one-way audio-publish failure. Reverted to Daily's documented default
+    // (script-src now allows 'unsafe-eval' instead) since that's the well-tested
+    // path for the audio-publish pipeline.
+    const vapi = new Vapi(publicKey);
+    // No audioSource/videoSource override needed — the Vapi/Daily default is
+    // audioSource: true (use the mic already granted by the browser permission
+    // prompt), confirmed by reading the SDK's own source
+    // (node_modules/@vapi-ai/web/dist/vapi.js: `audioSource: this.dailyCallObject.audioSource ?? true`).
+    // Nothing here mutes or withholds the local track.
 
     vapi.on("call-start", () => {
       setStatus("live");
