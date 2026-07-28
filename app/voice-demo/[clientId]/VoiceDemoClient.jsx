@@ -40,7 +40,11 @@ export default function VoiceDemoClient({ assistantId, businessName }) {
     if (vapiRef.current) return vapiRef.current;
 
     const { default: Vapi } = await import("@vapi-ai/web");
-    const vapi = new Vapi(publicKey);
+    // avoidEval: true tells Daily's underlying call engine to skip eval()-based
+    // code paths, so our CSP can grant it 'wasm-unsafe-eval' (WebAssembly only)
+    // instead of the much broader 'unsafe-eval' — see the comment on cspHeader
+    // in next.config.ts.
+    const vapi = new Vapi(publicKey, undefined, { avoidEval: true });
 
     vapi.on("call-start", () => {
       setStatus("live");
