@@ -16,14 +16,100 @@ function formatMMSS(totalSeconds) {
   return `${m}:${String(rem).padStart(2, "0")}`;
 }
 
+// Transcript lines live only in this component's React state — never sent
+// anywhere but rendered in the browser, and wiped on unmount/new call. See
+// TranscriptPanel below for the render side of this.
+function TranscriptPanel({ lines, partial, businessName, visible }) {
+  const scrollRef = useRef(null);
+
+  // Auto-scroll to the newest line whenever a final line lands or a partial
+  // line's text grows, but only if the visitor hasn't scrolled up to read
+  // back — checked via a small threshold so a deliberate scroll-up isn't
+  // fought on every transcript update.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distanceFromBottom < 120) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [lines, partial]);
+
+  if (!visible) return null;
+
+  const hasPartial = partial.role && partial.text;
+  const isEmpty = lines.length === 0 && !hasPartial;
+
+  return (
+    <div className="mt-6 w-full text-left">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-[#4A5568]">
+        Live transcript
+      </p>
+      <div
+        ref={scrollRef}
+        className="flex max-h-72 flex-col gap-2 overflow-y-auto rounded-xl border border-[#E2E8F0] bg-[#F8F9FA] p-3 sm:max-h-80"
+      >
+        {isEmpty && (
+          <p className="py-6 text-center text-sm italic text-[#4A5568]/70">
+            Listening for the conversation…
+          </p>
+        )}
+
+        {lines.map((line) => (
+          <TranscriptBubble
+            key={line.id}
+            role={line.role}
+            text={line.text}
+            businessName={businessName}
+          />
+        ))}
+
+        {hasPartial && (
+          <TranscriptBubble
+            role={partial.role}
+            text={partial.text}
+            businessName={businessName}
+            pending
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TranscriptBubble({ role, text, businessName, pending }) {
+  const isUser = role === "user";
+  return (
+    <div className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
+      <span className="mb-0.5 px-1 text-[10px] font-semibold uppercase tracking-wide text-[#4A5568]/60">
+        {isUser ? "You" : businessName}
+      </span>
+      <div
+        className={[
+          "max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-snug",
+          isUser
+            ? "rounded-br-sm bg-[#0D7377] text-white"
+            : "rounded-bl-sm border border-[#E2E8F0] bg-white text-[#1A1A2E]",
+          pending ? "opacity-60 italic" : "",
+        ].join(" ")}
+      >
+        {text}
+      </div>
+    </div>
+  );
+}
+
 export default function VoiceDemoClient({ assistantId, businessName }) {
   // idle -> connecting -> live -> ended | error
   const [status, setStatus] = useState("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [remainingSeconds, setRemainingSeconds] = useState(MAX_CALL_SECONDS);
+  const [transcriptLines, setTranscriptLines] = useState([]);
+  const [partialTranscript, setPartialTranscript] = useState({ role: null, text: "" });
 
   const vapiRef = useRef(null);
   const countdownRef = useRef(null);
+  const lineIdRef = useRef(0);
 
   const publicKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY;
 
@@ -31,6 +117,33 @@ export default function VoiceDemoClient({ assistantId, businessName }) {
     if (countdownRef.current) {
       clearInterval(countdownRef.current);
       countdownRef.current = null;
+    }
+  }
+
+  // Handles every Vapi "message" event and picks out transcript messages.
+  // Confirmed against node_modules/@vapi-ai/web's shipped types
+  // (api.ts: ServerMessageTranscript) rather than guessed: the client SDK's
+  // generic 'message' event (vapi.on("message", ...)) fires for every
+  // server message forwarded over Daily's data channel, and transcript
+  // messages always carry `type: "transcript"` (the "transcript[transcriptType=
+  // 'final']" variant in the type union is a *server-webhook* filter option,
+  // not a value the client SDK ever emits) with a separate
+  // `transcriptType: "partial" | "final"` field, plus `role: "assistant" | "user"`
+  // and `transcript: <string>`. Both the assistant's spoken lines and the
+  // user's transcribed speech arrive through this same event.
+  function handleVapiMessage(message) {
+    if (!message || message.type !== "transcript") return;
+    const { role, transcriptType, transcript } = message;
+    if (!role || typeof transcript !== "string") return;
+
+    if (transcriptType === "final") {
+      const text = transcript.trim();
+      if (!text) return;
+      lineIdRef.current += 1;
+      setTranscriptLines((prev) => [...prev, { id: lineIdRef.current, role, text }]);
+      setPartialTranscript((prev) => (prev.role === role ? { role: null, text: "" } : prev));
+    } else if (transcriptType === "partial") {
+      setPartialTranscript({ role, text: transcript });
     }
   }
 
@@ -58,6 +171,10 @@ export default function VoiceDemoClient({ assistantId, businessName }) {
     vapi.on("call-start", () => {
       setStatus("live");
       setRemainingSeconds(MAX_CALL_SECONDS);
+      // Fresh transcript for every new call — nothing from a previous call
+      // on this page lingers.
+      setTranscriptLines([]);
+      setPartialTranscript({ role: null, text: "" });
       clearCountdown();
       countdownRef.current = setInterval(() => {
         setRemainingSeconds((prev) => {
@@ -74,6 +191,8 @@ export default function VoiceDemoClient({ assistantId, businessName }) {
       clearCountdown();
       setStatus("ended");
     });
+
+    vapi.on("message", handleVapiMessage);
 
     vapi.on("error", (err) => {
       clearCountdown();
@@ -122,8 +241,10 @@ export default function VoiceDemoClient({ assistantId, businessName }) {
     };
   }, []);
 
+  const showTranscript = status === "live" || status === "ended";
+
   return (
-    <div className="mt-8 flex flex-col items-center gap-4">
+    <div className="mt-8 flex w-full flex-col items-center gap-4">
       {status === "idle" && (
         <button
           onClick={handleStart}
@@ -186,6 +307,13 @@ export default function VoiceDemoClient({ assistantId, businessName }) {
           </button>
         </div>
       )}
+
+      <TranscriptPanel
+        lines={transcriptLines}
+        partial={partialTranscript}
+        businessName={businessName}
+        visible={showTranscript}
+      />
     </div>
   );
 }

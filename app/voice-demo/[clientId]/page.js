@@ -131,7 +131,7 @@ export default async function VoiceDemoPage({ params }) {
           </p>
         </div>
 
-        <div className="mx-auto mt-10 w-full max-w-md rounded-2xl border border-[#E2E8F0] bg-white p-8 shadow-xl shadow-[#0D7377]/5 sm:p-10">
+        <div className="mx-auto mt-10 w-full max-w-md rounded-2xl border border-[#E2E8F0] bg-white p-8 shadow-xl shadow-[#0D7377]/5 sm:p-10 lg:max-w-xl">
           <div className="flex flex-col items-center gap-4 text-center">
             <MascotCharacter industry={demo.industry} size={140} animation="idle" />
             <div>
