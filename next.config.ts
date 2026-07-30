@@ -30,11 +30,19 @@ const PUBLIC_STATIC_EXTENSIONS =
 //     WebRTC audio is attached via `audio.srcObject`, which no browser's media-src ever
 //     governs. Added `'self' blob:` defensively/narrowly anyway (no external domains) in
 //     case any blob-URL playback path exists internally; nothing else added here.
+// 'unsafe-eval' is scoped to /voice-demo only (see voiceDemoCspHeader below) rather than
+// added to the site-wide script-src — Next.js's last-match-wins header override behavior
+// (a later `headers()` entry matching the same path replaces the whole header value; see
+// node_modules/next/dist/docs/.../headers.md "Header Overriding Behavior") lets the
+// /voice-demo/:path* entry carry its own full CSP string with 'unsafe-eval' added, without
+// weakening script-src for the rest of the app. The rest of the Vapi/Daily additions below
+// (script-src https://*.daily.co blob:, media-src, connect-src) are specific domains rather
+// than a broad eval allowance, so they're left site-wide as before.
 // Deliberately NOT added: *.banuba.cloud (Daily's virtual-background/blur provider — only
 // needed for video effects we don't use) and no bare "*" anywhere.
-const cspHeader = [
+const cspDirectives = (scriptSrcExtra: string) => [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' 'unsafe-eval' js.stripe.com *.vercel-insights.com vercel.live https://*.daily.co blob:`,
+  `script-src 'self' 'unsafe-inline' ${scriptSrcExtra}js.stripe.com *.vercel-insights.com vercel.live https://*.daily.co blob:`,
   "style-src 'self' 'unsafe-inline' fonts.googleapis.com",
   "font-src 'self' fonts.gstatic.com",
   "img-src 'self' data: blob: *.supabase.co images.unsplash.com",
@@ -45,7 +53,10 @@ const cspHeader = [
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
-].join("; ");
+];
+
+const cspHeader = cspDirectives("").join("; ");
+const voiceDemoCspHeader = cspDirectives("'unsafe-eval' ").join("; ");
 
 const nextConfig: NextConfig = {
   async headers() {
@@ -81,6 +92,14 @@ const nextConfig: NextConfig = {
             value: "public, max-age=0, must-revalidate",
           },
         ],
+      },
+      // Must come after the site-wide entry above — Next.js applies the last matching
+      // header value when two entries set the same key for the same path (see
+      // "Header Overriding Behavior" in the headers() doc), so this replaces the site-wide
+      // CSP with the 'unsafe-eval'-inclusive one only for /voice-demo/*.
+      {
+        source: "/voice-demo/:path*",
+        headers: [{ key: "Content-Security-Policy", value: voiceDemoCspHeader }],
       },
     ];
   },
