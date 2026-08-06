@@ -241,7 +241,8 @@ It's a small thing that ends up being a real edge over other ${industryPlural} i
 
 Want me to build you a free demo? No commitment — you hear it answer as your business, then decide. The decision's completely yours.
 
-— Gowan, VestaChatHost (vestachathost.com)`;
+— Gowan, VestaChatHost
+hello@vestachathost.com | vestachathost.com`;
 
   return { to: rec.contact_email, subject, body };
 }
