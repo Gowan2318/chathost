@@ -161,10 +161,34 @@ const BUSY_MOMENT = {
 };
 
 // ── Eligibility ──────────────────────────────────────────────────────────
-const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.([A-Za-z]{2,})$/;
+
+// Real gTLDs plausible for a local-business outreach list. Any 2-letter
+// suffix is allowed on the assumption it's a ccTLD (.de, .uk, .ie, ...) —
+// there are ~250 of those and none are worth enumerating here.
+const COMMON_TLDS = new Set([
+  "com", "net", "org", "edu", "gov", "mil", "int", "info", "biz", "name",
+  "pro", "coop", "museum", "aero", "jobs", "mobi", "travel", "xyz", "app",
+  "dev", "shop", "store", "online", "site", "tech", "agency", "company",
+]);
+
 function isValidEmail(v) {
   const trimmed = (v || "").trim();
-  return trimmed && trimmed.toUpperCase() !== "NONE" && EMAIL_RE.test(trimmed);
+  if (!trimmed || trimmed.toUpperCase() === "NONE") return false;
+
+  const match = EMAIL_RE.exec(trimmed);
+  if (!match) return false;
+
+  const tld = match[1];
+
+  // Scraped markdown sometimes runs an email straight into the next word
+  // with no boundary ("info@site.comPhone: 555…") — a lowercase letter
+  // immediately followed by an uppercase one inside the "TLD" is that
+  // leaked word starting, not a real suffix.
+  if (/[a-z][A-Z]/.test(tld)) return false;
+
+  const lowerTld = tld.toLowerCase();
+  return lowerTld.length === 2 || COMMON_TLDS.has(lowerTld);
 }
 
 function isNotSent(v) {
