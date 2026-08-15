@@ -172,6 +172,20 @@ const COMMON_TLDS = new Set([
   "dev", "shop", "store", "online", "site", "tech", "agency", "company",
 ]);
 
+// Domains used industry-wide as filler/example values rather than a real
+// business's own address (docs, form placeholders, scraper mail-merge
+// junk). Add to this list as new dummies turn up in the data.
+const PLACEHOLDER_DOMAINS = new Set([
+  "example.com", "example.org", "example.net",
+  "email.com", "domain.com", "test.com",
+  "yourdomain.com", "company.com", "mailservice.com", "mydomain.com",
+  "sample.com",
+]);
+
+function isPlaceholderEmail(domain) {
+  return PLACEHOLDER_DOMAINS.has(domain.toLowerCase());
+}
+
 function isValidEmail(v) {
   const trimmed = (v || "").trim();
   if (!trimmed || trimmed.toUpperCase() === "NONE") return false;
@@ -188,7 +202,12 @@ function isValidEmail(v) {
   if (/[a-z][A-Z]/.test(tld)) return false;
 
   const lowerTld = tld.toLowerCase();
-  return lowerTld.length === 2 || COMMON_TLDS.has(lowerTld);
+  if (lowerTld.length !== 2 && !COMMON_TLDS.has(lowerTld)) return false;
+
+  const domain = trimmed.slice(trimmed.indexOf("@") + 1);
+  if (isPlaceholderEmail(domain)) return false;
+
+  return true;
 }
 
 function isNotSent(v) {
