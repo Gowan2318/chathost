@@ -46,6 +46,19 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const VAPI_MODEL = "claude-sonnet-4-5-20250929"; // current working Anthropic model
 const SAVE_BOOKING_TOOL_NAME = "save_booking";
 
+// Vapi rejects assistant names over 40 chars — truncate long business names
+// so the create call doesn't fail outright for e.g. "STEAM Beauty & Wellness Spa".
+const ASSISTANT_NAME_SUFFIX = " — Voice Receptionist";
+const ASSISTANT_NAME_MAX = 40;
+function assistantName(businessName) {
+  const maxBase = ASSISTANT_NAME_MAX - ASSISTANT_NAME_SUFFIX.length;
+  const base =
+    businessName.length > maxBase
+      ? businessName.slice(0, maxBase - 1).trimEnd() + "…"
+      : businessName;
+  return `${base}${ASSISTANT_NAME_SUFFIX}`;
+}
+
 // Defaults for a brand-new assistant, which has no "live" voice/transcriber
 // to preserve yet. Matches the config the original shared assistant was
 // already running (voice: Vapi's "Elliot", transcriber: Deepgram nova-3).
@@ -280,7 +293,7 @@ async function run(clientId) {
     console.log(`No vapi_assistant_id on file for ${clientId} — creating a new Vapi assistant.`);
 
     const createBody = {
-      name: `${businessName} — Voice Receptionist`,
+      name: assistantName(businessName),
       model: {
         provider: "anthropic",
         model: VAPI_MODEL,
