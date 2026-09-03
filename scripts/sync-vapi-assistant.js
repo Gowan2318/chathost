@@ -63,7 +63,13 @@ function assistantName(businessName) {
 // to preserve yet. Matches the config the original shared assistant was
 // already running (voice: Vapi's "Elliot", transcriber: Deepgram nova-3).
 const DEFAULT_VOICE = { provider: "vapi", voiceId: "Elliot" };
-const DEFAULT_TRANSCRIBER = { provider: "deepgram", model: "nova-3", language: "en" };
+// smartFormat improves punctuation/proper-noun formatting on the raw Deepgram
+// transcript. It does NOT specifically fix a caller's spoken name getting
+// duplicated with its letter-by-letter spelling (e.g. "Gowan, G-O-W-A-N" ->
+// "gowan gowan") — Deepgram has no dedicated flag for that; that's a
+// conversational-reconciliation problem, handled in the system prompt
+// instead (see lib/voice/build-system-prompt.js "Capturing names accurately").
+const DEFAULT_TRANSCRIBER = { provider: "deepgram", model: "nova-3", language: "en", smartFormat: true };
 
 function bookingToolDefinition(webhookUrl, webhookSecret) {
   return {
@@ -357,8 +363,13 @@ async function run(clientId) {
   // the model as a whole, not just the fields being changed) — fetch the
   // assistant's current, live model config first and reuse it verbatim,
   // swapping out only `messages`/`model`/`toolIds`. Never hardcode a model id
-  // here beyond VAPI_MODEL — voice/transcriber are left untouched entirely.
+  // here beyond VAPI_MODEL. Voice is left fully untouched (it's a per-client
+  // personality/branding choice). Transcriber is mostly untouched too — we
+  // only layer smartFormat onto an existing Deepgram transcriber (a generic
+  // quality improvement, not a personalization), preserving every other
+  // field (model, language, any keywords/keyterm a client already has) as-is.
   let currentModel;
+  let patchTranscriber;
   try {
     const getResp = await fetch(assistantUrl, { headers: vapiHeaders });
     if (!getResp.ok) {
@@ -377,9 +388,18 @@ async function run(clientId) {
     console.log(
       `Live from Vapi — voice: provider=${assistant.voice?.provider ?? "?"} voiceId=${assistant.voice?.voiceId ?? "?"} (untouched — not sent in PATCH)`
     );
-    console.log(
-      `Live from Vapi — transcriber: provider=${assistant.transcriber?.provider ?? "?"} model=${assistant.transcriber?.model ?? "?"} (untouched — not sent in PATCH)`
-    );
+
+    const currentTranscriber = assistant.transcriber;
+    if (currentTranscriber?.provider === "deepgram" && !currentTranscriber.smartFormat) {
+      patchTranscriber = { ...currentTranscriber, smartFormat: true };
+      console.log(
+        `Live from Vapi — transcriber: provider=deepgram model=${currentTranscriber.model ?? "?"} — adding smartFormat: true`
+      );
+    } else {
+      console.log(
+        `Live from Vapi — transcriber: provider=${currentTranscriber?.provider ?? "?"} model=${currentTranscriber?.model ?? "?"} (untouched — not sent in PATCH)`
+      );
+    }
   } catch (err) {
     return `request to Vapi failed — ${err.message}`;
   }
@@ -399,14 +419,15 @@ async function run(clientId) {
   console.log(`PATCH will send — metadata.client_id: ${clientId}`);
   console.log(`PATCH will send — server.url: ${assistantServer.url}, serverMessages: ${JSON.stringify(assistantServerMessages)}`);
 
-  // firstMessage/metadata/server/serverMessages are top-level fields on the
-  // assistant, siblings of `model` — not nested inside it.
+  // firstMessage/metadata/server/serverMessages/transcriber are top-level
+  // fields on the assistant, siblings of `model` — not nested inside it.
   const patchBody = {
     model: patchModel,
     firstMessage,
     metadata,
     server: assistantServer,
     serverMessages: assistantServerMessages,
+    ...(patchTranscriber ? { transcriber: patchTranscriber } : {}),
   };
   console.log(`PATCH body: ${JSON.stringify(patchBody)}`);
 
